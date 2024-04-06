@@ -371,13 +371,19 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
             return 'You dont have any account id saved to the database!, try running the `/my_account_id` again'
     elif account_id == '1':
         return PS4AccountID('0000000000000000')
-    
-    ctx.omljustusethe0optionsaccountid = '**Rerember, you dont have to manually type in your account id, just put 0 in the field!**\n\n'
-    
+
     try:
-        return PS4AccountID(account_id)
+        my_account_id = PS4AccountID(account_id)
+        try:
+            my_account_id_for_my_acc = PS4AccountID(get_user_account_id(author_id))
+        except KeyError: pass
+        else:
+            if my_account_id_for_my_acc == my_account_id:
+                ctx.omljustusethe0optionsaccountid = '**Rerember, you dont have to manually type in your account id, just put 0 in the field!**\n\n'
+        return my_account_id
     except ValueError:
         return f'{account_id} is not a valid account id, it should be the one in your SAVEDATA folder! Or get it from the `/my_account_id` command'
+
 
 def list_ps4_saves(folder_containing_saves: Path,/) -> Generator[tuple[Path,Path],None,None]:
     for filename in folder_containing_saves.rglob('*'):
