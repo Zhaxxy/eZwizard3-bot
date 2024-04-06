@@ -122,7 +122,7 @@ bot_admins:
         if silly in _SILLY_SAVES:
             _raise_bad_config(key)
 
-    my_config[key] = tuple(x)
+    my_config[key] = tuple(str(b) for b in x)
 
     key = 'title_id'
     if not (x := my_config.get(key)) or x == 'FAKE78699':
