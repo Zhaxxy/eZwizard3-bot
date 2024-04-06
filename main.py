@@ -713,23 +713,23 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 account_id_old = await resign_mounted_save(ctx,ftp,new_mount_dir,account_id)
             return results,account_id_old
     finally:
-        async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-            try:
-                await ftp.change_directory(new_mount_dir) # check if we are still mounted
-            except Exception:
-                pass#print(f'{type(e).__name__}: {e}')
-            else:
-                await ftp.upload(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys')
-                umount_p = await unmount_save(ps4,mem,mp)
-                if umount_p:
-                    try:
-                        await ftp.change_directory(new_mount_dir)
-                    except Exception: pass
-                    else:
-                        if savedatax:
+        if savedatax:
+            async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+                try:
+                    await ftp.change_directory(new_mount_dir) # check if we are still mounted
+                except Exception:
+                    pass#print(f'{type(e).__name__}: {e}')
+                else:
+                    await ftp.upload(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys')
+                    umount_p = await unmount_save(ps4,mem,mp)
+                    if umount_p:
+                        try:
+                            await ftp.change_directory(new_mount_dir)
+                        except Exception: pass
+                        else:
                             await log_user_error(ctx,'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!')
                             breakpoint()
-                return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided'
+                    return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided'
 
 
 async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None = None) -> str:
@@ -757,23 +757,23 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
                     await ftp.change_directory(MOUNTED_POINT.as_posix())
                     await ftp.download(savedatax,decrypted_save_ouput / 'savedata0',write_into=True)
     finally:
-        async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-            try:
-                await ftp.change_directory(new_mount_dir) # check if we are still mounted
-            except Exception:
-                pass#print(f'{type(e).__name__}: {e}')
-            else:
-                await ftp.upload(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys')
-                umount_p = await unmount_save(ps4,mem,mp)
-                if umount_p:
-                    try:
-                        await ftp.change_directory(new_mount_dir) # check if we are still mounted
-                    except Exception: pass
-                    else:
-                        if savedatax: # it appears that savedatax can be nothing
+        if savedatax:
+            async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+                try:
+                    await ftp.change_directory(new_mount_dir) # check if we are still mounted
+                except Exception:
+                    pass#print(f'{type(e).__name__}: {e}')
+                else:
+                    await ftp.upload(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys')
+                    umount_p = await unmount_save(ps4,mem,mp)
+                    if umount_p:
+                        try:
+                            await ftp.change_directory(new_mount_dir) # check if we are still mounted
+                        except Exception: pass
+                        else:
                             await log_user_error(ctx,'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!')
                             breakpoint()
-                return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it the save you provided'
+                    return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it the save you provided'
 
 
 def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg):
