@@ -36,7 +36,6 @@ except:
 else:
     __file__ = str(Path(__file__) / 'huh.huh')
 
-CANT_USE_BOT_IN_DMS = 'Sorry, but you cant use this bot in dms you must use it in a server channel'
 
 FILE_SIZE_TOTAL_LIMIT = 677_145_600 # 600mb
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
@@ -162,12 +161,13 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
 
 async def log_message(ctx: interactions.SlashContext, msg: str):
     print(msg)
+    channel = ctx.channel or ctx.author
     try:
         msg = ctx.omljustusethe0optionsaccountid + msg
     except AttributeError:
         pass
     if ctx.expired:
-        await ctx.channel.send(msg)
+        await channel.send(msg)
     else:
         await ctx.edit(content=msg)
 
@@ -178,12 +178,13 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         # return
     print('user bad ##################')
     print(error_msg)
+    channel = ctx.channel or ctx.author
     try:
         error_msg = ctx.omljustusethe0optionsaccountid + error_msg
     except AttributeError:
         pass
     if ctx.expired:
-        await ctx.channel.send(f'<@{ctx.author_id}> {error_msg}',ephemeral=False)
+        await channel.send(f'<@{ctx.author_id}> {error_msg}',ephemeral=False)
     else:
         placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
         await ctx.send(f'<@{ctx.author_id}> Uh oh: {error_msg}',ephemeral=False) 
@@ -192,12 +193,13 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
 
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
     print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
+    channel = ctx.channel or ctx.author
     try:
         success_msg = ctx.omljustusethe0optionsaccountid + success_msg
     except AttributeError:
         pass
     if ctx.expired:
-        await ctx.channel.send(f'<@{ctx.author_id}>: {success_msg}',ephemeral=False, file=file)
+        await channel.send(f'<@{ctx.author_id}>: {success_msg}',ephemeral=False, file=file)
     else:
         placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
         await ctx.send(f'<@{ctx.author_id}>: {success_msg}',ephemeral=False, file=file) 
@@ -868,10 +870,6 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
             pass
         await ctx.bot.stop()
         return
-    if not ctx.channel:
-        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
-        return
-
 
     try:
         save_dir_ftp = await get_save_str()
@@ -929,11 +927,6 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             pass
         await ctx.bot.stop()
         return
-    if not ctx.channel:
-        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
-        return
-    
-    
 
     account_id = account_id_from_str(account_id,ctx.author_id,ctx)
     if isinstance(account_id,str):
@@ -1472,9 +1465,6 @@ async def ping_test(ctx: interactions.SlashContext):
         except Exception:
             pass
         await ctx.bot.stop()
-        return
-    if not ctx.channel:
-        await ctx.send(f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms but {CANT_USE_BOT_IN_DMS}',ephemeral=False)
         return
     await ctx.send(f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms',ephemeral=False)
     ctx.channel
