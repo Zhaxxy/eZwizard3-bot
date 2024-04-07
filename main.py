@@ -12,6 +12,7 @@ import os
 from datetime import datetime
 from zlib import crc32 # put modules you need at the bottom of list for custom cheats, in correct block
 import struct
+import gzip
 
 from psnawp_api import PSNAWP
 from psnawp_api.core.psnawp_exceptions import PSNAWPNotFound
@@ -816,7 +817,8 @@ def account_id_opt(func):
     min_length=1,
     opt_type=interactions.OptionType.STRING
     )(func)
-
+def filename_p_opt(func):
+    return interactions.slash_option(name='filename_p',description='If mutiple files are found, it will look for a file with this name, put path if in folder',opt_type=interactions.OptionType.STRING,required=False)(func)# (like man4/mysave.sav)')
 
 async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Sequence[CheatFunc | DecFunc],chet_files_custom: Path, savedata0_folder:Path) -> bool:
     await log_message(ctx,f'Looking for any `dl_link`s or `savedata0`s to download')
@@ -1036,9 +1038,45 @@ async def export_single_file_any_game(ftp: aioftp.Client, mount_dir: str, savena
 any_game_export = advanced_mode_export.group(name="any_game", description="Export a decrypted save from any game, if it doesnt work, please ask to add your game")
 @any_game_export.subcommand(sub_cmd_name="export", sub_cmd_description="Export a decrypted save from any game, if it doesnt work, please ask to add your game")
 @dec_enc_save_files
-@interactions.slash_option(name='filename_p',description='If mutiple files are found, it will look for a file with this name, put path if in folder',opt_type=interactions.OptionType.STRING,required=False)# (like man4/mysave.sav)')
+@filename_p_opt
 async def do_export_single_file_any_game(ctx: interactions.SlashContext,save_files: str,**kwargs):
     await base_do_dec(ctx,save_files,DecFunc(export_single_file_any_game,kwargs))
+
+
+async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+    """
+    Exported dl2 file
+    """
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+    
+    await ftp.download(ftp_save[0],decrypted_save_ouput)
+    
+    downloaded_ftp_save = decrypted_save_ouput / ftp_save[0]
+    
+    with gzip.open(downloaded_ftp_save, 'rb') as f_in:
+        with open(downloaded_ftp_save.with_suffix('.gz'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
+            shutil.copyfileobj(f_in, f_out)
+    os.replace(downloaded_ftp_save.with_suffix('.gz'),downloaded_ftp_save)
+    
+dying_light_2_export = advanced_mode_export.group(name='dying_light_2_export',description='Export .sav files')
+@dying_light_2_export.subcommand(sub_cmd_name='dying_light_2_export_sav',sub_cmd_description="Export a .sav file (eg save_main_0.sav) to your save")
+@dec_enc_save_files
+@filename_p_opt
+async def do_export_dl2_save(ctx: interactions.SlashContext,save_files: str,**kwargs):
+    await base_do_dec(ctx,save_files,DecFunc(export_dl2_save,kwargs))
 
 # async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/):
 #     await ftp.change_directory(mount_dir)
@@ -1256,10 +1294,44 @@ any_game_import = advanced_mode_import.group(name="any_game", description="Impor
 @interactions.slash_option('save_files','The save file to import the decrypted save to',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('dl_link_single','The file link you wanna import YOU SHOULD GET THIS FROM SAVEWIZARD OR advanced_mode_export',interactions.OptionType.STRING,True)
-@interactions.slash_option(name='filename_p',description='If mutiple files are found, it will look for a file with this name, put path if in folder',opt_type=interactions.OptionType.STRING,required=False)# (like man4/mysave.sav)')
+@filename_p_opt
 async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_single_file_any_game,kwargs))
 
+
+async def upload_dl2_sav_gz_decompressed(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_sav_decompressed: Path, filename_p: str | None = None):
+    """
+    Encrypted save
+    """
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+    
+    with open(dl_link_sav_decompressed, 'rb') as f_in:
+        with gzip.open(dl_link_sav_decompressed.with_suffix('.gz'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
+            shutil.copyfileobj(f_in, f_out)
+    os.replace(dl_link_sav_decompressed.with_suffix('.gz'),dl_link_sav_decompressed)
+    
+    await ftp.upload(dl_link_sav_decompressed,ftp_save[0],write_into=True)
+dying_light_2_import = advanced_mode_import.group(name="dying_light_2_import", description="Import .sav files")
+@dying_light_2_import.subcommand(sub_cmd_name="dying_light_2_import_sav", sub_cmd_description="Import a .sav file (eg save_main_0.sav) to your save")
+@interactions.slash_option('save_files','The save file to import the .sav file to',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('dl_link_sav_decompressed','the .sav file you want, eg a save_main_0.sav file',interactions.OptionType.STRING,True)
+@filename_p_opt
+async def do_upload_dl2_save(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_dl2_sav_gz_decompressed,kwargs))
 # async def upload_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_dot_sav_file: Path):
 #     """
 #     Encrypted Dying Light 2 save
