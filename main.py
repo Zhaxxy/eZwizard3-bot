@@ -1437,7 +1437,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     except PSNAWPNotFound as e:
         await log_user_error(ctx,f'Invalid psn name {psn_name}')
         return
-    account_id_hex = f"{int(user.account_id):016x}"
+    account_id_hex = f'{int(user.account_id):016x}'
     
     start_msg = 'your account id for {0} is {1}, saved to database, put 0 in the account_id option to use this account id!'
     my_database_account_id: str | None = None
