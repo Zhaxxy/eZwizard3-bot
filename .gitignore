@@ -164,3 +164,4 @@ cython_debug/
 config.yaml
 DO_NOT_DELETE_automatically_generated_gdrive_token.json
 credentials.json
+user_stuff.sqlite
