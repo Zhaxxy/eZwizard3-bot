@@ -255,7 +255,7 @@ class PS4AccountID:
         if len(account_id) != 16:
             raise ValueError('Invalid account id, lenght is not 16')
         int(account_id,16)
-        self._account_id = account_id
+        self._account_id = account_id.casefold()
     
     def __repr__(self) -> str:
         return f'{type(self).__name__}({self.account_id!r})'
