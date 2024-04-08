@@ -37,7 +37,7 @@ def pretty_time(time_in_seconds: float) -> str:
     return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
 
 def _raise_bad_config(missing_key: str) -> NoReturn:
-    raise Exception(f'Unconfigured config, unconfigured value {missing_key} or bad config')
+    raise Exception(f'Unconfigured config, unconfigured value {missing_key} or bad config or missing {missing_key}')
 
 _SILLY_SAVES = {'some_silly_save0', 'some_silly_save2', 'some_silly_save4', 'some_silly_save6', 'some_silly_save8', 'some_silly_save10', 'some_silly_save12', 'some_silly_save14', 'some_silly_save16', 'some_silly_save18', 'some_silly_save22', 'some_silly_save20'}
 def load_config() -> frozendict:
@@ -90,7 +90,13 @@ user_id:
 # each line here starts with "  - " because of yaml syntax
 bot_admins:
   - l147836464353247343
-  - l207983219845103687""")
+  - l207983219845103687
+# Simple boolean, if set to true then people will be able to use the bot in dms,
+# or if its false then people will not be able to use bot in dms, besides pinging the bot and my_account_id command
+# Some people may not want people using bot in dms soo
+allow_bot_usage_in_dms:
+    true
+""")
         raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yml file') from None
 
     key = 'discord_token'
@@ -140,6 +146,13 @@ bot_admins:
         _raise_bad_config(key)
 
     my_config[key] = tuple(x)
-
+    
+    key = 'allow_bot_usage_in_dms'
+    if (x := my_config.get(key)) is None:
+        _raise_bad_config(key)
+    
+    if not isinstance(x,bool):
+        raise Exception(f'{key} value should ethier be true or false, not {x}')
+    
     return frozendict(my_config)
     

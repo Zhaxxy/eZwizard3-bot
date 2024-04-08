@@ -36,6 +36,7 @@ except:
 else:
     __file__ = str(Path(__file__) / 'huh.huh')
 
+CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled commands in dms'
 
 FILE_SIZE_TOTAL_LIMIT = 677_145_600 # 600mb
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
@@ -871,6 +872,10 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         await ctx.bot.stop()
         return
 
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
+        return
+
     try:
         save_dir_ftp = await get_save_str()
     except SaveMountPointResourceError:
@@ -926,6 +931,10 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
         except Exception:
             pass
         await ctx.bot.stop()
+        return
+
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
 
     account_id = account_id_from_str(account_id,ctx.author_id,ctx)
@@ -1466,8 +1475,13 @@ async def ping_test(ctx: interactions.SlashContext):
             pass
         await ctx.bot.stop()
         return
-    await ctx.send(f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms',ephemeral=False)
-    ctx.channel
+    cool_ping_msg = f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms'
+    
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'
+    
+    await ctx.send(cool_ping_msg,ephemeral=False)
+
 
 async def main() -> int:
     global ps4
