@@ -1431,7 +1431,6 @@ psnawp = PSNAWP(CONFIG["ssocookie"])
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     ctx = await set_up_ctx(ctx)
     
-    
     await log_message(ctx,f'Looking for psn name {psn_name}')
     try:
         user = psnawp.user(online_id=psn_name)
@@ -1439,9 +1438,19 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
         await log_user_error(ctx,f'Invalid psn name {psn_name}')
         return
     account_id_hex = hex(int(user.account_id)).replace('0x','').rjust(16,'0')
-    add_user_account_id(ctx.author_id,account_id_hex)
-
-    await log_user_success(ctx,f'your account id for {psn_name} is {account_id_hex}, saved to database, use 0 in the account_id option to use this account id!')
+    
+    start_msg = 'your account id for {0} is {1}, saved to database, use 0 in the account_id option to use this account id!'
+    my_database_account_id: str | None = None
+    try:
+        my_database_account_id = get_user_account_id(ctx.author_id)
+    except KeyError:
+        pass
+    
+    if my_database_account_id != account_id_hex:
+        add_user_account_id(ctx.author_id,account_id_hex)
+    else:
+        start_msg = '**We\'ve already saved your account id for {0}**, it\'s {1}, use 0 in the account_id option to use this account id!'
+    await log_user_success(ctx,start_msg.format(user.online_id,account_id_hex))
 
 
 @interactions.slash_command(name="delete_cheat_chain",description=f"Deletes your cheat chain")
