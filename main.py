@@ -7,7 +7,6 @@ from traceback import format_exc
 from io import BytesIO
 import time
 import zipfile
-import json
 import os
 from datetime import datetime
 from zlib import crc32 # put modules you need at the bottom of list for custom cheats, in correct block
