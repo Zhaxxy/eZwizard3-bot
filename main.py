@@ -813,7 +813,7 @@ def dec_enc_save_files(func):
 def account_id_opt(func):
     return interactions.slash_option(
     name="account_id",
-    description="The account id to resign the saves to, put 0 for account id in database and 1 for no resign",
+    description="The account id to resign the saves to, put in 0 for account id in database and 1 for no resign",
     required=True,
     max_length=16,
     min_length=1,
@@ -1439,7 +1439,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
         return
     account_id_hex = hex(int(user.account_id)).replace('0x','').rjust(16,'0')
     
-    start_msg = 'your account id for {0} is {1}, saved to database, use 0 in the account_id option to use this account id!'
+    start_msg = 'your account id for {0} is {1}, saved to database, put 0 in the account_id option to use this account id!'
     my_database_account_id: str | None = None
     try:
         my_database_account_id = get_user_account_id(ctx.author_id)
@@ -1449,7 +1449,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     if my_database_account_id != account_id_hex:
         add_user_account_id(ctx.author_id,account_id_hex)
     else:
-        start_msg = '**We\'ve already saved your account id for {0}**, it\'s {1}, use 0 in the account_id option to use this account id!'
+        start_msg = '**We\'ve already saved your account id for {0}**, it\'s {1}, put 0 in the account_id option to use this account id!'
     await log_user_success(ctx,start_msg.format(user.online_id,account_id_hex))
 
 
