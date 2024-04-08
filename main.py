@@ -241,7 +241,7 @@ _save_mount_points = _ResourceManager(CONFIG['save_dirs'])
 async def get_save_str() -> str:
     return await _save_mount_points.acquire_resource()
 
-async def free_save_str(save_str: str,/) -> str:
+async def free_save_str(save_str: str,/) -> None:
     return await _save_mount_points.release_resource(save_str)
 
 async def get_amnt_free_save_strs() -> int:
