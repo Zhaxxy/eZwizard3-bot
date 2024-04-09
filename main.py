@@ -463,6 +463,9 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
             return f'blud thinks hes funny'
         return archive_name
 
+    if extract_drive_folder_id(link):
+        return f'For this option we do not take in folder urls {link}'
+
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(link) as response:
