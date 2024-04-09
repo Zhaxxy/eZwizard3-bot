@@ -27,6 +27,7 @@ from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
+from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
 
 try:
     __file__ = sys._MEIPASS
@@ -1068,20 +1069,53 @@ async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, savename: str, dec
     
     await ftp.download(ftp_save[0],decrypted_save_ouput)
     
-    downloaded_ftp_save = decrypted_save_ouput / ftp_save[0]
+    downloaded_ftp_save: Path = decrypted_save_ouput / ftp_save[0]
     
     with gzip.open(downloaded_ftp_save, 'rb') as f_in:
         with open(downloaded_ftp_save.with_suffix('.gz'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
             shutil.copyfileobj(f_in, f_out)
     os.replace(downloaded_ftp_save.with_suffix('.gz'),downloaded_ftp_save)
-    
 dying_light_2_export = advanced_mode_export.group(name='dying_light_2_export',description='Export .sav files')
-@dying_light_2_export.subcommand(sub_cmd_name='dying_light_2_export_sav',sub_cmd_description="Export a .sav file (eg save_main_0.sav) to your save")
+@dying_light_2_export.subcommand(sub_cmd_name='dying_light_2_export_sav',sub_cmd_description="Export a .sav file (eg save_main_0.sav) from your save")
 @dec_enc_save_files
 @filename_p_opt
 async def do_export_dl2_save(ctx: interactions.SlashContext,save_files: str,**kwargs):
     await base_do_dec(ctx,save_files,DecFunc(export_dl2_save,kwargs))
 
+async def export_xenoverse_2_sdata000_dat_file(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None,verify_checksum: bool = True):
+    """
+    Exported xenoverse 2 SDATAXXX.DAT file
+    """
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+    
+    await ftp.download(ftp_save[0],decrypted_save_ouput)
+    
+    downloaded_ftp_save: Path = decrypted_save_ouput / ftp_save[0]
+
+    with open(downloaded_ftp_save, 'rb') as f_in:
+        with open(downloaded_ftp_save.with_suffix('.bin'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
+            decrypt_xenoverse2_ps4(f_in,f_out,check_hash=verify_checksum)
+    os.replace(downloaded_ftp_save.with_suffix('.bin'),downloaded_ftp_save)
+xenoverse_2_export = advanced_mode_export.group(name='xenoverse_2',description='Export Xenoverse 2 saves')
+@xenoverse_2_export.subcommand(sub_cmd_name='xenoverse_2_export_sdata000_dat',sub_cmd_description='Export SDATAXXX.DAT files (eg SDATA000.DAT)')
+@dec_enc_save_files
+@filename_p_opt
+@interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)
+async def do_export_xenoverse_2_sdata000_dat_file(ctx: interactions.SlashContext,save_files: str,**kwargs):
+    await base_do_dec(ctx,save_files,DecFunc(export_xenoverse_2_sdata000_dat_file,kwargs))
 # async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/):
 #     await ftp.change_directory(mount_dir)
 #     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path) and path.name != 'SETTINGS.dat']
@@ -1336,6 +1370,37 @@ dying_light_2_import = advanced_mode_import.group(name="dying_light_2_import", d
 @filename_p_opt
 async def do_upload_dl2_save(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_dl2_sav_gz_decompressed,kwargs))
+
+async def upload_xenoverse_2_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_sdata000_dat_dec: Path, filename_p: str | None = None):
+    """
+    Xenoverse 2 encrypted save
+    """
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+
+    with open(dl_link_sdata000_dat_dec,'rb') as f, open(dl_link_sdata000_dat_dec.with_suffix('.enc'),'wb') as f_out:
+        encrypt_xenoverse2_ps4(f,f_out)
+    await ftp.upload(dl_link_sdata000_dat_dec.with_suffix('.enc'),ftp_save[0],write_into=True)
+xenoverse_2_import = advanced_mode_import.group(name="xenoverse_2_import", description="Import decrypted xeno files")
+@xenoverse_2_import.subcommand(sub_cmd_name="xenoverse_2_import_sdata000_dat", sub_cmd_description="Import a SDATAXXX.DAT decrypted file (eg SDATA000.DAT.dec) to your save")
+@interactions.slash_option('save_files','The save file to import the SDATAXXX.DAT file to',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('dl_link_sdata000_dat_dec','the SDATAXXX.DAT file you want, eg a SDATA000.DAT.dec file, should be extra decrypted',interactions.OptionType.STRING,True)
+@filename_p_opt
+async def do_upload_xenoverse_2_save(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_xenoverse_2_save,kwargs))
 # async def upload_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_dot_sav_file: Path):
 #     """
 #     Encrypted Dying Light 2 save
