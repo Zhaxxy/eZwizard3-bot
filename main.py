@@ -1542,15 +1542,7 @@ async def see_cheat_chain(ctx: interactions.SlashContext):
 @interactions.slash_command(name="ping",description=f"Test if the bot is responding")
 async def ping_test(ctx: interactions.SlashContext):
     global bot
-    try:
-        await ps4.notify(f'{ctx.author_id} pinged the bot!')
-    except Exception:
-        try:
-            await ctx.channel.send(HUH)
-        except Exception:
-            pass
-        await ctx.bot.stop()
-        return
+    await ps4_life_check(ctx)
     cool_ping_msg = f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms'
     
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
