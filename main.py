@@ -346,6 +346,15 @@ def get_total_amnt_used():
     with SqliteDict("user_stuff.sqlite", tablename="total_amnt_used") as db:
         return db["total_amnt_used_value"]
 
+def save_url(author_id: str, url: str):
+    author_id = str(author_id)
+    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls") as db:
+        db[author_id] = url
+        db.commit()
+
+def get_saved_url(author_id: str) -> str:
+    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls") as db:
+        return db[str(author_id)]
 
 user_cheat_chains = {}
 def add_cheat_chain(author_id: str, cheat_function: CheatFunc):
@@ -847,6 +856,12 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
     for cheat in cheat_chain:
         for arg_name,link in cheat.kwargs.items():
             if arg_name.startswith('dl_link'):
+                if link == '7':
+                    try:
+                        link = get_saved_url(ctx.author_id)
+                    except KeyError:
+                        await log_user_error(ctx,'You dont have any url saved, try running the file2url command again!')
+                        return False
                 await log_message(ctx,f'Downloading {link} {arg_name}')
                 result = await download_direct_link(ctx,link,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT)
                 if isinstance(result,str):
@@ -886,7 +901,14 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
-
+    
+    if save_files == '7':
+        try:
+            save_files = get_saved_url(ctx.author_id)
+        except KeyError:
+            await log_user_error(ctx,'You dont have any url saved, try running the file2url command again!')
+            return
+    
     try:
         save_dir_ftp = await get_save_str()
     except SaveMountPointResourceError:
@@ -939,6 +961,13 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
+
+    if save_files == '7':
+        try:
+            save_files = get_saved_url(ctx.author_id)
+        except KeyError:
+            await log_user_error(ctx,'You dont have any url saved, try running the file2url command again!')
+            return
 
     account_id = account_id_from_str(account_id,ctx.author_id,ctx)
     if isinstance(account_id,str):
@@ -1521,7 +1550,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     await log_user_success(ctx,start_msg.format(user.online_id,account_id_hex))
 
 
-@interactions.slash_command(name="delete_cheat_chain",description=f"Deletes your cheat chain")
+@interactions.slash_command(name="delete_cheat_chain",description="Deletes your cheat chain")
 async def delete_cheat_chain(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
     
@@ -1530,7 +1559,7 @@ async def delete_cheat_chain(ctx: interactions.SlashContext):
     await log_user_success(ctx,'Removed all the cheats from your cheat chain!')
 
 
-@interactions.slash_command(name="see_cheat_chain",description=f"See the cheats currently your cheat chain!")
+@interactions.slash_command(name="see_cheat_chain",description="See the cheats currently your cheat chain!")
 async def see_cheat_chain(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
     
@@ -1539,7 +1568,7 @@ async def see_cheat_chain(ctx: interactions.SlashContext):
     await log_user_success(ctx,f'Cheats in your chain are currently...{chets}')
 
 
-@interactions.slash_command(name="ping",description=f"Test if the bot is responding")
+@interactions.slash_command(name="ping",description="Test if the bot is responding")
 async def ping_test(ctx: interactions.SlashContext):
     global bot
     await ps4_life_check(ctx)
@@ -1549,6 +1578,20 @@ async def ping_test(ctx: interactions.SlashContext):
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'
     
     await ctx.send(cool_ping_msg,ephemeral=False)
+
+
+@interactions.slash_command(name='file2url',description="Convience command to get url from discord attachment, saves as url as 7")
+@interactions.slash_option(
+    name="my_file",
+    description='The file you want as a url',
+    required=True,
+    opt_type=interactions.OptionType.ATTACHMENT
+    )
+async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment):
+    ctx = await set_up_ctx(ctx)
+    await log_message(ctx,'Getting url')
+    save_url(ctx.author,my_file.url)
+    await log_user_success(ctx,f'the url is {my_file.url}, or use 7 in a field that needs a url, like save_files or dl_link')
 
 
 async def main() -> int:
