@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine
+from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, assert_never
 from pathlib import Path
 import shutil
 from traceback import format_exc
@@ -162,13 +162,14 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
 
 async def log_message(ctx: interactions.SlashContext, msg: str):
     print(msg)
+
     channel = ctx.channel or ctx.author
     try:
         msg = ctx.omljustusethe0optionsaccountid + msg
     except AttributeError:
         pass
     if ctx.expired:
-        await channel.send(msg)
+        await channel.send(f'{msg}')
     else:
         await ctx.edit(content=msg)
 
@@ -393,6 +394,20 @@ def list_ps4_saves(folder_containing_saves: Path,/) -> Generator[tuple[Path,Path
     for filename in folder_containing_saves.rglob('*'):
         if is_ps4_title_id(filename.parent.name) and filename.suffix == '.bin' and filename.is_file() and Path(filename.with_suffix('')).is_file():
             yield filename,Path(filename.with_suffix(''))
+
+
+async def ps4_life_check(ctx: interactions.SlashContext | None = None):
+    channel = ctx.channel or ctx.author
+    try:
+        await ps4.notify('life check!')
+    except Exception:
+        try:
+            await channel.send(HUH) if ctx else None
+        except Exception:
+            pass
+        await ctx.bot.stop()
+        assert_never('bot should be ended')
+    
 
 
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
@@ -865,15 +880,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
 
 async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fun: DecFunc | None = None):
     ctx = await set_up_ctx(ctx)
-    try:
-        await ps4.notify('doing some base_do_dec')
-    except Exception:
-        try:
-            await ctx.channel.send(HUH)
-        except Exception:
-            pass
-        await ctx.bot.stop()
-        return
+    await ps4_life_check(ctx)
 
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
@@ -926,15 +933,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
 
 async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account_id: str, cheat: CheatFunc):
     ctx = await set_up_ctx(ctx)
-    try:
-        await ps4.notify('doing some base_do_cheat')
-    except Exception:
-        try:
-            await ctx.channel.send(HUH)
-        except Exception:
-            pass
-        await ctx.bot.stop()
-        return
+    await ps4_life_check(ctx)
 
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
