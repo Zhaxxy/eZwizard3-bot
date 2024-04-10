@@ -481,7 +481,8 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
 
     if extract_drive_folder_id(link):
         return f'For this option we do not take in folder urls {link}'
-
+    
+    link = link.replace('media.discordapp.net','cdn.discordapp.com')
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(link) as response:
