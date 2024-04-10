@@ -1,3 +1,4 @@
 [submodule "custom_cheats/xenoverse2_ps4_decrypt"]
 	path = custom_cheats/xenoverse2_ps4_decrypt
 	url = https://github.com/Zhaxxy/xenoverse2_ps4_decrypt.git
+	ignore = untracked
