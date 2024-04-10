@@ -1590,7 +1590,7 @@ async def ping_test(ctx: interactions.SlashContext):
 async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment):
     ctx = await set_up_ctx(ctx)
     await log_message(ctx,'Getting url')
-    save_url(ctx.author,my_file.url)
+    save_url(ctx.author_id,my_file.url)
     await log_user_success(ctx,f'the url is {my_file.url}, or use 7 in a field that needs a url, like save_files or dl_link')
 
 
