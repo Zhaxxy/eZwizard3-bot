@@ -755,11 +755,12 @@ async def resign_mounted_save(ctx: interactions.SlashContext, ftp: aioftp.Client
     finally:
         return old_account_id
 
-async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str) -> str | tuple[list | PS4AccountID]:
+async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str]) -> str | tuple[list | PS4AccountID]:
     pretty_save_dir = white_file.relative_to(parent_dir)
     await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
+    mount_save_title_id = CONFIG['title_id'] if isinstance(save_dir_ftp,str) else save_dir_ftp[2]
     try:
-        async with MountSave(ps4,mem,int(CONFIG['user_id'],16),CONFIG['title_id'],save_dir_ftp) as mp:
+        async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
             savedatax = mp.savedatax
             new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
             if not mp:
@@ -1077,7 +1078,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     except FileNotFoundError:
                         pass
             if save_files.isdigit():
-                await log_message(ctx,'cleaning up the things you did')
+                await log_message(ctx,'cleaning up the things you did')3
                 await log_user_error(ctx,'unimplemented')
                 return
                 
