@@ -1077,7 +1077,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     except FileNotFoundError:
                         pass
             if save_files.isdigit():
-                await log_message(ctx,'cleaning up the things you did'
+                await log_message(ctx,'cleaning up the things you did')
                 await log_user_error(ctx,'unimplemented')
                 return
                 
