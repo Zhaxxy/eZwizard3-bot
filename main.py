@@ -28,6 +28,7 @@ from archive_helpers import get_archive_info, extract_single_file, filename_vali
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
 from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
+from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
 
 try:
     __file__ = sys._MEIPASS
@@ -1145,6 +1146,42 @@ xenoverse_2_export = advanced_mode_export.group(name='xenoverse_2',description='
 @interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)
 async def do_export_xenoverse_2_sdata000_dat_file(ctx: interactions.SlashContext,save_files: str,**kwargs):
     await base_do_dec(ctx,save_files,DecFunc(export_xenoverse_2_sdata000_dat_file,kwargs))
+
+
+async def export_red_dead_redemption_2_or_gta_v_file(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+    """
+    Exported Red Dead Redemption 2 or Grand Theft Auto V savedata
+    """
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+    
+    await ftp.download(ftp_save[0],decrypted_save_ouput)
+    
+    downloaded_ftp_save: Path = decrypted_save_ouput / ftp_save[0]
+    
+    with open(downloaded_ftp_save,'rb') as f:
+        decrypted_rdr2_data = auto_encrypt_decrypt(f)
+    with open(downloaded_ftp_save,'wb') as f:
+        f.write(decrypted_rdr2_data)
+rdr_2_or_gta_v_export = advanced_mode_export.group(name='rdr_2_or_gta_v_export',description='Export Red Dead Redemption 2 or GTA V saves')
+@rdr_2_or_gta_v_export.subcommand(sub_cmd_name='rdr_2_or_gta_v_export_savedata',sub_cmd_description='Export Red Dead Redemption 2 or GTA V saves')
+@dec_enc_save_files
+@filename_p_opt
+#@interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)
+async def do_export_red_dead_redemption_2_or_gta_v_file(ctx: interactions.SlashContext,save_files: str,**kwargs):
+    await base_do_dec(ctx,save_files,DecFunc(export_red_dead_redemption_2_or_gta_v_file,kwargs))
 # async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/):
 #     await ftp.change_directory(mount_dir)
 #     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path) and path.name != 'SETTINGS.dat']
@@ -1430,6 +1467,41 @@ xenoverse_2_import = advanced_mode_import.group(name="xenoverse_2_import", descr
 @filename_p_opt
 async def do_upload_xenoverse_2_save(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_xenoverse_2_save,kwargs))
+
+async def upload_red_dead_redemption_2_or_gta_v_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_savedata: Path, filename_p: str | None = None):
+    """
+    Red Dead Redemption 2 or Grand Theft Auto V encrypted save
+    """
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+
+    with open(dl_link_savedata,'rb+') as f:
+        encrypted_rdr2_data = auto_encrypt_decrypt(f)
+    
+    with open(dl_link_savedata,'wb') as f:
+        f.write(encrypted_rdr2_data)
+    
+    await ftp.upload(dl_link_savedata,ftp_save[0],write_into=True)
+rdr_2_or_gta_v_import = advanced_mode_import.group(name="rdr_2_or_gta_v_import", description="Import decrypted Red Dead Redemption 2 or GTA V saves")
+@rdr_2_or_gta_v_import.subcommand(sub_cmd_name="rdr_2_or_gta_v_import_savedata", sub_cmd_description="Import a exported save file from Red Dead Redemption 2 or GTA V")
+@interactions.slash_option('save_files','The save file to import the savedata file to',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('dl_link_savedata','the savedata you want, eg a memory.dat file, should be extra decrypted',interactions.OptionType.STRING,True)
+@filename_p_opt
+async def do_upload_red_dead_redemption_2_or_gta_v_save(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_red_dead_redemption_2_or_gta_v_save,kwargs))
 # async def upload_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_dot_sav_file: Path):
 #     """
 #     Encrypted Dying Light 2 save
