@@ -351,15 +351,48 @@ def get_total_amnt_used():
     with SqliteDict("user_stuff.sqlite", tablename="total_amnt_used") as db:
         return db["total_amnt_used_value"]
 
-def save_url(author_id: str, url: str):
+
+def save_url(author_id: str, url: str, url_id: int):
+    if type(url_id) != int or url_id <= 1:
+        raise TypeError(f'Invalid url_id {url_id}')
     author_id = str(author_id)
-    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls") as db:
-        db[author_id] = url
+    url_id = str(url_id)
+    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls_ids") as db:
+        try:
+            a = db[author_id]
+        except KeyError:
+            db[author_id] = {url_id:url}
+        else:
+            a.update({url_id:url})
+            db[author_id] = a
         db.commit()
 
-def get_saved_url(author_id: str) -> str:
-    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls") as db:
-        return db[str(author_id)]
+
+def get_saved_url(author_id: str, url_id: int) -> str:
+    if type(url_id) != int or url_id <= 1:
+        raise TypeError(f'Invalid url_id {url_id}')
+    author_id = str(author_id)
+    url_id = str(url_id)
+    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls_ids") as db:
+        a = db[author_id]
+        print(f'{a = }')
+        return a[url_id]
+
+
+def delete_saved_urls(author_id: str):
+    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls_ids") as db:
+        try:
+            del db[str(author_id)]
+        except KeyError:
+            pass
+        db.commit()
+
+def get_all_saved_urls(author_id: str) -> dict[str,str]:
+    with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls_ids") as db:
+        try:
+            return db[author_id]
+        except KeyError:
+            return {}
 
 user_cheat_chains = {}
 def add_cheat_chain(author_id: str, cheat_function: CheatFunc):
@@ -861,11 +894,11 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
     for cheat in cheat_chain:
         for arg_name,link in cheat.kwargs.items():
             if arg_name.startswith('dl_link'):
-                if link == '7':
+                if link.isdigit() and int(link) > 1:
                     try:
-                        link = get_saved_url(ctx.author_id)
+                        link = get_saved_url(ctx.author_id,int(link))
                     except KeyError:
-                        await log_user_error(ctx,'You dont have any url saved, try running the file2url command again!')
+                        await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
                         return False
                 await log_message(ctx,f'Downloading {link} {arg_name}')
                 result = await download_direct_link(ctx,link,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT)
@@ -907,11 +940,11 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
     
-    if save_files == '7':
+    if save_files.isdigit() and int(save_files) > 1:
         try:
-            save_files = get_saved_url(ctx.author_id)
+            save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
-            await log_user_error(ctx,'You dont have any url saved, try running the file2url command again!')
+            await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
             return
     
     try:
@@ -967,11 +1000,11 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
 
-    if save_files == '7':
+    if save_files.isdigit() and int(save_files) > 1:
         try:
-            save_files = get_saved_url(ctx.author_id)
+            save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
-            await log_user_error(ctx,'You dont have any url saved, try running the file2url command again!')
+            await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
             return
 
     account_id = account_id_from_str(account_id,ctx.author_id,ctx)
@@ -1656,19 +1689,40 @@ async def ping_test(ctx: interactions.SlashContext):
     await ctx.send(cool_ping_msg,ephemeral=False)
 
 
-@interactions.slash_command(name='file2url',description="Convience command to get url from discord attachment, saves as url as 7")
+@interactions.slash_command(name='file2url',description="Convenience command to get url from discord attachment")
 @interactions.slash_option(
     name="my_file",
     description='The file you want as a url',
     required=True,
     opt_type=interactions.OptionType.ATTACHMENT
     )
-async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment):
+@interactions.slash_option(
+    name="my_file_id",
+    description='The ID you put in to access this url',
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    min_value=2
+    )
+async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment, my_file_id: int):
     ctx = await set_up_ctx(ctx)
     await log_message(ctx,'Getting url')
-    save_url(ctx.author_id,my_file.url)
-    await log_user_success(ctx,f'the url is {my_file.url}, or use 7 in a field that needs a url, like save_files or dl_link')
+    save_url(ctx.author_id,my_file.url,my_file_id)
+    await log_user_success(ctx,f'the url is {my_file.url}, or use {my_file_id} in a field that needs a url, like save_files or dl_link')
 
+@interactions.slash_command(name='delete_files2urls',description="Delete all your saved urls!")
+async def delete_files2urls(ctx: interactions.SlashContext):
+    ctx = await set_up_ctx(ctx)
+    delete_saved_urls(ctx.author_id)
+    await log_user_success(ctx,'Deleted all urls saved succesfully!')
+
+@interactions.slash_command(name='see_saved_files2urls',description="See all your saved urls with the file2url command")
+async def see_saved_files2urls(ctx: interactions.SlashContext):
+    ctx = await set_up_ctx(ctx)
+    a = get_all_saved_urls(ctx.author_id)
+    pretty = ''
+    for key,value in a.items():
+        pretty += f'{key} -> {value}\n'
+    await log_user_success(ctx,f'Your saved urls are... \n{pretty.strip()}')
 
 async def main() -> int:
     global ps4
