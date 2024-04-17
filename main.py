@@ -27,8 +27,12 @@ from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
-from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
-from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
+try:
+    from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
+    from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
+except ModuleNotFoundError as e:
+    msg = f'{e}, maybe you need to add the --recurse-submodules to the git clone command `git clone https://github.com/Zhaxxy/eZwizard3-bot.git --recurse-submodules`'
+    raise ModuleNotFoundError(msg) from None
 
 try:
     __file__ = sys._MEIPASS
