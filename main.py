@@ -1035,22 +1035,27 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
 
             if not await pre_process_cheat_args(ctx,my_cheats_chain,chet_files_custom,savedata0_folder):
                 return
-
-            download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
-            if download_ps4_saves_result:
-                await log_user_error(ctx,download_ps4_saves_result)
+            
+            if save_files.isdigit():
+                await log_message(ctx,'doing special built in save thing')
+                await log_user_error(ctx,'unimplemented')
                 return
-            for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
-                await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
-                pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
-                await log_message(ctx,f'Getting ready to mount {pretty_folder_thing}')
-                async with mounted_saves_at_once:
-                    a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,save_dir_ftp)
-                if isinstance(a,str):
-                    await log_user_error(ctx,a)
+            else:
+                download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
+                if download_ps4_saves_result:
+                    await log_user_error(ctx,download_ps4_saves_result)
                     return
-                results,old_account_id = a
-                await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
+                for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
+                    await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
+                    pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
+                    await log_message(ctx,f'Getting ready to mount {pretty_folder_thing}')
+                    async with mounted_saves_at_once:
+                        a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,save_dir_ftp)
+                    if isinstance(a,str):
+                        await log_user_error(ctx,a)
+                        return
+                    results,old_account_id = a
+                    await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
             
             await log_message(ctx,f'looking through results to do some renaming for {save_files}')
             for bin_file, white_file in done_ps4_saves:
@@ -1071,7 +1076,11 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         white_file.parent.parent.rename(white_file.parent.parent.parent / old_account_id.account_id)
                     except FileNotFoundError:
                         pass
-
+            if save_files.isdigit():
+                await log_message(ctx,'cleaning up the things you did'
+                await log_user_error(ctx,'unimplemented')
+                return
+                
             await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or 'paypal me some money eboot.bin@protonmail.com and i might fix this message').strip())
             return
     finally:
