@@ -1745,12 +1745,12 @@ async def main() -> int:
 
     UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
 
-
+    initialise_database()
+    
     global mem
     global bot
     async with PatchMemoryPS4900(ps4) as mem:
         bot = interactions.Client(token=CONFIG['discord_token'])
-        initialise_database()
         await bot.astart()
     return 0 
 

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, NamedTuple
 import json
 import re
 
@@ -7,6 +7,21 @@ import yaml
 from frozendict import frozendict
 
 CUSA_TITLE_ID = re.compile(r'CUSA\d{5}')
+
+
+class BuiltInSave(NamedTuple):
+    on_ps4_title_id: str
+    on_ps4_save_dir: str
+    unique_name: str
+    desc: str
+    
+    @classmethod
+    def from_yaml_entry(cls,yaml_entry: str,/):
+        on_ps4_title_id, on_ps4_save_dir, unique_name, *descc = yaml_entry.split(' ')
+        return cls(on_ps4_title_id, on_ps4_save_dir, unique_name, ' '.join(descc))
+
+    def as_entry_str(self) -> str:
+        return ' '.join(self)
 
 def is_ps4_title_id(input_str: str,/) -> bool: 
     return bool(CUSA_TITLE_ID.fullmatch(input_str))
@@ -96,6 +111,11 @@ bot_admins:
 # Some people may not want people using bot in dms soo
 allow_bot_usage_in_dms:
     true
+# saves already on the console put here to allow for quicker resigns and cheats
+# follow the format
+# - TITLEID SAVEDIRNAME a_unique_name_for_a_save some description that can have spaces
+built_in_saves:
+  - CUSA12345 LBPXSAVE bigfart some cool description here
 """)
         raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yml file') from None
 
@@ -153,6 +173,38 @@ allow_bot_usage_in_dms:
     
     if not isinstance(x,bool):
         raise Exception(f'{key} value should ethier be true or false, not {x}')
+
+    key = 'built_in_saves'
+    if (x := my_config.get(key)) is None:
+        raise Exception(f'Unconfigured config, unconfigured value {key} or bad config or missing {key}, you can just put the key and no saves if you dont want any built in saves')
     
+    if my_config[key] is None:
+        del my_config[key]
+    
+    for i, value in enumerate(my_config[key]):
+        try:
+            newish_value = my_config[key][i] = BuiltInSave.from_yaml_entry(value)
+        except Exception as e:
+            raise ValueError(f'Invalid {key} entry `{value}`, got error {type(e).__name__}: {e}') from None
+        
+        if (newish_value.on_ps4_title_id == my_config['title_id']) and (newish_value.on_ps4_save_dir in my_config['save_dirs']):
+            raise ValueError(f'Entry `{value}` cannot be a save in the save_dirs')
+        
+        for i2, sub_value in enumerate(my_config[key]):
+            if i2 == i:
+                continue
+            try:
+                newish_sub_value = BuiltInSave.from_yaml_entry(sub_value)
+            except Exception:
+                continue # this is gonna error out later, lets just let that happen when it comes to the time
+            
+            if newish_sub_value.unique_name == newish_value.unique_name:
+                raise ValueError(f'Entries `{value}` and `{sub_value}` cannot have the save unique_name')
+            
+            if (newish_sub_value.on_ps4_title_id == newish_value.on_ps4_title_id) and \
+            (newish_sub_value.on_ps4_save_dir == newish_value.on_ps4_save_dir):
+                raise ValueError(f'Entries `{value}` and `{sub_value}` are duplicate saves, maybe you made a mistake?')
+
+
+    my_config[key] = frozendict({ben.unique_name:ben for ben in my_config[key]})
     return frozendict(my_config)
-    
