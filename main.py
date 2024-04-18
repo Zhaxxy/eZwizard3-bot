@@ -52,7 +52,7 @@ DOWNLOAD_CHUNK_SIZE = 1024
 AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
 
 CONFIG = load_config()
-SAVE_FOLDER_ENCRYPTED = f'/user/home/{CONFIG["user_id"]}/savedata/{CONFIG["title_id"]}'
+SAVE_FOLDER_ENCRYPTED = f'/user/home/{CONFIG["user_id"]}/savedata/YAHY40786'
 MOUNTED_POINT = Path('/mnt/sandbox/NPXS20001_000')
 
 PS4_SAVE_KEYSTONES = {
@@ -243,7 +243,9 @@ class _ResourceManager:
     async def get_free_resources_count(self):
         async with self.lock:
             return len(self.resources) - len(self.used_resources)
-_save_mount_points = _ResourceManager(CONFIG['save_dirs'])
+SAVE_DIRS = ('save0', 'save1', 'save2', 'save3', 'save4', 'save5', 'save6', 'save7', 'save8', 'save9', 'save10', 'save11')
+
+_save_mount_points = _ResourceManager(SAVE_DIRS)
 
 async def get_save_str() -> str:
     return await _save_mount_points.acquire_resource()
@@ -715,6 +717,9 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file.relative_to(parent_dir)
+    await log_message(ctx,'Ensuring base save exists on ps4 before uploading')
+    async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
+        pass
     await log_message(ctx,'Connecting to PS4 ftp to upload encrpyted save')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
         await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
@@ -758,7 +763,7 @@ async def resign_mounted_save(ctx: interactions.SlashContext, ftp: aioftp.Client
 async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str]) -> str | tuple[list | PS4AccountID]:
     pretty_save_dir = white_file.relative_to(parent_dir)
     await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
-    mount_save_title_id = CONFIG['title_id'] if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
+    mount_save_title_id = 'YAHY40786' if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
             savedatax = mp.savedatax
@@ -809,7 +814,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
 
     await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
     try:
-        async with MountSave(ps4,mem,int(CONFIG['user_id'],16),CONFIG['title_id'],save_dir_ftp) as mp:
+        async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
             savedatax = mp.savedatax
             new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
             if not mp:
@@ -1621,13 +1626,13 @@ async def update_status():
 
     if not amnt_of_free:
         status = interactions.Status.DO_NOT_DISTURB
-        msg = f'NO slots free {amnt_of_free}/{len(CONFIG["save_dirs"])} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
-    elif amnt_of_free == len(CONFIG['save_dirs']):
+        msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
+    elif amnt_of_free == len(SAVE_DIRS):
         status = interactions.Status.IDLE
-        msg = f'All slots free {amnt_of_free}/{len(CONFIG["save_dirs"])} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
+        msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
     else:
         status = interactions.Status.ONLINE
-        msg = f'Some slots free {amnt_of_free}/{len(CONFIG["save_dirs"])} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
+        msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
     await bot.change_presence(activity=interactions.Activity.create(
                                 name=msg),
                                 status=status)
@@ -1740,8 +1745,6 @@ async def main() -> int:
     await send_ps4debug(CONFIG['ps4_ip'],port=9090)
     ps4 = PS4Debug(CONFIG['ps4_ip'])
 
-    async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-        await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
 
     UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
 

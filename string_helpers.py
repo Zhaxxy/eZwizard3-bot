@@ -76,25 +76,6 @@ google_credentials_file:
 # This one is easy, you can get it by looking at View Connection Status in Network settings (IP Address)
 ps4_ip:
     192.168.1.256 
-# You need sacrifice saves in order for this bot to work
-# ill probably make a guide on how using save mounter
-# each line here starts with "  - " because of yaml syntax
-save_dirs:
-  - some_silly_save0
-  - some_silly_save2
-  - some_silly_save4
-  - some_silly_save6
-  - some_silly_save8
-  - some_silly_save10
-  - some_silly_save12
-  - some_silly_save14
-  - some_silly_save16
-  - some_silly_save18
-  - some_silly_save22
-  - some_silly_save20
-# The title id of the saves, they all need to be of the same game
-title_id: 
-    FAKE78699 
 # This is the user_id of your local account. NOT ACCOUNT ID! (i should be able to grab this but idk why it no work)
 # you can get this by going to /user/home on a ftp client and the folder name will be your user_id.
 # also in each folder there is a username.dat file with the local username, so you can open this to find your user
@@ -141,18 +122,12 @@ built_in_saves:
         _raise_bad_config(key)
 
     key = 'save_dirs'
-    if not (x := my_config.get(key)):
-        _raise_bad_config(key)
-
-    for silly in x:
-        if silly in _SILLY_SAVES:
-            _raise_bad_config(key)
-
-    my_config[key] = tuple(str(b) for b in x)
+    if (x := my_config.get(key)):
+        raise Exception(f'{key} in your config is no longer needed, please delete it as well as its values')
 
     key = 'title_id'
-    if not (x := my_config.get(key)) or x == 'FAKE78699':
-        _raise_bad_config(key)
+    if (x := my_config.get(key)):
+        raise Exception(f'{key} in your config is no longer needed, please delete it as well as its value')
 
     key = 'user_id'
     if not (x := my_config.get(key)) or x == '1ej71bbd':
@@ -186,10 +161,8 @@ built_in_saves:
             newish_value = my_config[key][i] = BuiltInSave.from_yaml_entry(value)
         except Exception as e:
             raise ValueError(f'Invalid {key} entry `{value}`, got error {type(e).__name__}: {e}') from None
-        
-        if (newish_value.on_ps4_title_id == my_config['title_id']) and (newish_value.on_ps4_save_dir in my_config['save_dirs']):
-            raise ValueError(f'Entry `{value}` cannot be a save in the save_dirs')
-        
+
+
         for i2, sub_value in enumerate(my_config[key]):
             if i2 == i:
                 continue
