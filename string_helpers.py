@@ -31,6 +31,12 @@ def extract_drive_folder_id(link: str,/) -> str:
     return link.split('folders/')[-1].split('?')[0] if link.startswith('https://drive.google.com/drive') else ''
 
 
+def chunker(seq, size):
+    """
+    https://stackoverflow.com/questions/434287/how-to-iterate-over-a-list-in-chunks
+    """
+    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
+
 def extract_drive_file_id(link: str,/) -> str:
     if link.startswith('https://drive.google.com/file/d/'):
         return link.split('https://drive.google.com/file/d/')[-1].split('?')[0].split('/')[0]

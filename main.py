@@ -23,7 +23,7 @@ import aioftp
 from ps4debug import PS4Debug
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID
+from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
@@ -173,29 +173,39 @@ async def log_message(ctx: interactions.SlashContext, msg: str):
         msg = ctx.omljustusethe0optionsaccountid + msg
     except AttributeError:
         pass
-    if ctx.expired:
-        await channel.send(f'{msg}')
-    else:
-        await ctx.edit(content=msg)
+    
+    
+    for msg_chunk in chunker(msg,1999):
+        if ctx.expired:
+            await channel.send(msg_chunk)
+        else:
+            await ctx.edit(content=msg_chunk)
 
 
 async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     # if error_msg == 'Theres too many people using the bot at the moment, please wait for a spot to free up':
         # # await ctx.send('...',ephemeral=False)
         # return
-    print('user bad ##################')
-    print(error_msg)
+    print(f'user bad ##################\n{error_msg}')
     channel = ctx.channel or ctx.author
     try:
         error_msg = ctx.omljustusethe0optionsaccountid + error_msg
     except AttributeError:
         pass
-    if ctx.expired:
-        await channel.send(f'<@{ctx.author_id}> {error_msg}',ephemeral=False)
-    else:
-        placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
-        await ctx.send(f'<@{ctx.author_id}> Uh oh: {error_msg}',ephemeral=False) 
-        await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
+    full_msg = f'<@{ctx.author_id}> Uh oh: {error_msg}'
+    first_time = True
+    
+    for msg_chunk in chunker(full_msg,1999):
+        if ctx.expired:
+            await channel.send(msg_chunk,ephemeral=False)
+        else:
+            if first_time:
+                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
+            await ctx.send(msg_chunk,ephemeral=False) 
+            if first_time:
+                await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
+        first_time = False
+            
     await update_status()
 
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
@@ -205,12 +215,20 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
         success_msg = ctx.omljustusethe0optionsaccountid + success_msg
     except AttributeError:
         pass
-    if ctx.expired:
-        await channel.send(f'<@{ctx.author_id}>: {success_msg}',ephemeral=False, file=file)
-    else:
-        placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
-        await ctx.send(f'<@{ctx.author_id}>: {success_msg}',ephemeral=False, file=file) 
-        await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
+    full_msg = f'<@{ctx.author_id}>: {success_msg}'
+    first_time = True
+    
+    for msg_chunk in chunker(full_msg,1999):
+        if ctx.expired:
+            await channel.send(full_msg,ephemeral=False, file=file)
+        else:
+            if first_time:
+                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
+            await ctx.send(full_msg,ephemeral=False, file=file) 
+            if first_time:
+                await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
+        first_time = False
+
     await update_status()
 
 class SaveMountPointResourceError(Exception):
