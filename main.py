@@ -1069,9 +1069,14 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     if savename:
                         try:
                             white_file.rename(white_file.parent / savename)
-                            bin_file.rename(bin_file.parent / (savename + '.bin'))
-                        except FileNotFoundError:
+                        except (FileNotFoundError, FileExistsError):
                             pass
+                        
+                        try:
+                            bin_file.rename(bin_file.parent / (savename + '.bin'))
+                        except (FileNotFoundError, FileExistsError):
+                            pass
+
                     if gameid:
                         try:
                             white_file.parent.rename(white_file.parent.parent / gameid)
@@ -1080,7 +1085,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 if not account_id:
                     try:
                         white_file.parent.parent.rename(white_file.parent.parent.parent / old_account_id.account_id)
-                    except FileNotFoundError:
+                    except (FileNotFoundError, FileExistsError):
                         pass
             if save_files.isdigit():
                 await log_message(ctx,'cleaning up the things you did')
