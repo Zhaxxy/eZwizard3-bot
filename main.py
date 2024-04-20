@@ -735,9 +735,9 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file.relative_to(parent_dir)
-    await log_message(ctx,'Ensuring base save exists on ps4 before uploading')
-    async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
-        pass
+    # await log_message(ctx,'Ensuring base save exists on ps4 before uploading')
+    # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
+        # pass
     await log_message(ctx,'Connecting to PS4 ftp to upload encrpyted save')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
         await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
@@ -1776,6 +1776,11 @@ async def main() -> int:
     global mem
     global bot
     async with PatchMemoryPS4900(ps4) as mem:
+        print('Memory patched, ensuring all base saves exist!')
+        for eeeee in SAVE_DIRS:
+            async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',eeeee) as mp:
+                pass
+        print('done checking!')
         bot = interactions.Client(token=CONFIG['discord_token'])
         await bot.astart()
     return 0 
