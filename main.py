@@ -1,6 +1,7 @@
 import asyncio
 import sys
 from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, assert_never
+from enum import Enum
 from pathlib import Path
 import shutil
 from traceback import format_exc
@@ -21,6 +22,7 @@ from sqlitedict import SqliteDict
 import aiohttp
 import aioftp
 from ps4debug import PS4Debug
+from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
 from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker
@@ -50,6 +52,7 @@ ZIP_LOOSE_FILES_MAX_AMT = 100
 MAX_RESIGNS_PER_ONCE = 99
 DOWNLOAD_CHUNK_SIZE = 1024
 AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
+PS4_ICON0_DIMENSIONS = 228,128
 
 CONFIG = load_config()
 SAVE_FOLDER_ENCRYPTED = f'/user/home/{CONFIG["user_id"]}/savedata/YAHY40786'
@@ -230,6 +233,12 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
         first_time = False
 
     await update_status()
+
+class ChangeSaveIconOption(Enum):
+    KEEP_ASPECT_NEAREST_NEIGHBOUR = 1
+    IGNORE_ASPECT_NEAREST_NEIGHBOUR = 2
+    KEEP_ASPECT_BILINEAR = 3
+    IGNORE_ASPECT_BILINEAR = 4 
 
 class SaveMountPointResourceError(Exception):
     """
@@ -1391,6 +1400,45 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
 async def do_re_region(ctx: interactions.SlashContext,save_files: str,account_id: str, gameid: str):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(re_region,{'gameid':gameid.upper()}))
 
+async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_image_overlay: Path, option: ChangeSaveIconOption):
+    await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
+    async with TemporaryDirectory() as tp:
+        og_icon0_path = Path(tp,'icon0.png')
+        await ftp.download('icon0.png',og_icon0_path,write_into=True)
+        with Image.open(dl_link_image_overlay).convert("RGBA") as icon_overlay:
+            width, height = icon_overlay.size
+            if option == ChangeSaveIconOption.KEEP_ASPECT_NEAREST_NEIGHBOUR:
+                icon_overlay = icon_overlay.resize((int((width / height) * PS4_ICON0_DIMENSIONS[1]),PS4_ICON0_DIMENSIONS[1]),Image.Resampling.NEAREST)
+            elif option == ChangeSaveIconOption.IGNORE_ASPECT_NEAREST_NEIGHBOUR:
+                icon_overlay = icon_overlay.resize(PS4_ICON0_DIMENSIONS,Image.Resampling.NEAREST)
+            elif option == ChangeSaveIconOption.KEEP_ASPECT_BILINEAR:
+                icon_overlay = icon_overlay.resize((int((width / height) * PS4_ICON0_DIMENSIONS[1]),PS4_ICON0_DIMENSIONS[1]))
+            elif option == ChangeSaveIconOption.IGNORE_ASPECT_BILINEAR:
+                icon_overlay = icon_overlay.resize(PS4_ICON0_DIMENSIONS)
+            
+            with Image.open(og_icon0_path) as im:
+                im.paste(icon_overlay,(0,0),icon_overlay)
+                im.save(og_icon0_path)
+        await ftp.upload(og_icon0_path,'icon0.png',write_into=True)
+@interactions.slash_command(name="change_icon",description=f"Add an icon overlay to your saves!")
+@interactions.slash_option('save_files','The save files to change the icon of',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('dl_link_image_overlay','The link to an image overlay you want, check out file2url!',interactions.OptionType.STRING,True)
+@interactions.slash_option(
+    name="option",
+    description="Some options you might want",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[
+        interactions.SlashCommandChoice(name="Keep aspect ratio and use nearest neighbour for resizing", value=1),
+        interactions.SlashCommandChoice(name="Ignore aspect ratio and use nearest neighbour for resizing", value=2),
+        interactions.SlashCommandChoice(name="Keep aspect ratio and use bilnear for resizing", value=3),
+        interactions.SlashCommandChoice(name="Ignore aspect ratio and use bilnear for resizing", value=4),
+    ]
+    )
+async def do_change_save_icon(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    kwargs['option'] = ChangeSaveIconOption(kwargs['option'])
+    await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_icon,kwargs))
 
 async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_name: bytes) -> CheatFuncResult:
     """
@@ -1684,7 +1732,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     account_id_hex = f'{int(user.account_id):016x}'
     
     start_msg = 'your account id for {0} is {1}, saved to database, put 0 in the account_id option to use this account id!'
-    my_database_account_id: str | None = None
+    my_database_account_id: str = ''
     try:
         my_database_account_id = get_user_account_id(ctx.author_id)
     except KeyError:
