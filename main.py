@@ -45,7 +45,7 @@ else:
 
 CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled commands in dms'
 
-FILE_SIZE_TOTAL_LIMIT = 677_145_600 # 600mb
+FILE_SIZE_TOTAL_LIMIT = 967_934_048
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 ATTACHMENT_MAX_FILE_SIZE = 24_000_000 # 24mb
 ZIP_LOOSE_FILES_MAX_AMT = 100
@@ -715,7 +715,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
             return f'The folder {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
 
         if total_ps4_saves_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'The total number of saves in {link} is too big, the max size of saves is {FILE_SIZE_TOTAL_LIMIT/1_048_576}mb'
+            return f'The total number of saves in {link} is too big, the max size of saves is {FILE_SIZE_TOTAL_LIMIT/1_048_576}mb, {total_ps4_saves_size} bytes is too big'
 
         for bin_file,white_file in ps4_saves:
             if bin_file.size != 96:
@@ -897,7 +897,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         except Exception as e:
             if 'storageQuotaExceeded' in str(e):
                 pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
-                await ctx.log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
+                await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
                 await asyncio.sleep(2*60)
                 try:
                     how_do_i_name_variables = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
