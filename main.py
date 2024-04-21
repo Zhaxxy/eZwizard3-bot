@@ -328,7 +328,7 @@ class CheatFunc(NamedTuple):
     kwargs: dict[str,Any]
 
     def pretty(self): # TODO make this not expose username in Path objects, make it just print name string instead ig
-        return f'```py\nawait {self.func.__name__}(**{self.kwargs})```'
+        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={b!r}' for a,b in self.kwargs.items())})```"
 
 class CheatFuncResult(NamedTuple):
     savename: str | None
@@ -340,7 +340,7 @@ class DecFunc(NamedTuple):
     kwargs: dict[str,Any]
 
     def pretty(self): # TODO make this not expose username in Path objects, make it just print name string instead ig
-        return f'```py\nawait {self.func.__name__}(**{self.kwargs})```'
+        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={b!r}' for a,b in self.kwargs.items())})```"
 
     @property
     def __doc__(self) -> str | None:
@@ -892,7 +892,23 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
 
     if new_zip_name.stat().st_size > ATTACHMENT_MAX_FILE_SIZE:
         await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive')
-        how_do_i_name_variables = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
+        try:
+            how_do_i_name_variables = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
+        except Exception as e:
+            if 'storageQuotaExceeded' in str(e):
+                pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
+                await ctx.log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
+                await asyncio.sleep(2*60)
+                try:
+                    how_do_i_name_variables = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
+                except Exception as e2:
+                    if 'storageQuotaExceeded' in str(e2):
+                        await log_user_error(ctx,f'You were too late, owners gdrive is full! ask {pingers} to clear some space')
+                        return
+                    else:
+                        raise
+            else:
+                raise
         await log_user_success(ctx,f'Here is a google drive link to your {custom_msg}\n{how_do_i_name_variables}')
     else:
         # shutil.move(new_zip_name,new_zip_name.name)
