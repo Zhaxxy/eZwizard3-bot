@@ -897,7 +897,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         except Exception as e:
             if 'storageQuotaExceeded' in str(e):
                 pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
-                await ctx.log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
+                await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
                 await asyncio.sleep(2*60)
                 try:
                     how_do_i_name_variables = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
