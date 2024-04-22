@@ -909,11 +909,11 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                         raise
             else:
                 raise
-        await log_user_success(ctx,f'Here is a google drive link to your {custom_msg}\n{how_do_i_name_variables}')
+        await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{how_do_i_name_variables}\nPlease download this asap as it can be deleted at any time')
     else:
         # shutil.move(new_zip_name,new_zip_name.name)
         await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment')
-        await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg}',file=str(new_zip_name))
+        await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
         # os.remove(new_zip_name.name)
     amnt_used_this_session += 1
     add_1_total_amnt_used()
