@@ -168,8 +168,9 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
     return ctx
 
 
-async def log_message(ctx: interactions.SlashContext, msg: str):
-    print(msg)
+async def log_message(ctx: interactions.SlashContext, msg: str,*,_do_print: bool = True):
+    if _do_print:
+        print(msg)
 
     channel = ctx.channel or ctx.author
     try:
@@ -184,6 +185,17 @@ async def log_message(ctx: interactions.SlashContext, msg: str):
         else:
             await ctx.edit(content=msg_chunk)
 
+async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
+    """
+    Use this when you know its gonna wait for a while, MAKE SURE YOU USE `asyncio.create_task` and cancel the task as soon as long task is done
+    """
+    await log_message(ctx, msg)
+    
+    tick = 0
+    while True:
+        await log_message(ctx, f'{msg} {tick} seconds spent here', _do_print=False)
+        await asyncio.sleep(10)
+        tick += 10
 
 async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     # if error_msg == 'Theres too many people using the bot at the moment, please wait for a spot to free up':
@@ -404,7 +416,6 @@ def get_saved_url(author_id: str, url_id: int) -> str:
     url_id = str(url_id)
     with SqliteDict("user_stuff.sqlite", tablename="user_saved_urls_ids") as db:
         a = db[author_id]
-        print(f'{a = }')
         return a[url_id]
 
 
@@ -747,25 +758,29 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     # await log_message(ctx,'Ensuring base save exists on ps4 before uploading')
     # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
         # pass
-    await log_message(ctx,'Connecting to PS4 ftp to upload encrpyted save')
-    async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-        await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
-        await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
-        await log_message(ctx,f'Uploading {pretty_save_dir} to ps4')
-        await ftp.upload(bin_file,ftp_bin,write_into=True)
-        await ftp.upload(white_file,ftp_white,write_into=True)
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrpyted save (this may take a while if mutiple slots are in use)'))
+    async with mounted_saves_at_once:
+        tick_tock_task.cancel()
+        async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+            await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
+            await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
+            await log_message(ctx,f'Uploading {pretty_save_dir} to ps4')
+            await ftp.upload(bin_file,ftp_bin,write_into=True)
+            await ftp.upload(white_file,ftp_white,write_into=True)
 
 async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_out: Path, white_file_out: Path,parent_dir: Path, save_dir_ftp: str):
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file_out.relative_to(parent_dir)
-    await log_message(ctx,'Connecting to PS4 ftp to download encrpyted save')
-    async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-        await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
-        await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
-        await log_message(ctx,f'Downloading {pretty_save_dir} from ps4')
-        await ftp.download(ftp_bin,bin_file_out,write_into=True)
-        await ftp.download(ftp_white,white_file_out,write_into=True)
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to download encrpyted save (this may take a while if mutiple slots are in use)'))
+    async with mounted_saves_at_once:
+        tick_tock_task.cancel()
+        async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+            await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
+            await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
+            await log_message(ctx,f'Downloading {pretty_save_dir} from ps4')
+            await ftp.download(ftp_bin,bin_file_out,write_into=True)
+            await ftp.download(ftp_white,white_file_out,write_into=True)
 
 
 async def resign_mounted_save(ctx: interactions.SlashContext, ftp: aioftp.Client,new_mount_dir:str, account_id: PS4AccountID) -> PS4AccountID:
@@ -1026,8 +1041,9 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                 pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
                 new_dec = (dec_tp / pretty_folder_thing)
                 new_dec.mkdir()
-                await log_message(ctx,f'Getting ready to mount {pretty_folder_thing}')
+                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
                 async with mounted_saves_at_once:
+                    tick_tock_task.cancel()
                     a = await decrypt_saves_on_ps4(ctx,bin_file,white_file,enc_tp,new_dec,save_dir_ftp,decrypt_fun)
                 if a:
                     await log_user_error(ctx,a)
@@ -1097,8 +1113,9 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
                     await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
                     pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
-                    await log_message(ctx,f'Getting ready to mount {pretty_folder_thing}')
+                    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
                     async with mounted_saves_at_once:
+                        tick_tock_task.cancel()
                         a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,save_dir_ftp)
                     if isinstance(a,str):
                         await log_user_error(ctx,a)
