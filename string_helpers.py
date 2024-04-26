@@ -56,7 +56,7 @@ def extract_drive_file_id(link: str,/) -> str:
 
 def make_folder_name_safe(some_string_path_ig: str, /) -> str:
     some_string_path_ig = str(some_string_path_ig)
-    some_string_path_ig = some_string_path_ig.replace(' ','_').replace('/','_').replace('\\','_').replace('\\','_')
+    some_string_path_ig = some_string_path_ig.replace(' ','_').replace('/','_').replace('\\','_')
     result = "".join(c for c in some_string_path_ig if c.isalnum() or c in ('_','-')).rstrip()
     return result[:254] if result else 'no_name'
 
