@@ -68,7 +68,7 @@ def pretty_time(time_in_seconds: float) -> str:
 def _raise_bad_config(missing_key: str) -> NoReturn:
     raise Exception(f'Unconfigured config, unconfigured value {missing_key} or bad config or missing {missing_key}')
 
-_SILLY_SAVES = {'some_silly_save0', 'some_silly_save2', 'some_silly_save4', 'some_silly_save6', 'some_silly_save8', 'some_silly_save10', 'some_silly_save12', 'some_silly_save14', 'some_silly_save16', 'some_silly_save18', 'some_silly_save22', 'some_silly_save20'}
+
 def load_config() -> frozendict:
 
     try:
