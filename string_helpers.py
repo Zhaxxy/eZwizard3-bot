@@ -90,7 +90,7 @@ google_credentials_file:
 # This one is easy, you can get it by looking at View Connection Status in Network settings (IP Address)
 ps4_ip:
     192.168.1.256 
-# This is the user_id of your local account. NOT ACCOUNT ID! (i should be able to grab this but idk why it no work)
+# This is the user_id of your local account. NOT ACCOUNT ID! (i should be able to grab this automatically but idk why it no work)
 # you can get this by going to /user/home on a ftp client and the folder name will be your user_id.
 # also in each folder there is a username.dat file with the local username, so you can open this to find your user
 # eg for me in /user/home/1eb71bbd the username.dat has SaveBy_Zhaxxy in it, which is my local username so my will be 1eb71bbd
