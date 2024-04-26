@@ -1101,7 +1101,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             if not await pre_process_cheat_args(ctx,my_cheats_chain,chet_files_custom,savedata0_folder):
                 return
             
-            if save_files.isdigit():
+            if False:
                 await log_message(ctx,'doing special built in save thing')
                 await log_user_error(ctx,'unimplemented')
                 return
@@ -1147,7 +1147,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         white_file.parent.parent.rename(white_file.parent.parent.parent / old_account_id.account_id)
                     except (FileNotFoundError, FileExistsError):
                         pass
-            if save_files.isdigit():
+            if False:
                 await log_message(ctx,'cleaning up the things you did')
                 await log_user_error(ctx,'unimplemented')
                 return
