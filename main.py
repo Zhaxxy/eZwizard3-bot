@@ -25,7 +25,7 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker
+from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
@@ -958,7 +958,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
     for cheat in cheat_chain:
         for arg_name,link in cheat.kwargs.items():
             if arg_name.startswith('dl_link'):
-                if link.isdigit() and int(link) > 1:
+                if is_str_int(link) and int(link) > 1:
                     try:
                         link = get_saved_url(ctx.author_id,int(link))
                     except KeyError:
@@ -1004,7 +1004,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
     
-    if save_files.isdigit() and int(save_files) > 1:
+    if is_str_int(save_files) and int(save_files) > 1:
         try:
             save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
@@ -1065,7 +1065,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
 
-    if save_files.isdigit() and int(save_files) > 1:
+    if is_str_int(save_files) and int(save_files) > 1:
         try:
             save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
