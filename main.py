@@ -1852,7 +1852,13 @@ async def main() -> int:
 
     UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
 
+    print('testing if ftp works')
+    async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+        await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
+
     initialise_database()
+    
+    
     
     global mem
     global bot
