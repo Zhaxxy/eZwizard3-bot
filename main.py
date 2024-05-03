@@ -334,6 +334,9 @@ class PS4AccountID:
     def from_bytes(cls,account_id_bytes: bytes):
         return cls(account_id_bytes[::-1].hex())
 
+    @classmethod
+    def from_account_id_number(cls, account_id_int: str | int):
+        return cls(f'{int(account_id_int):016x}')
 
 class CheatFunc(NamedTuple):
     func: Coroutine[None, None, str | None]
@@ -1762,7 +1765,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     except PSNAWPNotFound as e:
         await log_user_error(ctx,f'Invalid psn name {psn_name}')
         return
-    account_id_hex = f'{int(user.account_id):016x}'
+    account_id_hex = PS4AccountID.from_account_id_number(user.account_id).account_id
     
     start_msg = 'your account id for {0} is {1}, saved to database, put 0 in the account_id option to use this account id!'
     my_database_account_id: str = ''
@@ -1846,20 +1849,22 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
 async def main() -> int:
     global ps4
     global UPLOAD_SAVES_FOLDER_ID
+    print('attempting to inject ps4debug payload')
     await send_ps4debug(CONFIG['ps4_ip'],port=9090)
     ps4 = PS4Debug(CONFIG['ps4_ip'])
-
+    print('ps4debug payload successfully injected')
 
     UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
 
     print('testing if ftp works')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
         await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
-
+    print('ftp works!')
+    print('initialising database')
     initialise_database()
+    print('done initialising database')
     
-    
-    
+    print('Patching memory')
     global mem
     global bot
     async with PatchMemoryPS4900(ps4) as mem:
