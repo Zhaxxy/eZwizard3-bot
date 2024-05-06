@@ -1867,7 +1867,7 @@ async def main() -> int:
 
     print('testing if ftp works')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-        await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
+        await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata')
     print('ftp works!')
     print('initialising database')
     initialise_database()
