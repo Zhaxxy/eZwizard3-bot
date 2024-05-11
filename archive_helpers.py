@@ -19,11 +19,17 @@ SEVEN_ZIP_ARGS = ('7z',)
 VALID_7Z_EXTENSIONS = frozenset(('.7z', '.xz', '.bzip2', '.gzip', '.tar', '.zip', '.wim', '.apfs', '.ar', '.arj', '.cab', '.chm', '.cpio', '.cramfs', '.dmg', '.ext', '.fat', '.gpt', '.hfs', '.ihex', '.iso', '.lzh', '.lzma', '.mbr', '.msi', '.nsis', '.ntfs', '.qcow2', '.rar', '.rpm', '.squashfs', '.udf', '.uefi', '.vdi', '.vhd', '.vhdx', '.vmdk', '.xar', '.z'))
 
 def test_7z():
+    global SEVEN_ZIP_ARGS
     import subprocess
     try:
         res = subprocess.run(SEVEN_ZIP_ARGS,capture_output=True)
     except FileNotFoundError:
-        raise Exception('7z is not on the PATH, ethier edit the SEVEN_ZIP_ARGS constant to 7z exe or install 7zip propley')
+        SEVEN_ZIP_ARGS = ('C:/Program Files/7-Zip/7z.exe',)
+        try:
+            res = subprocess.run(SEVEN_ZIP_ARGS,capture_output=True)
+        except FileNotFoundError:
+            raise FileNotFoundError('7z is not on the PATH, ethier edit the SEVEN_ZIP_ARGS constant to the path to 7z.exe or install 7zip propley') from None
+
     if res.returncode:
         raise Exception(f'something went wrong with 7zip... {res.stderr}')
     res_stdout = res.stdout.decode("utf-8").replace("\r\n","\n")
