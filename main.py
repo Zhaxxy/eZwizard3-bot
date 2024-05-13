@@ -1332,8 +1332,8 @@ async def do_export_red_dead_redemption_2_or_gta_v_file(ctx: interactions.SlashC
 ############################02 Custom cheats
 cheats_base_command = interactions.SlashCommand(name="cheats", description="Commands for custom cheats for some games")
 
-async def _(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
-DUMMY_CHEAT_FUNC = CheatFunc(_,{})
+async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
+DUMMY_CHEAT_FUNC = CheatFunc(do_nothing,{})
 @interactions.slash_command(name="resign", description=f"Resign save files to an account id (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files to resign too',interactions.OptionType.STRING,True)
 @account_id_opt
