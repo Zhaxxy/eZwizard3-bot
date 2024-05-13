@@ -982,6 +982,12 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     return False
                 cheat.kwargs[arg_name] = result
             if arg_name == 'decrypted_save_file':
+                if is_str_int(link) and int(link) > 1:
+                    try:
+                        link = get_saved_url(ctx.author_id,int(link))
+                    except KeyError:
+                        await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
+                        return False
                 await log_message(ctx,f'Downloading {link} savedata0 folder or zip')
                 result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder)
                 if result:
