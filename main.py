@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import re
 from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, assert_never
 from enum import Enum
 from pathlib import Path
@@ -504,28 +505,28 @@ async def ps4_life_check(ctx: interactions.SlashContext | None = None):
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
         await log_message(ctx,f'Checking {link} if valid archive')
         try:
-            a = await get_archive_info(archive_name)
+            zip_info = await get_archive_info(archive_name)
         except Exception as e:
             return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
 
-        if a.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
+        if zip_info.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
             return f'The decompressed {link} is too big, the max is {FILE_SIZE_TOTAL_LIMIT/1_048_576}mb'
         
         await log_message(ctx,f'Looking for saves in {link}')
         ps4_saves: list[tuple[Path,Path]] = []
-        for zip_file in a.files.values():
+        for zip_file in zip_info.files.values():
             if not zip_file.is_file: continue
             if not is_ps4_title_id(zip_file.path.parent.name): continue
             if not zip_file.path.suffix == '.bin': continue
 
             white_file = zip_file.path.with_suffix('')
-            if not a.files.get(white_file): continue
+            if not zip_info.files.get(white_file): continue
             if zip_file.size != 96:
                 return f'Invalid bin file {zip_file.path} found in {link}'
 
             ps4_saves.append((zip_file.path,white_file))
         if not ps4_saves:
-            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAXXXXX folder?'
+            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAXXXXX folder? we also do not support nested archives so make sure there are no archives in this'
 
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
             return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
@@ -541,6 +542,26 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             except Exception as e:
                 return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
         return ''
+
+
+async def get_direct_dl_link_from_mediafire_link(url: str) -> str:
+    url_origin = url
+    async with aiohttp.ClientSession() as session:
+        for _ in range(10): # give it ten tries
+            async with session.get(url) as response:
+                if 'Content-Disposition' in response.headers:
+                    # This is the file
+                    break
+                for line in (await response.text()).splitlines():
+                    m = re.search(r'href="((http|https)://download[^"]+)', line)
+                    if m:
+                        url = m.groups()[0]
+                        break
+                else: # no break
+                    raise Exception(f'Permission denied: {url_origin}. Maybe you need to change permission over Anyone with the link')
+        else: # no break
+            raise Exception(f'Too many tries on {url_origin} to get download link')
+        return url
 
 
 async def download_direct_link(ctx: interactions.SlashContext,link: str, donwload_location: Path, validation: Callable[[str], str] = None, max_size: int = FILE_SIZE_TOTAL_LIMIT) -> Path | str:
@@ -574,6 +595,13 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
         return f'For this option we do not take in folder urls {link}'
     
     link = link.replace('media.discordapp.net','cdn.discordapp.com')
+    
+    if 'mediafire.com' in link:
+        await log_message(ctx,f'Getting direct download link from mediafire url {link}')
+        try:
+            link = await get_direct_dl_link_from_mediafire_link(link)
+        except Exception as e:
+            return f'Bad mediafire link {type(e).__name__}: {e}'
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(link) as response:
@@ -584,11 +612,17 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         filename = link.split('/')[-1].split('?')[0]
                     if validation_result := validation(filename):
                         return f'invalid file {link} reason: {validation_result}'
-                    file_size = int(response.headers.get('Content-Length', 0))
+                    file_size = response.headers.get('Content-Length')
+                    if file_size is None:
+                        return 'There was no Content-Length header'
+                    try:
+                        file_size = int(file_size)
+                    except ValueError:
+                        return f'Content-Length {file_size!r} was not a valid number'
                     if file_size > max_size:
                         return f'The file {link} is too big, we only accept {max_size/1_048_576}mb, if you think this is wrong please report it'
-                    if file_size < 1:
-                        return f'The file {link} is too small lmao, or there was no Content-Length header'
+                    if file_size < 2:
+                        return f'The file {link} is too small lmao'
                     downloaded_size = 0
                     chunks_done = 0
                     direct_zip = Path(donwload_location,filename)
