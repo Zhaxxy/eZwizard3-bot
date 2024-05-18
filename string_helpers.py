@@ -112,7 +112,7 @@ allow_bot_usage_in_dms:
 built_in_saves:
   - CUSA12345 LBPXSAVE bigfart some cool description here
 """)
-        raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yml file') from None
+        raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yaml file') from None
 
     key = 'discord_token'
     if not (x := my_config.get(key)) or x == 'MTIxMzAQk2APdMtqdXTtSfJcD2.GaxeZo.SLW6IWM7qdSxyQhCvClXINFJF4AIbF6oJVahrb':
