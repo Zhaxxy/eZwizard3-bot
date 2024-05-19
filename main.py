@@ -26,7 +26,7 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int
+from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
@@ -164,7 +164,7 @@ async def get_time_as_string_token() -> str:
 
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
     await ctx.defer()
-    # t = await ctx.respond(content='...')
+    # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
     ctx.mode = mode
     return ctx
@@ -201,7 +201,7 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
 
 async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     # if error_msg == 'Theres too many people using the bot at the moment, please wait for a spot to free up':
-        # # await ctx.send('...',ephemeral=False)
+        # # await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
         # return
     print(f'user bad ##################\n{error_msg}')
     channel = ctx.channel or ctx.author
@@ -217,7 +217,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
             await channel.send(msg_chunk,ephemeral=False)
         else:
             if first_time:
-                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
+                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
             await ctx.send(msg_chunk,ephemeral=False) 
             if first_time:
                 await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
@@ -240,7 +240,7 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
             await channel.send(full_msg,ephemeral=False, file=file)
         else:
             if first_time:
-                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send('...',ephemeral=False)
+                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
             await ctx.send(full_msg,ephemeral=False, file=file) 
             if first_time:
                 await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)

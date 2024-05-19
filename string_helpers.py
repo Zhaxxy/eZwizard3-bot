@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import NoReturn, NamedTuple
 import json
 import re
+from random import choice and random_choice
 
 import yaml
 from frozendict import frozendict
@@ -195,3 +196,38 @@ built_in_saves:
 
     my_config[key] = frozendict({ben.unique_name:ben for ben in my_config[key]})
     return frozendict(my_config)
+
+
+SILLY_RANDOM_STRINGS_NOT_UNIQUE = """
+You can add any more strings here you want, just put in your strings in theese triple quotes for each string choice new line
+ben
+BENNY ben BENNY
+benny, oh benny!
+I HATE NI
+hush little piggy
+feel free do donate me anything to paypal eboot.bin@protonmail.com
+SHAT AP
+C plas plas
+Donald_trump_talks_about_trucks.mp4
+rip littlebigplanet 2024 april
+Samoji & Hotane's Daily Life
+**this text is bold.** *this text is in italics.* `this text has a dark grey box behind it.` __this text is underlined.__ ~~this text is crossed out.~~
+90.237.164.177, this your ip lil bro?
+I don't know what the cat says
+Mu wants something.
+モドキやんの要求は？(^^♪
+どうした？ お腹は空いてなさそうし･･･｡何が欲しいの？何をして欲しいの？
+My jaw is itchy and itchy. (^^♪
+Die Katze bellt die Fliege an
+where ever happened to eZwizard1, was there ever a eZwizard1?
+thesoundsofchildrenbeingtoturedinhell.png
+$Afx/ProcessorID
+RuntimeError: coroutine ignored GeneratorExit, more like kys: kys ignored kys (keep yourself safe)
+ben you are getting too close to me
+Суперкот
+LittleBigPlanet 7ny% - Full Series Speedrun! (8:46:26)
+Tammy!
+""".strip().split('\n')
+
+def get_a_stupid_silly_random_string_not_unique() -> str:
+    return random_choice(SILLY_RANDOM_STRINGS_NOT_UNIQUE)
