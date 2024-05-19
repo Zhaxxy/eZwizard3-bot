@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import NoReturn, NamedTuple
 import json
 import re
-from random import choice and random_choice
+from random import choice as random_choice
 
 import yaml
 from frozendict import frozendict
