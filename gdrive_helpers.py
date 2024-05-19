@@ -158,7 +158,6 @@ def _get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> Generat
     this function messes up if you use exact same path, but who tf be doing that
     """
     no_ids = {_PathWithNoIDInHash(x): x for x in the_folder}
-    we_found_macosx_silly_thing = False
     for filepath in no_ids:
         if '__MACOSX' in filepath.file_thing.file_name_as_path.parts and (not filepath.file_thing.is_file): continue
         if filepath.file_thing.file_name_as_path.name.startswith('._'): continue
