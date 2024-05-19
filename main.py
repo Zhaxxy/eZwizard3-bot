@@ -1900,12 +1900,17 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
 async def main() -> int:
     global ps4
     global UPLOAD_SAVES_FOLDER_ID
+    
+    print('attempting to make ezwizardtwo_saves folder on google drive account to store large saves')
+    UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
+    print('made ezwizardtwo_saves folder or it already exists successfully')
+    
     print('attempting to inject ps4debug payload')
     await send_ps4debug(CONFIG['ps4_ip'],port=9090)
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     print('ps4debug payload successfully injected')
 
-    UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
+    
 
     print('testing if ftp works')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
