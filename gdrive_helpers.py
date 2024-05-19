@@ -74,12 +74,12 @@ _USER_CREDS = UserCreds(
 
 
 _client_creds_dict = json.load(open('credentials.json'))
-par = 'installed' if _client_creds_dict.get('installed') else 'web'
+_par = 'installed' if _client_creds_dict.get('installed') else 'web'
 _CLIENT_CREDS = ClientCreds(
-    client_id = _client_creds_dict[par]['client_id'],
-    client_secret = _client_creds_dict[par]['client_secret'],
+    client_id = _client_creds_dict[_par]['client_id'],
+    client_secret = _client_creds_dict[_par]['client_secret'],
     scopes = _user_creds_dict['scopes'],
-    redirect_uri = _client_creds_dict[par]['redirect_uris'][0]
+    redirect_uri = _client_creds_dict[_par]['redirect_uris'][0]
 )
 def agg() -> Aiogoogle:
     return Aiogoogle(user_creds=_USER_CREDS, client_creds=_CLIENT_CREDS)
