@@ -164,14 +164,14 @@ def _get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> Generat
     for filepath in no_ids:
         if '__MACOSX' in filepath.file_thing.file_name_as_path.parts and (not filepath.file_thing.is_file): continue
         if filepath.file_thing.file_name_as_path.name.startswith('._'): continue
-        if is_ps4_title_id(filepath.file_thing.file_name_as_path.parent.name) and (not filepath.file_thing.is_file):
+        if is_ps4_title_id(filepath.file_thing.file_name_as_path.parent.name):
             if filepath.file_thing.file_name_as_path.name.endswith('.bin') and filepath.file_thing.is_file:
                 try:
                     white_file = no_ids[_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix(''),''))]
                 except KeyError:
                     pass
                 else:
-                    if white_file.file_thing.is_file:
+                    if white_file.is_file:
                         yield PS4GDriveFileSave(no_ids[filepath],white_file)
             else:
                 try:
@@ -179,7 +179,7 @@ def _get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> Generat
                 except KeyError:
                     pass
                 else:
-                    if bin_file.file_thing.is_file:
+                    if bin_file.is_file:
                         yield PS4GDriveFileSave(bin_file,no_ids[filepath])
 
 def get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> set[PS4GDriveFileSave]:
