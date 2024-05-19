@@ -229,6 +229,7 @@ LittleBigPlanet 7ny% - Full Series Speedrun! (8:46:26)
 BD0CB701D6079614D54DF907A08CDB10
 PR]-<Q9*WxHsV8rcW!JuH7k_ug:T5ApX and the iv is _Y7]mD1ziyH#Ar=0
 Tammy!
+ITZTHATPLAYER was here.
 """.strip().split('\n')
 
 def get_a_stupid_silly_random_string_not_unique() -> str:
