@@ -158,23 +158,27 @@ def _get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> Generat
     this function messes up if you use exact same path, but who tf be doing that
     """
     no_ids = {_PathWithNoIDInHash(x): x for x in the_folder}
-    
+    we_found_macosx_silly_thing = False
     for filepath in no_ids:
-        if is_ps4_title_id(filepath[0].parent.name):
-            if filepath[0].name.endswith('.bin'):
+        if '__MACOSX' in filepath.file_thing.file_name_as_path.parts and (not filepath.file_thing.is_file): continue
+        if filepath.file_thing.file_name_as_path.name.startswith('._'): continue
+        if is_ps4_title_id(filepath.file_thing.file_name_as_path.parent.name) and (not filepath.file_thing.is_file):
+            if filepath.file_thing.file_name_as_path.name.endswith('.bin') and filepath.file_thing.is_file:
                 try:
-                    white_file = no_ids[_PathWithNoIDInHash((filepath[0].with_suffix(''),''))]
+                    white_file = no_ids[_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix(''),''))]
                 except KeyError:
                     pass
                 else:
-                    yield PS4GDriveFileSave(no_ids[filepath],white_file)
+                    if white_file.file_thing.is_file:
+                        yield PS4GDriveFileSave(no_ids[filepath],white_file)
             else:
                 try:
-                    bin_file = no_ids[_PathWithNoIDInHash((filepath[0].with_suffix('.bin'),''))]
+                    bin_file = no_ids[_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix('.bin'),''))]
                 except KeyError:
                     pass
                 else:
-                    yield PS4GDriveFileSave(bin_file,no_ids[filepath])
+                    if bin_file.file_thing.is_file:
+                        yield PS4GDriveFileSave(bin_file,no_ids[filepath])
 
 def get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> set[PS4GDriveFileSave]:
     return {x for x in _get_valid_saves_out_names_only(the_folder)}

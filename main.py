@@ -517,8 +517,10 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
         for zip_file in zip_info.files.values():
             if not zip_file.is_file: continue
             if not is_ps4_title_id(zip_file.path.parent.name): continue
-            if not zip_file.path.suffix == '.bin': continue
-
+            if zip_file.path.suffix != '.bin': continue
+            if '__MACOSX' in zip_file.path.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
+            if zip_file.path.name.startswith('._'): continue
+            
             white_file = zip_file.path.with_suffix('')
             if not zip_info.files.get(white_file): continue
             if zip_file.size != 96:
@@ -662,7 +664,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         seen_savedata0_folders: set[GDriveFile] = {
             raw_files[Path(*(p.file_name_as_path.parts[:p.file_name_as_path.parts.index('savedata0')+1]))]
             for p in raw_files.values()
-            if not p.is_file and 'savedata0' in p.file_name_as_path.parts
+            if (not p.is_file) and ('savedata0' in p.file_name_as_path.parts) and ('__MACOSX' not in p.file_name_as_path.parts) and (not p.file_name_as_path.name.startswith('._'))
         }
 
         if not seen_savedata0_folders:
@@ -716,7 +718,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
     seen_savedata0_folders: set[SevenZipFile] = {
         a.files[Path(*(p.path.parts[:p.path.parts.index('savedata0')+1]))]
         for p in a.files.values()
-        if not p.is_file and 'savedata0' in p.path.parts
+        if (not p.is_file) and ('savedata0' in p.path.parts) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
     }
     if not seen_savedata0_folders:
         return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that'
