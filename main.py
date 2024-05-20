@@ -1809,7 +1809,10 @@ psnawp = PSNAWP(CONFIG["ssocookie"])
     )
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     ctx = await set_up_ctx(ctx)
-    
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
+        return
+
     await log_message(ctx,f'Looking for psn name {psn_name}')
     try:
         user = psnawp.user(online_id=psn_name)
@@ -1835,7 +1838,9 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
 @interactions.slash_command(name="delete_cheat_chain",description="Deletes your cheat chain")
 async def delete_cheat_chain(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
-    
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
+        return
     
     delete_chain(ctx.author_id)
     await log_user_success(ctx,'Removed all the cheats from your cheat chain!')
@@ -1878,6 +1883,10 @@ async def ping_test(ctx: interactions.SlashContext):
     )
 async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment, my_file_id: int):
     ctx = await set_up_ctx(ctx)
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
+        return
+
     await log_message(ctx,'Getting url')
     save_url(ctx.author_id,my_file.url,my_file_id)
     await log_user_success(ctx,f'the url is {my_file.url}, or use {my_file_id} in a field that needs a url, like save_files or dl_link')
@@ -1891,6 +1900,10 @@ async def delete_files2urls(ctx: interactions.SlashContext):
 @interactions.slash_command(name='see_saved_files2urls',description="See all your saved urls with the file2url command")
 async def see_saved_files2urls(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
+        return
+
     a = get_all_saved_urls(ctx.author_id)
     pretty = ''
     for key,value in a.items():

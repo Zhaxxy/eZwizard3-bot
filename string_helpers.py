@@ -103,7 +103,7 @@ bot_admins:
   - l147836464353247343
   - l207983219845103687
 # Simple boolean, if set to true then people will be able to use the bot in dms,
-# or if its false then people will not be able to use bot in dms, besides pinging the bot and my_account_id command
+# or if its false then people will not be able to use bot in dms, besides pinging the bot
 # Some people may not want people using bot in dms soo
 allow_bot_usage_in_dms:
     true
