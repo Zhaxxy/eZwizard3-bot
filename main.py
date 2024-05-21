@@ -954,6 +954,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                 pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
                 await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
                 await asyncio.sleep(2*60)
+                await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive')
                 try:
                     google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
                 except Exception as e2:
