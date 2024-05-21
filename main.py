@@ -948,14 +948,14 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
     if new_zip_name.stat().st_size > ATTACHMENT_MAX_FILE_SIZE:
         await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive')
         try:
-            how_do_i_name_variables = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
+            google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
         except Exception as e:
             if 'storageQuotaExceeded' in str(e):
                 pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
                 await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
                 await asyncio.sleep(2*60)
                 try:
-                    how_do_i_name_variables = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
+                    google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
                 except Exception as e2:
                     if 'storageQuotaExceeded' in str(e2):
                         await log_user_error(ctx,f'You were too late, owners gdrive is full! ask {pingers} to clear some space')
@@ -964,7 +964,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                         raise
             else:
                 raise
-        await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{how_do_i_name_variables}\nPlease download this asap as it can be deleted at any time')
+        await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\nPlease download this asap as it can be deleted at any time')
     else:
         # shutil.move(new_zip_name,new_zip_name.name)
         await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment')
