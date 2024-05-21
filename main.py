@@ -1615,7 +1615,7 @@ async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_fil
 
 async def upload_dl2_sav_gz_decompressed(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_sav_decompressed: Path, filename_p: str | None = None):
     """
-    Encrypted save
+    Encrypted dying light 2 save
     """
     await ftp.change_directory(mount_dir)
     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
