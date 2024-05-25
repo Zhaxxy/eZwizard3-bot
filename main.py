@@ -863,7 +863,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                         result = await chet.func(ftp,new_mount_dir,white_file.name,**chet.kwargs)
                     results.append(result) if result else None
                 except Exception:
-                    return f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}. reason: ```{format_exc()}```'
+                    return f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}. reason: ```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
             await log_message(ctx,'Connecting to PS4 ftp to do resign')
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                 await ftp.change_directory(new_mount_dir) 
@@ -908,7 +908,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
                     try:
                         await decrypt_fun.func(ftp,new_mount_dir,white_file.name,decrypted_save_ouput,**decrypt_fun.kwargs)
                     except Exception:
-                        return f'Could not custom decrypt your save {pretty_save_dir}, reason ```{format_exc()}```'
+                        return f'Could not custom decrypt your save {pretty_save_dir}, reason ```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
             else:
                 await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
