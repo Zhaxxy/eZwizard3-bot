@@ -195,10 +195,15 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     
     tick = 0
     while True:
+        if ctx.expired:
+            await log_message(ctx, f'{msg} {tick} seconds spent here, over 15 minutes likely bot is stuck and needs reboot (including the PS4)', _do_print=False)
+            while True:
+                await asyncio.sleep(10)
         await log_message(ctx, f'{msg} {tick} seconds spent here', _do_print=False)
         await asyncio.sleep(10)
         tick += 10
-
+    
+    
 async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     # if error_msg == 'Theres too many people using the bot at the moment, please wait for a spot to free up':
         # # await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
@@ -795,7 +800,7 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file.relative_to(parent_dir)
-    # await log_message(ctx,'Ensuring base save exists on ps4 before uploading')
+    # await log_message(ctx,'Ensuring base save exists on PS4 before uploading')
     # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
         # pass
     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrpyted save (this may take a while if mutiple slots are in use)'))
@@ -804,7 +809,7 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
         async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
             await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
             await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
-            await log_message(ctx,f'Uploading {pretty_save_dir} to ps4')
+            await log_message(ctx,f'Uploading {pretty_save_dir} to PS4')
             await ftp.upload(bin_file,ftp_bin,write_into=True)
             await ftp.upload(white_file,ftp_white,write_into=True)
 
@@ -818,7 +823,7 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
         async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
             await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
             await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
-            await log_message(ctx,f'Downloading {pretty_save_dir} from ps4')
+            await log_message(ctx,f'Downloading {pretty_save_dir} from PS4')
             await ftp.download(ftp_bin,bin_file_out,write_into=True)
             await ftp.download(ftp_white,white_file_out,write_into=True)
 
@@ -1434,7 +1439,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
             raise AssertionError('Yeah we should have gotten an error here')
     await ftp.change_directory(parent_mount)
     await ftp.upload(decrypted_save_file / 'savedata0',mount_last_name,write_into=True)
-@interactions.slash_command(name="encrypt", description=f"Encrypt a save (max 1 save per command) only jb ps4 decrypted save")
+@interactions.slash_command(name="encrypt", description=f"Encrypt a save (max 1 save per command) only jb PS4 decrypted save")
 @interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('decrypted_save_file','A link to a folder or zip of your decrypted savedata0 folder',interactions.OptionType.STRING,True)
