@@ -56,9 +56,9 @@ def extract_drive_file_id(link: str,/) -> str:
 
 
 def make_folder_name_safe(some_string_path_ig: str, /) -> str:
-    some_string_path_ig = str(some_string_path_ig)
-    some_string_path_ig = some_string_path_ig.replace(' ','_').replace('/','_').replace('\\','_')
-    result = 'PS4_FOLDER_IN_ME_'+("".join(c for c in some_string_path_ig if c.isalnum() or c in ('_','-')).rstrip())
+    some_string_path_ig = str(some_string_path_ig).replace(' ','_').replace('/','_').replace('\\','_')
+    leader = 'PS4_FOLDER_IN_ME_' if is_ps4_title_id(some_string_path_ig.replace('_','')) else ''
+    result = leader + ("".join(c for c in some_string_path_ig if c.isalnum() or c in ('_','-')).rstrip())
     return result[:254] if result else 'no_name'
 
 def pretty_time(time_in_seconds: float) -> str:
