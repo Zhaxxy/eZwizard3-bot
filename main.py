@@ -196,7 +196,7 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     tick = 0
     while True:
         if ctx.expired:
-            await log_message(ctx, f'{msg} {tick} seconds spent here, over 15 minutes likely bot is stuck and needs reboot (including the PS4)', _do_print=False)
+            await log_message(ctx, f'{msg}, over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)', _do_print=False)
             while True:
                 await asyncio.sleep(10)
         await log_message(ctx, f'{msg} {tick} seconds spent here', _do_print=False)
