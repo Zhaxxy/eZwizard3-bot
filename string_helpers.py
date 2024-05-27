@@ -8,7 +8,7 @@ import yaml
 from frozendict import frozendict
 
 CUSA_TITLE_ID = re.compile(r'CUSA\d{5}')
-
+PSN_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9-_]{2,15}$') # https://regex101.com/library/4XPer9
 
 class BuiltInSave(NamedTuple):
     on_ps4_title_id: str
@@ -24,8 +24,13 @@ class BuiltInSave(NamedTuple):
     def as_entry_str(self) -> str:
         return ' '.join(self)
 
+
 def is_ps4_title_id(input_str: str,/) -> bool: 
     return bool(CUSA_TITLE_ID.fullmatch(input_str))
+
+
+def is_psn_name(input_str: str,/) -> bool:
+    return bool(PSN_NAME.fullmatch(input_str))
 
 
 def extract_drive_folder_id(link: str,/) -> str:
@@ -46,6 +51,7 @@ def chunker(seq, size):
     """
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
+
 def extract_drive_file_id(link: str,/) -> str:
     if link.startswith('https://drive.google.com/file/d/'):
         return link.split('https://drive.google.com/file/d/')[-1].split('?')[0].split('/')[0]
@@ -61,17 +67,18 @@ def make_folder_name_safe(some_string_path_ig: str, /) -> str:
     result = leader + ("".join(c for c in some_string_path_ig if c.isalnum() or c in ('_','-')).rstrip())
     return result[:254] if result else 'no_name'
 
+
 def pretty_time(time_in_seconds: float) -> str:
     hours, extra_seconds = divmod(int(time_in_seconds),3600)
     minutes, seconds = divmod(extra_seconds,60)
     return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
+
 
 def _raise_bad_config(missing_key: str) -> NoReturn:
     raise Exception(f'Unconfigured config, unconfigured value {missing_key} or bad config or missing {missing_key}')
 
 
 def load_config() -> frozendict:
-
     try:
         with open('config.yaml','r') as f:
             my_config: dict = yaml.load(f,yaml.Loader)
@@ -234,6 +241,7 @@ I am a retarded horse
 Like a somebodyyyyyyy
 
 """.strip().split('\n')
+
 
 def get_a_stupid_silly_random_string_not_unique() -> str:
     return random_choice(SILLY_RANDOM_STRINGS_NOT_UNIQUE)

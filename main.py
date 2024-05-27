@@ -26,7 +26,7 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique
+from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
@@ -1818,12 +1818,16 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
-
+    
+    if not is_psn_name(psn_name):
+        await log_user_error(ctx,f'Not a valid psn name {psn_name}, check it again!')
+        return
+        
     await log_message(ctx,f'Looking for psn name {psn_name}')
     try:
         user = psnawp.user(online_id=psn_name)
     except PSNAWPNotFound as e:
-        await log_user_error(ctx,f'Invalid psn name {psn_name}')
+        await log_user_error(ctx,f'Could not find psn name {psn_name}, perhaps you mispelled it?')
         return
     account_id_hex = PS4AccountID.from_account_id_number(user.account_id).account_id
     
