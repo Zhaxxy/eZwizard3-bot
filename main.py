@@ -533,7 +533,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
 
             ps4_saves.append((zip_file.path,white_file))
         if not ps4_saves:
-            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAXXXXX folder? we also do not support nested archives so make sure there are no archives in this'
+            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAXXXXX folder? we also do not support nested archives so make sure there are no archives in this. your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
 
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
             return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
@@ -764,7 +764,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAXXXXX folder?'
+            return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAXXXXX folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
