@@ -1826,7 +1826,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     await log_message(ctx,f'Looking for psn name {psn_name}')
     try:
         user = psnawp.user(online_id=psn_name)
-    except PSNAWPNotFound as e:
+    except PSNAWPNotFound:
         await log_user_error(ctx,f'Could not find psn name {psn_name}, perhaps you mispelled it?')
         return
     account_id_hex = PS4AccountID.from_account_id_number(user.account_id).account_id
