@@ -843,7 +843,7 @@ async def resign_mounted_save(ctx: interactions.SlashContext, ftp: aioftp.Client
                     f.write(bytes(account_id))
             await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
     except Exception as e:
-        await log_message(ctx,f'Something went wrong when resinging the save, {type(e).__name__}: {e}, ignoring!')
+        await log_message(ctx,f'Something went wrong when resigning the save, {type(e).__name__}: {e}, ignoring!')
     finally:
         return old_account_id
 
@@ -872,7 +872,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
             await log_message(ctx,'Connecting to PS4 ftp to do resign')
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                 await ftp.change_directory(new_mount_dir) 
-                await log_message(ctx,f'Resinging {pretty_save_dir} to {account_id.account_id}')
+                await log_message(ctx,f'Resigning {pretty_save_dir} to {account_id.account_id}')
                 account_id_old = await resign_mounted_save(ctx,ftp,new_mount_dir,account_id)
             return results,account_id_old
     finally:
