@@ -1065,7 +1065,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
-    if is_in_test_mode():
+    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1832,7 +1832,7 @@ psnawp = PSNAWP(CONFIG["ssocookie"])
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode():
+    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1869,7 +1869,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
 async def delete_cheat_chain(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode():
+    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1898,7 +1898,10 @@ async def ping_test(ctx: interactions.SlashContext):
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'
     if is_in_test_mode():
-        cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
+        if ctx.author_id in CONFIG['bot_admins']:
+            cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE} but you can as you\'re a bot admin!'
+        else:
+            cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
         
     await ctx.send(cool_ping_msg,ephemeral=False)
 
@@ -1920,7 +1923,7 @@ async def ping_test(ctx: interactions.SlashContext):
 async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment, my_file_id: int):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode():
+    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1941,7 +1944,7 @@ async def delete_files2urls(ctx: interactions.SlashContext):
 async def see_saved_files2urls(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode():
+    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1957,7 +1960,8 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
 async def main() -> int:
     global ps4
     global UPLOAD_SAVES_FOLDER_ID
-    
+    if is_in_test_mode():
+        print('in test mode, only bot admins can use bot this session')
     print('attempting to make ezwizardtwo_saves folder on google drive account to store large saves')
     UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
     print('made ezwizardtwo_saves folder or it already exists successfully')
