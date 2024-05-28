@@ -1798,7 +1798,7 @@ async def update_status():
     global update_status_start
     amnt_of_free = await get_amnt_free_save_strs()
     
-    leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode(): else ''
+    leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
     
     if amnt_of_free != old_amnt_of_free:
         update_status_start = time.perf_counter()
