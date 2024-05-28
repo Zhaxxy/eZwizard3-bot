@@ -1065,7 +1065,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
-    if is_in_test_mode()
+    if is_in_test_mode():
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1129,7 +1129,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
 
-    if is_in_test_mode()
+    if is_in_test_mode():
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1798,7 +1798,7 @@ async def update_status():
     global update_status_start
     amnt_of_free = await get_amnt_free_save_strs()
     
-    leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
+    leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode(): else ''
     
     if amnt_of_free != old_amnt_of_free:
         update_status_start = time.perf_counter()
@@ -1832,7 +1832,7 @@ psnawp = PSNAWP(CONFIG["ssocookie"])
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode()
+    if is_in_test_mode():
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1869,7 +1869,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
 async def delete_cheat_chain(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode()
+    if is_in_test_mode():
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1897,7 +1897,7 @@ async def ping_test(ctx: interactions.SlashContext):
     
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'
-    if is_in_test_mode()
+    if is_in_test_mode():
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
         
     await ctx.send(cool_ping_msg,ephemeral=False)
@@ -1920,7 +1920,7 @@ async def ping_test(ctx: interactions.SlashContext):
 async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment, my_file_id: int):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode()
+    if is_in_test_mode():
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1941,7 +1941,7 @@ async def delete_files2urls(ctx: interactions.SlashContext):
 async def see_saved_files2urls(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode()
+    if is_in_test_mode():
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
