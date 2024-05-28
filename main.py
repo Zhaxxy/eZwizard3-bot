@@ -45,7 +45,7 @@ else:
     __file__ = str(Path(__file__) / 'huh.huh')
 
 CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled commands in dms'
-CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot'
+CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
 
 FILE_SIZE_TOTAL_LIMIT = 967_934_048
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
