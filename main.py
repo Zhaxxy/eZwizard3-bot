@@ -46,6 +46,7 @@ else:
 
 CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled commands in dms'
 CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
+WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
 FILE_SIZE_TOTAL_LIMIT = 967_934_048
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
@@ -175,6 +176,7 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
     ctx.mode = mode
+    await log_message(ctx,'Pleast wait, if over a minute is spent here do the command again!',_do_print = False)
     return ctx
 
 
@@ -503,6 +505,7 @@ def list_ps4_saves(folder_containing_saves: Path,/) -> Generator[tuple[Path,Path
 
 async def ps4_life_check(ctx: interactions.SlashContext | None = None):
     channel = ctx.channel or ctx.author
+    ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         await ps4.notify('life check!')
     except Exception:
@@ -803,7 +806,13 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
             return direct_zip
         return await extract_ps4_encrypted_saves_archive(ctx,link,output_folder,account_id,direct_zip)
 
-
+async def _upload_encrypted_to_ps4(bin_file: Path, white_file: Path, ftp_bin: str, ftp_white: str):
+    async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+        # await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
+        await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
+        # await log_message(ctx,f'Uploading {pretty_save_dir} to PS4')
+        await ftp.upload(bin_file,ftp_bin,write_into=True)
+        await ftp.upload(white_file,ftp_white,write_into=True)
 async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path, white_file: Path,parent_dir: Path, save_dir_ftp: str):
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
@@ -814,13 +823,18 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrpyted save (this may take a while if mutiple slots are in use)'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
-        async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-            await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
-            await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
-            await log_message(ctx,f'Uploading {pretty_save_dir} to PS4')
-            await ftp.upload(bin_file,ftp_bin,write_into=True)
-            await ftp.upload(white_file,ftp_white,write_into=True)
+        await log_message(ctx,f'Uploading {pretty_save_dir} to PS4')
+        custon_decss = lambda: asyncio.run(_upload_encrypted_to_ps4(bin_file, white_file, ftp_bin, ftp_white))
+        await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
+
+async def _download_encrypted_from_ps4(bin_file_out: Path, white_file_out: Path, ftp_bin: str, ftp_white: str):
+    async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+        # await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
+        await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
+        # await log_message(ctx,f'Downloading {pretty_save_dir} from PS4')
+        await ftp.download(ftp_bin,bin_file_out,write_into=True)
+        await ftp.download(ftp_white,white_file_out,write_into=True)
 async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_out: Path, white_file_out: Path,parent_dir: Path, save_dir_ftp: str):
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
@@ -828,15 +842,12 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to download encrpyted save (this may take a while if mutiple slots are in use)'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
-        async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-            await log_message(ctx,f'Pwd to {SAVE_FOLDER_ENCRYPTED}')
-            await ftp.change_directory(SAVE_FOLDER_ENCRYPTED)
-            await log_message(ctx,f'Downloading {pretty_save_dir} from PS4')
-            await ftp.download(ftp_bin,bin_file_out,write_into=True)
-            await ftp.download(ftp_white,white_file_out,write_into=True)
+        await log_message(ctx,f'Downloading {pretty_save_dir} from PS4')
+        custon_decss = lambda: asyncio.run(_download_encrypted_from_ps4(bin_file_out, white_file_out, ftp_bin, ftp_white))
+        await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
 
-async def resign_mounted_save(ctx: interactions.SlashContext, ftp: aioftp.Client,new_mount_dir:str, account_id: PS4AccountID) -> PS4AccountID:
+async def resign_mounted_save(ctx: interactions.SlashContext | None, ftp: aioftp.Client,new_mount_dir:str, account_id: PS4AccountID) -> PS4AccountID:
     old_account_id = PS4AccountID('0000000000000000')
     try:
         await ftp.change_directory(Path(new_mount_dir,'sce_sys').as_posix())
@@ -851,14 +862,12 @@ async def resign_mounted_save(ctx: interactions.SlashContext, ftp: aioftp.Client
                     f.write(bytes(account_id))
             await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
     except Exception as e:
-        await log_message(ctx,f'Something went wrong when resigning the save, {type(e).__name__}: {e}, ignoring!')
+        if ctx:
+            await log_message(ctx,f'Something went wrong when resigning the save, {type(e).__name__}: {e}, ignoring!')
     finally:
         return old_account_id
-
-async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str]) -> str | tuple[list | PS4AccountID]:
-    pretty_save_dir = white_file.relative_to(parent_dir)
-    await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
-    mount_save_title_id = 'YAHY40786' if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
+async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str) -> str | tuple[list | PS4AccountID]:
+    ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
             savedatax = mp.savedatax
@@ -869,19 +878,19 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
             for index, chet in enumerate(cheats):
                 results = []
                 try:
-                    await log_message(ctx,'Connecting to PS4 ftp to do some cheats')
+                    # await log_message(ctx,'Connecting to PS4 ftp to do some cheats')
                     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                         await ftp.change_directory(new_mount_dir) 
-                        await log_message(ctx,f'Applying cheat {chet.pretty()} {index + 1}/{len(cheats)} for {pretty_save_dir}')
+                        # await log_message(ctx,f'Applying cheat {chet.pretty()} {index + 1}/{len(cheats)} for {pretty_save_dir}')
                         result = await chet.func(ftp,new_mount_dir,white_file.name,**chet.kwargs)
                     results.append(result) if result else None
                 except Exception:
-                    return f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}. reason: ```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
-            await log_message(ctx,'Connecting to PS4 ftp to do resign')
+                    return f'Could not apply cheat {chet.pretty()} to {pretty_save_dir}. reason: ```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+            # await log_message(ctx,'Connecting to PS4 ftp to do resign')
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                 await ftp.change_directory(new_mount_dir) 
-                await log_message(ctx,f'Resigning {pretty_save_dir} to {account_id.account_id}')
-                account_id_old = await resign_mounted_save(ctx,ftp,new_mount_dir,account_id)
+                # await log_message(ctx,f'Resigning {pretty_save_dir} to {account_id.account_id}')
+                account_id_old = await resign_mounted_save(None,ftp,new_mount_dir,account_id)
             return results,account_id_old
     finally:
         if savedatax:
@@ -898,16 +907,20 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                             await ftp.change_directory(new_mount_dir)
                         except Exception: pass
                         else:
-                            await log_user_error(ctx,'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!')
-                            breakpoint()
+                            # await log_user_error(ctx,WARNING_COULD_NOT_UNMOUNT_MSG)
+                            # breakpoint()
+                            return WARNING_COULD_NOT_UNMOUNT_MSG
                     return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided'
-
-
-async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None = None) -> str:
+async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str]) -> str | tuple[list | PS4AccountID]:
     pretty_save_dir = white_file.relative_to(parent_dir)
-    await log_message(ctx,'Connecting to PS4 ftp to do some decrypts')
+    mount_save_title_id = 'YAHY40786' if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
+    await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
+    custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id))
+    res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
+    return res
 
-    await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
+async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None, pretty_save_dir: Path) -> str | None:
+    ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
             savedatax = mp.savedatax
@@ -915,7 +928,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
             if not mp:
                 return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})'
             if decrypt_fun:
-                await log_message(ctx,f'Doing custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
+                # await log_message(ctx,f'Doing custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                     await ftp.change_directory(new_mount_dir)
                     try:
@@ -923,7 +936,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
                     except Exception:
                         return f'Could not custom decrypt your save {pretty_save_dir}, reason ```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
             else:
-                await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
+                # await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                     await ftp.change_directory(MOUNTED_POINT.as_posix())
                     await ftp.download(savedatax,decrypted_save_ouput / 'savedata0',write_into=True)
@@ -942,10 +955,21 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
                             await ftp.change_directory(new_mount_dir) # check if we are still mounted
                         except Exception: pass
                         else:
-                            await log_user_error(ctx,'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!')
-                            breakpoint()
+                            # await log_user_error(ctx,WARNING_COULD_NOT_UNMOUNT_MSG)
+                            # breakpoint()
+                            return WARNING_COULD_NOT_UNMOUNT_MSG
                     return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it the save you provided'
+async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None = None) -> str | None:
+    pretty_save_dir = white_file.relative_to(parent_dir)
 
+    # await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
+    if decrypt_fun:
+        await log_message(ctx,f'Attemping custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
+    else:
+        await log_message(ctx,f'Attemping to download savedata0 folder from decrypted {pretty_save_dir}')
+    custon_decss = lambda: asyncio.run(_decrypt_saves_on_ps4(bin_file, white_file, parent_dir, decrypted_save_ouput, save_dir_ftp, decrypt_fun, pretty_save_dir))
+    res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
+    return res
 
 def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg):
     with zipfile.ZipFile(new_zip_name,'w') as zp:
@@ -1115,6 +1139,8 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                     a = await decrypt_saves_on_ps4(ctx,bin_file,white_file,enc_tp,new_dec,save_dir_ftp,decrypt_fun)
                 if a:
                     await log_user_error(ctx,a)
+                    if a == WARNING_COULD_NOT_UNMOUNT_MSG:
+                        breakpoint()
                     return
             your_saves_msg = 'savedata0 decrypted save'
             if decrypt_fun:
@@ -1129,7 +1155,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
 
-    if is_in_test_mode():
+    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1190,6 +1216,8 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,save_dir_ftp)
                     if isinstance(a,str):
                         await log_user_error(ctx,a)
+                        if a == WARNING_COULD_NOT_UNMOUNT_MSG:
+                            breakpoint()
                         return
                     results,old_account_id = a
                     await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
@@ -1782,6 +1810,7 @@ async def do_import_bigfart(ctx: interactions.SlashContext,save_files: str,accou
 ############################04 Cool bot features
 @interactions.listen()
 async def ready():
+    ps4 = PS4Debug(CONFIG['ps4_ip'])
     await update_status()
     _update_status.start()
     await ps4.notify('eZwizard3-bot connected!')
@@ -1958,7 +1987,6 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
     await log_user_success(ctx,f'Your saved urls are... \n{pretty.strip()}')
 
 async def main() -> int:
-    global ps4
     global UPLOAD_SAVES_FOLDER_ID
     if is_in_test_mode():
         print('in test mode, only bot admins can use bot this session')
