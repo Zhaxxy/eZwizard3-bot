@@ -1009,7 +1009,8 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
         # os.remove(new_zip_name.name)
     amnt_used_this_session += 1
-    add_1_total_amnt_used()
+    if not is_in_test_mode():
+        add_1_total_amnt_used()
 
 ############################00 Real commands stuff
 def dec_enc_save_files(func):
