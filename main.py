@@ -1238,7 +1238,7 @@ advanced_mode_export = interactions.SlashCommand(name="advanced_mode_export", de
 async def do_dec(ctx: interactions.SlashContext,save_files: str):
     await base_do_dec(ctx,save_files)
 
-async def export_single_file_any_game(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+async def export_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_name: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
     """
     Exported file
     """
@@ -1266,7 +1266,7 @@ async def do_export_single_file_any_game(ctx: interactions.SlashContext,save_fil
     await base_do_dec(ctx,save_files,DecFunc(export_single_file_any_game,kwargs))
 
 
-async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
     """
     Exported dl2 file
     """
@@ -1300,7 +1300,7 @@ dying_light_2_export = advanced_mode_export.group(name='dying_light_2_export',de
 async def do_export_dl2_save(ctx: interactions.SlashContext,save_files: str,**kwargs):
     await base_do_dec(ctx,save_files,DecFunc(export_dl2_save,kwargs))
 
-async def export_xenoverse_2_sdata000_dat_file(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None,verify_checksum: bool = True):
+async def export_xenoverse_2_sdata000_dat_file(ftp: aioftp.Client, mount_dir: str, save_name: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None,verify_checksum: bool = True):
     """
     Exported xenoverse 2 SDATAXXX.DAT file
     """
@@ -1336,7 +1336,7 @@ async def do_export_xenoverse_2_sdata000_dat_file(ctx: interactions.SlashContext
     await base_do_dec(ctx,save_files,DecFunc(export_xenoverse_2_sdata000_dat_file,kwargs))
 
 
-async def export_red_dead_redemption_2_or_gta_v_file(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+async def export_red_dead_redemption_2_or_gta_v_file(ftp: aioftp.Client, mount_dir: str, save_name: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
     """
     Exported Red Dead Redemption 2 or Grand Theft Auto V savedata
     """
@@ -1370,7 +1370,7 @@ rdr_2_or_gta_v_export = advanced_mode_export.group(name='rdr_2_or_gta_v_export',
 #@interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)
 async def do_export_red_dead_redemption_2_or_gta_v_file(ctx: interactions.SlashContext,save_files: str,**kwargs):
     await base_do_dec(ctx,save_files,DecFunc(export_red_dead_redemption_2_or_gta_v_file,kwargs))
-# async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, savename: str, decrypted_save_ouput: Path,/):
+# async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name: str, decrypted_save_ouput: Path,/):
 #     await ftp.change_directory(mount_dir)
 #     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path) and path.name != 'SETTINGS.dat']
 #     print(f'{files = }')
