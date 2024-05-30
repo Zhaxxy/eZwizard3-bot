@@ -1030,7 +1030,7 @@ def account_id_opt(func):
     opt_type=interactions.OptionType.STRING
     )(func)
 def filename_p_opt(func):
-    return interactions.slash_option(name='filename_p',description='If mutiple files are found, it will look for a file with this name, put path if in folder',opt_type=interactions.OptionType.STRING,required=False)(func)# (like man4/mysave.sav)')
+    return interactions.slash_option(name='filename_p',description='If multiple files are found, it will look for a file with this name, put path if in folder',opt_type=interactions.OptionType.STRING,required=False)(func)# (like man4/mysave.sav)')
 
 async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Sequence[CheatFunc | DecFunc],chet_files_custom: Path, savedata0_folder:Path) -> bool:
     await log_message(ctx,f'Looking for any `dl_link`s or `savedata0`s to download')
