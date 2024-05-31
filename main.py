@@ -263,11 +263,18 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
 
     await update_status()
 
+
 class ChangeSaveIconOption(Enum):
     KEEP_ASPECT_NEAREST_NEIGHBOUR = 1
     IGNORE_ASPECT_NEAREST_NEIGHBOUR = 2
     KEEP_ASPECT_BILINEAR = 3
     IGNORE_ASPECT_BILINEAR = 4 
+
+
+class CleanEncryptedSaveOption(Enum):
+    DONT_DELETE_ANYTHING = 0
+    DELETE_ALL_BUT_KEEP_SCE_SYS = 1
+    DELETE_ALL_INCLUDING_SCE_SYS = 2
 
 class SaveMountPointResourceError(Exception):
     """
@@ -699,7 +706,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         if test[0] > FILE_SIZE_TOTAL_LIMIT:
             return f'The decrypted save {link} is too big, maybe you uploaded a wrong file to it? max is {FILE_SIZE_TOTAL_LIMIT/1_048_576}mb'
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
-            return f'The decrypted save {link} has too many loose files, max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+            return f'The decrypted save {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
 
         await log_message(ctx,f'Downloading {link} savedata0 folder')
         Path(output_folder,'savedata0').mkdir(parents=True,exist_ok=True)# TODO maybe i dont gotta do this, but i am
@@ -728,7 +735,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         return f'The decompressed {link} is too big, the max is {FILE_SIZE_TOTAL_LIMIT} bytes'
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
-        return f'The decompressed {link} has too many loose files, max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+        return f'The decompressed {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
 
     await log_message(ctx,f'Looking for decrypted saves in {link}')
     seen_savedata0_folders: set[SevenZipFile] = {
@@ -1272,7 +1279,7 @@ async def export_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_n
     Exported file
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1300,7 +1307,7 @@ async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_
     Exported dl2 file
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1334,7 +1341,7 @@ async def export_xenoverse_2_sdata000_dat_file(ftp: aioftp.Client, mount_dir: st
     Exported xenoverse 2 SDATAXXX.DAT file
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1370,7 +1377,7 @@ async def export_red_dead_redemption_2_or_gta_v_file(ftp: aioftp.Client, mount_d
     Exported Red Dead Redemption 2 or Grand Theft Auto V savedata
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1399,22 +1406,8 @@ rdr_2_or_gta_v_export = advanced_mode_export.group(name='rdr_2_or_gta_v_export',
 #@interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)
 async def do_export_red_dead_redemption_2_or_gta_v_file(ctx: interactions.SlashContext,save_files: str,**kwargs):
     await base_do_dec(ctx,save_files,DecFunc(export_red_dead_redemption_2_or_gta_v_file,kwargs))
-# async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/):
-#     await ftp.change_directory(mount_dir)
-#     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path) and path.name != 'SETTINGS.dat']
-#     print(f'{files = }')
-#     try:
-#         ftp_save, = files
-#     except ValueError:
-#         raise ValueError('Mutiple files found in save excluding SETTINGS.dat file, maybe a different save type?') from None
-    
-#     await ftp.download(ftp_save[0],decrypted_save_ouput)
-# dying_light_2_export = advanced_mode_export.group(name='dying_light_2_export',description='Export .sav files')
-# @dying_light_2_export.subcommand(sub_cmd_name='dying_light_2_export_sav',sub_cmd_description="Export a .sav file (eg save_main_0.sav) to your save")
-# @dec_enc_save_files
-# async def do_export_dl2_save(ctx: interactions.SlashContext,save_files: str):
-#     await base_do_dec(ctx,save_files,DecFunc(export_dl2_save,{}))
-############################02 Custom cheats
+
+
 cheats_base_command = interactions.SlashCommand(name="cheats", description="Commands for custom cheats for some games")
 
 async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
@@ -1464,30 +1457,39 @@ strider = cheats_base_command.group(name="strider", description="Cheats for Stri
     ])
 async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(strider_change_difficulty,kwargs))
-async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,decrypted_save_file: Path, clean_encrypted_file: bool = False):
+async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,decrypted_save_file: Path, clean_encrypted_file: CleanEncryptedSaveOption):
     """
     Encrypted save
     """
     parent_mount, mount_last_name = Path(mount_dir).parent.as_posix(), Path(mount_dir).name
-    await ftp.change_directory(parent_mount)
+    
+    if clean_encrypted_file.value:
+        await ftp.change_directory(mount_dir)
+        for path,info in (await ftp.list(recursive=True)):
+            if path.parts[0] == 'sce_sys' and clean_encrypted_file == CleanEncryptedSaveOption.DELETE_ALL_BUT_KEEP_SCE_SYS:
+                continue
+            await ftp.remove(path)
+    
 
-    if clean_encrypted_file:
-        try:
-            await ftp.remove(mount_last_name)
-        except Exception:
-            pass
-        else:
-            print('Yeah we should have gotten an error here')
-            breakpoint()
-            raise AssertionError('Yeah we should have gotten an error here')
     await ftp.change_directory(parent_mount)
     await ftp.upload(decrypted_save_file / 'savedata0',mount_last_name,write_into=True)
 @interactions.slash_command(name="encrypt", description=f"Encrypt a save (max 1 save per command) only jb PS4 decrypted save")
 @interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('decrypted_save_file','A link to a folder or zip of your decrypted savedata0 folder',interactions.OptionType.STRING,True)
-@interactions.slash_option('clean_encrypted_file','If True, deletes all in encrypted file; only use when decrypted folder has all files. Default: False',interactions.OptionType.BOOLEAN,False)
+#@interactions.slash_option('clean_encrypted_file','If True, deletes all in encrypted file; only use when decrypted folder has all files. Default: False',interactions.OptionType.BOOLEAN,False)
+@interactions.slash_option(
+    name="clean_encrypted_file",
+    description="Delete all in encrypted file; only use when decrypted folder has all files",
+    required=False,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[ # TODO make theese choices stick out from each other more
+        interactions.SlashCommandChoice(name="Delete all in encrypted file but *keep sce_sys folder*; only use when decrypted folder has all files", value=1),
+        interactions.SlashCommandChoice(name="Delete all in encrypted file **INCLUDING sce_sys folder**; only use if decrypted folder has al files", value=2),
+    ]
+    )
 async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 
@@ -1637,7 +1639,7 @@ async def upload_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_n
     Encrypted save
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1667,7 +1669,7 @@ async def upload_dl2_sav_gz_decompressed(ftp: aioftp.Client, mount_dir: str, sav
     Encrypted dying light 2 save
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1701,7 +1703,7 @@ async def upload_xenoverse_2_save(ftp: aioftp.Client, mount_dir: str, save_name:
     Xenoverse 2 encrypted save
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1732,7 +1734,7 @@ async def upload_red_dead_redemption_2_or_gta_v_save(ftp: aioftp.Client, mount_d
     Red Dead Redemption 2 or Grand Theft Auto V encrypted save
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
@@ -1761,32 +1763,14 @@ rdr_2_or_gta_v_import = advanced_mode_import.group(name="rdr_2_or_gta_v_import",
 @filename_p_opt
 async def do_upload_red_dead_redemption_2_or_gta_v_save(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_red_dead_redemption_2_or_gta_v_save,kwargs))
-# async def upload_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_dot_sav_file: Path):
-#     """
-#     Encrypted Dying Light 2 save
-#     """
-#     await ftp.change_directory(mount_dir)
-#     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path) and path.name != 'SETTINGS.dat']
-#     try:
-#         ftp_save, = files
-#     except ValueError:
-#         raise ValueError('Mutiple files found in save excluding SETTINGS.dat file, maybe a different save type?') from None
-    
-#     await ftp.upload(dl_link_dot_sav_file,ftp_save[0],write_into=True)
-# dying_light_2_import = advanced_mode_import.group(name="dying_light_2_import", description="Import .sav files")
-# @dying_light_2_import.subcommand(sub_cmd_name="dying_light_2_import_sav", sub_cmd_description="Import a .sav file (eg save_main_0.sav) to your save")
-# @interactions.slash_option('save_files','The save file to import the .sav file to',interactions.OptionType.STRING,True)
-# @account_id_opt
-# @interactions.slash_option('dl_link_dot_sav_file','the .sav file you want, eg a save_main_0.sav file',interactions.OptionType.STRING,True)
-# async def do_upload_dl2_save(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-#     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_dl2_save,kwargs))
+
 
 async def import_bigfart(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_bigfart: Path):
     """
     Encrypted bigfart
     """
     await ftp.change_directory(mount_dir)
-    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and 'sce_sys' not in str(path)]
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
         ftp_save, = files
     except ValueError:
