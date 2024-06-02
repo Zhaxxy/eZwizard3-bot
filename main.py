@@ -461,6 +461,23 @@ def get_all_saved_urls(author_id: str) -> dict[str,str]:
         except KeyError:
             return {}
 
+
+def is_user_verbose_mode(author_id: str) -> bool:
+    author_id = str(author_id)
+    with SqliteDict("user_stuff.sqlite", tablename="user_verbose_booleans") as db:
+        try:
+            return db[author_id]
+        except KeyError:
+            db[author_id] = False
+            return False
+
+def set_user_verbose_mode(author_id: str, verbose_mode: bool):
+    author_id = str(author_id)
+    with SqliteDict("user_stuff.sqlite", tablename="user_verbose_booleans") as db:
+        db[author_id] = verbose_mode
+        db.commit()
+
+
 user_cheat_chains = {}
 def add_cheat_chain(author_id: str, cheat_function: CheatFunc):
     global user_cheat_chains
@@ -873,7 +890,9 @@ async def resign_mounted_save(ctx: interactions.SlashContext | None, ftp: aioftp
             await log_message(ctx,f'Something went wrong when resigning the save, {type(e).__name__}: {e}, ignoring!')
     finally:
         return old_account_id
-async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str) -> str | tuple[list | PS4AccountID]:
+
+
+async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str) -> str | tuple[list | PS4AccountID]:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
@@ -891,8 +910,14 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                         # await log_message(ctx,f'Applying cheat {chet.pretty()} {index + 1}/{len(cheats)} for {pretty_save_dir}')
                         result = await chet.func(ftp,new_mount_dir,white_file.name,**chet.kwargs)
                     results.append(result) if result else None
-                except Exception:
-                    return f'Could not apply cheat {chet.pretty()} to {pretty_save_dir}. reason: ```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+                except Exception as e:
+                    leader = ''
+                    if is_user_verbose_mode(ctx_author_id):
+                        error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+                    else:
+                        error_msg = f'```{type(e).__name__}: {e}```'
+                        leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
+                    return f'{leader}Could not apply cheat {chet.pretty()}to {pretty_save_dir}.\n\nreason: {error_msg}'
             # await log_message(ctx,'Connecting to PS4 ftp to do resign')
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                 await ftp.change_directory(new_mount_dir) 
@@ -922,11 +947,12 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
     pretty_save_dir = white_file.relative_to(parent_dir)
     mount_save_title_id = 'YAHY40786' if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
     await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
-    custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id))
+    custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
 
-async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None, pretty_save_dir: Path) -> str | None:
+
+async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None, pretty_save_dir: Path, ctx_author_id: str) -> str | None:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
@@ -940,8 +966,14 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                     await ftp.change_directory(new_mount_dir)
                     try:
                         await decrypt_fun.func(ftp,new_mount_dir,white_file.name,decrypted_save_ouput,**decrypt_fun.kwargs)
-                    except Exception:
-                        return f'Could not custom decrypt your save {pretty_save_dir}, reason ```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+                    except Exception as e:
+                        leader = ''
+                        if is_user_verbose_mode(ctx_author_id):
+                            error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+                        else:
+                            error_msg = f'```{type(e).__name__}: {e}```'
+                            leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
+                        return f'{leader}Could not custom decrypt your save {pretty_save_dir}.\n\nreason {error_msg}'
             else:
                 # await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -974,7 +1006,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
         await log_message(ctx,f'Attemping custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
     else:
         await log_message(ctx,f'Attemping to download savedata0 folder from decrypted {pretty_save_dir}')
-    custon_decss = lambda: asyncio.run(_decrypt_saves_on_ps4(bin_file, white_file, parent_dir, decrypted_save_ouput, save_dir_ftp, decrypt_fun, pretty_save_dir))
+    custon_decss = lambda: asyncio.run(_decrypt_saves_on_ps4(bin_file, white_file, parent_dir, decrypted_save_ouput, save_dir_ftp, decrypt_fun, pretty_save_dir,ctx.author_id))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
 
@@ -1971,6 +2003,17 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
         pretty += f'{key} -> {value}\n'
     await log_user_success(ctx,f'Your saved urls are... \n{pretty.strip()}')
 
+
+@interactions.slash_command(name='set_verbose_mode',description="Do you want error messages more verbose (detailed)?")
+@interactions.slash_option('verbose_mode','Do you want error messages more verbose (detailed)?',interactions.OptionType.BOOLEAN,True)
+async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
+    ctx = await set_up_ctx(ctx)
+    set_user_verbose_mode(ctx.author_id,verbose_mode)
+    if verbose_mode:
+        await log_user_success(ctx,'Verbose mode (more detailed error messages) is **ON**')
+    else:
+        await log_user_success(ctx,'Verbose mode (more detailed error messages) is *OFF*')
+    
 async def main() -> int:
     global UPLOAD_SAVES_FOLDER_ID
     if is_in_test_mode():

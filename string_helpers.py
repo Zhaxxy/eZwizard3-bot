@@ -226,7 +226,7 @@ Mu wants something.
 どうした？ お腹は空いてなさそうし･･･｡何が欲しいの？何をして欲しいの？
 My jaw is itchy and itchy. (^^♪
 Die Katze bellt die Fliege an
-where ever happened to eZwizard1, was there ever a eZwizard1?
+what ever happened to eZwizard1, was there ever a eZwizard1?
 thesoundsofchildrenbeingtoturedinhell.png
 $Afx/ProcessorID
 RuntimeError: coroutine ignored GeneratorExit, more like kys: kys ignored kys (keep yourself safe)
