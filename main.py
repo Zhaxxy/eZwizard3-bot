@@ -14,6 +14,7 @@ from datetime import datetime
 from zlib import crc32 # put modules you need at the bottom of list for custom cheats, in correct block
 import struct
 import gzip
+from sqlite3 import connect as sqlite3_connect
 
 from psnawp_api import PSNAWP
 from psnawp_api.core.psnawp_exceptions import PSNAWPNotFound
@@ -58,7 +59,8 @@ AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
 PS4_ICON0_DIMENSIONS = 228,128
 
 CONFIG = load_config()
-SAVE_FOLDER_ENCRYPTED = f'/user/home/{CONFIG["user_id"]}/savedata/YAHY40786'
+BASE_TITLE_ID = 'YAHY40786'
+SAVE_FOLDER_ENCRYPTED = f'/user/home/{CONFIG["user_id"]}/savedata/{BASE_TITLE_ID}'
 MOUNTED_POINT = Path('/mnt/sandbox/NPXS20001_000')
 
 PS4_SAVE_KEYSTONES = {
@@ -842,7 +844,7 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file.relative_to(parent_dir)
     # await log_message(ctx,'Ensuring base save exists on PS4 before uploading')
-    # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
+    # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,save_dir_ftp) as mp:
         # pass
     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrpyted save (this may take a while if mutiple slots are in use)'))
     async with mounted_saves_at_once:
@@ -945,7 +947,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                     return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided'
 async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str]) -> str | tuple[list | PS4AccountID]:
     pretty_save_dir = white_file.relative_to(parent_dir)
-    mount_save_title_id = 'YAHY40786' if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
+    mount_save_title_id = BASE_TITLE_ID if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
     await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
@@ -955,7 +957,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
 async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None, pretty_save_dir: Path, ctx_author_id: str) -> str | None:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
-        async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',save_dir_ftp) as mp:
+        async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,save_dir_ftp) as mp:
             savedatax = mp.savedatax
             new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
             if not mp:
@@ -2031,8 +2033,27 @@ async def main() -> int:
 
     print('testing if ftp works')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-        await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata')
-    print('ftp works!')
+        await ftp.change_directory(f'/system_data/savedata/{CONFIG["user_id"]}/db/user')
+        print('ftp works!')
+        print('Cleaning base saves')
+        try:
+            os.remove('savedata.db')
+        except FileNotFoundError:
+            pass
+        await ftp.download('savedata.db','savedata.db',write_into=True)
+        try:
+            con = sqlite3_connect('savedata.db')
+            cur = con.cursor()
+            cur.execute(f'DELETE FROM savedata WHERE title_id = "{BASE_TITLE_ID}"')
+            con.commit()
+        finally:
+            cur.close()
+            con.close()
+        await ftp.upload('savedata.db','savedata.db',write_into=True)
+    os.remove('savedata.db')
+    print('done cleaning base saves')
+    
+    
     print('initialising database')
     initialise_database()
     print('done initialising database')
@@ -2043,7 +2064,7 @@ async def main() -> int:
     async with PatchMemoryPS4900(ps4) as mem:
         print('Memory patched, ensuring all base saves exist!')
         for eeeee in SAVE_DIRS:
-            async with MountSave(ps4,mem,int(CONFIG['user_id'],16),'YAHY40786',eeeee) as mp:
+            async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,eeeee) as mp:
                 pass
         print('done checking!')
         bot = interactions.Client(token=CONFIG['discord_token'])
