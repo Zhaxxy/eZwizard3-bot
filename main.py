@@ -2065,7 +2065,8 @@ async def main() -> int:
         print('Memory patched, ensuring all base saves exist!')
         for eeeee in SAVE_DIRS:
             async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,eeeee) as mp:
-                pass
+                if not mp:
+                    raise ValueError(f'broken base save {eeeee}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
         print('done checking!')
         bot = interactions.Client(token=CONFIG['discord_token'])
         await bot.astart()
