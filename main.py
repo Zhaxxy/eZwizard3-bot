@@ -2050,6 +2050,13 @@ async def main() -> int:
             cur.close()
             con.close()
         await ftp.upload('savedata.db','savedata.db',write_into=True)
+        try:
+            await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata/{BASE_TITLE_ID}')
+        except Exception:
+            pass
+        else:
+            await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata/')
+            await ftp.remove(BASE_TITLE_ID)
     os.remove('savedata.db')
     print('done cleaning base saves')
     
