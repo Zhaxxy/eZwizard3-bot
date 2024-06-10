@@ -754,7 +754,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         return f'The decompressed {link} is too big, the max is {FILE_SIZE_TOTAL_LIMIT} bytes'
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
-        return f'The decompressed {link} has too many loose files ({len(a.files)), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+        return f'The decompressed {link} has too many loose files ({len(a.files)}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
 
     await log_message(ctx,f'Looking for decrypted saves in {link}')
     seen_savedata0_folders: set[SevenZipFile] = {
