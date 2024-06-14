@@ -16,7 +16,7 @@ class SevenZipInfo(NamedTuple):
 
     
 SEVEN_ZIP_ARGS = ('7z',)
-VALID_7Z_EXTENSIONS = frozenset(('.7z', '.xz', '.bzip2', '.gzip', '.tar', '.zip', '.wim', '.apfs', '.ar', '.arj', '.cab', '.chm', '.cpio', '.cramfs', '.dmg', '.ext', '.fat', '.gpt', '.hfs', '.ihex', '.iso', '.lzh', '.lzma', '.mbr', '.msi', '.nsis', '.ntfs', '.qcow2', '.rar', '.rpm', '.squashfs', '.udf', '.uefi', '.vdi', '.vhd', '.vhdx', '.vmdk', '.xar', '.z'))
+VALID_7Z_EXTENSIONS = frozenset(('.mcworld','.7z', '.xz', '.bzip2', '.gzip', '.tar', '.zip', '.wim', '.apfs', '.ar', '.arj', '.cab', '.chm', '.cpio', '.cramfs', '.dmg', '.ext', '.fat', '.gpt', '.hfs', '.ihex', '.iso', '.lzh', '.lzma', '.mbr', '.msi', '.nsis', '.ntfs', '.qcow2', '.rar', '.rpm', '.squashfs', '.udf', '.uefi', '.vdi', '.vhd', '.vhdx', '.vmdk', '.xar', '.z'))
 
 def test_7z():
     global SEVEN_ZIP_ARGS
@@ -73,6 +73,20 @@ async def get_archive_info(path_to_archive: Path | str) -> SevenZipInfo:
         total_uncompressed_size += path_size
     
     return SevenZipInfo(files,total_uncompressed_size)
+
+
+async def extract_full_archive(path_to_archive: Path | str, output_loc: Path | str = '',command: Literal['e'] | Literal['x'] = 'e'):
+    output_loc = output_loc or getcwd()
+    proc = await asyncio.create_subprocess_exec(
+       *SEVEN_ZIP_ARGS,
+        command,path_to_archive,f'-o{output_loc}',
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
+    if stderr or proc.returncode:
+        raise Exception(f'bad zip file? error code {proc.returncode} error: {stderr}{stdout}')
 
 
 async def extract_single_file(path_to_archive: Path | str, name_of_file: Path | str, output_loc: Path | str = '', command: Literal['e'] | Literal['x'] = 'e'):

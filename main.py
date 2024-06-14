@@ -4,7 +4,6 @@ import re
 from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, assert_never
 from enum import Enum
 from pathlib import Path
-import shutil
 from traceback import format_exc
 from io import BytesIO
 import time
@@ -16,6 +15,8 @@ import struct
 import gzip
 from sqlite3 import connect as sqlite3_connect
 
+import aioshutil as shutil
+from aiopath import AsyncPath
 from psnawp_api import PSNAWP
 from psnawp_api.core.psnawp_exceptions import PSNAWPNotFound
 from aiofiles.tempfile import TemporaryDirectory, TemporaryFile
@@ -28,8 +29,8 @@ from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
 from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name
-from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile
-from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder
+from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive
+from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
 try:
     from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
@@ -49,10 +50,10 @@ CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled comman
 CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
-FILE_SIZE_TOTAL_LIMIT = 967_934_048
+FILE_SIZE_TOTAL_LIMIT = 1_073_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
-ZIP_LOOSE_FILES_MAX_AMT = 100
+ZIP_LOOSE_FILES_MAX_AMT = 8_000
 MAX_RESIGNS_PER_ONCE = 99
 DOWNLOAD_CHUNK_SIZE = 1024
 AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
@@ -157,7 +158,7 @@ HUH = "Connection terminated. I'm sorry to interrupt you Elizabeth, if you still
 #         return self.new_path
 
 #     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
-#         shutil.rmtree(self.new_path)
+#         await shutil.rmtree(self.new_path)
 
 
 def is_in_test_mode() -> bool:
@@ -502,6 +503,9 @@ def delete_chain(author_id: str):
 
 
 def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashContext) -> str | PS4AccountID:
+    """
+    Returns a PS4AccountID if success, else returns str as error message
+    """
     if account_id == '0':
         try:
             return PS4AccountID(get_user_account_id(author_id))
@@ -691,7 +695,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
 
 
 
-async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,link: str, output_folder: Path) -> str:
+async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,link: str, output_folder: Path, allow_any_folder: bool, unpack_first_root_folder: bool) -> str:
     """
     For now at least, we are only gonna allow one encryption at a time
     """
@@ -702,21 +706,23 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
         except Exception as e:
             return f'Could not get files metadata from folder {link}, got error {type(e).__name__}: {e}, maybe its not public?'
-        await log_message(ctx,f'Looking for a savedata0 folder in {link}')
-        seen_savedata0_folders: set[GDriveFile] = {
-            raw_files[Path(*(p.file_name_as_path.parts[:p.file_name_as_path.parts.index('savedata0')+1]))]
-            for p in raw_files.values()
-            if (not p.is_file) and ('savedata0' in p.file_name_as_path.parts) and ('__MACOSX' not in p.file_name_as_path.parts) and (not p.file_name_as_path.name.startswith('._'))
-        }
+        if not allow_any_folder:
+            await log_message(ctx,f'Looking for a savedata0 folder in {link}')
+            seen_savedata0_folders: set[GDriveFile] = {
+                raw_files[Path(*(p.file_name_as_path.parts[:p.file_name_as_path.parts.index('savedata0')+1]))]
+                for p in raw_files.values()
+                if (not p.is_file) and ('savedata0' in p.file_name_as_path.parts) and ('__MACOSX' not in p.file_name_as_path.parts) and (not p.file_name_as_path.name.startswith('._'))
+            }
 
-        if not seen_savedata0_folders:
-            return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and upload that'
+            if not seen_savedata0_folders:
+                return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and upload that'
 
-        if len(seen_savedata0_folders) > 1:
-            return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
-
-        for x in seen_savedata0_folders:
-            savedata0_folder = x
+            if len(seen_savedata0_folders) > 1:
+                return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
+            for savedata0_folder in seen_savedata0_folders:
+                pass
+        else:
+            savedata0_folder = await get_folder_info_from_id(new_link)
         await log_message(ctx,f'Checking if {link} savedata0 folder is too big or not')
         try:
             test = await get_gdrive_folder_size(savedata0_folder.file_id)
@@ -729,21 +735,34 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
 
         await log_message(ctx,f'Downloading {link} savedata0 folder')
         Path(output_folder,'savedata0').mkdir(parents=True,exist_ok=True)# TODO maybe i dont gotta do this, but i am
+        new_savedata0_folder_made = Path(output_folder,'savedata0')
         try:
-            await download_folder(savedata0_folder.file_id,Path(output_folder,'savedata0'))
+            await download_folder(savedata0_folder.file_id,new_savedata0_folder_made)
         except Exception:
             return 'blud thinks hes funny'
+        if unpack_first_root_folder:
+            await log_message(ctx,f'Doing some file management with {link}')
+            checker = AsyncPath(new_savedata0_folder_made)
+            thing_count = 0
+            async for thing in checker.iterdir():
+                thing_count += 1
+            if thing_count != 1:
+                return ''
+            
+            async for file_name in thing.iterdir():
+                await shutil.move(file_name,new_savedata0_folder_made)
+            
         return ''
     
     async with TemporaryDirectory() as tp:
         direct_zip = await download_direct_link(ctx,link,tp,filename_valid_extension)
         if isinstance(direct_zip,str):
             return direct_zip
-        return await extract_savedata0_decrypted_save(ctx,link,output_folder,direct_zip)
+        return await extract_savedata0_decrypted_save(ctx,link,output_folder,direct_zip,allow_any_folder,unpack_first_root_folder)
 
 
 
-async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: str, output_folder: Path, archive_name: Path) -> str:
+async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: str, output_folder: Path, archive_name: Path, allow_any_folder: bool, unpack_first_root_folder: bool) -> str:
     await log_message(ctx,f'Checking {link} if valid archive')
     try:
         a = await get_archive_info(archive_name)
@@ -755,36 +774,51 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
         return f'The decompressed {link} has too many loose files ({len(a.files)}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+    if not allow_any_folder:
+        await log_message(ctx,f'Looking for decrypted saves in {link}')
+        seen_savedata0_folders: set[SevenZipFile] = {
+            a.files[Path(*(p.path.parts[:p.path.parts.index('savedata0')+1]))]
+            for p in a.files.values()
+            if (not p.is_file) and ('savedata0' in p.path.parts) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
+        }
+        if not seen_savedata0_folders:
+            return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that'
 
-    await log_message(ctx,f'Looking for decrypted saves in {link}')
-    seen_savedata0_folders: set[SevenZipFile] = {
-        a.files[Path(*(p.path.parts[:p.path.parts.index('savedata0')+1]))]
-        for p in a.files.values()
-        if (not p.is_file) and ('savedata0' in p.path.parts) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
-    }
-    if not seen_savedata0_folders:
-        return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that'
+        if len(seen_savedata0_folders) > 1:
+            return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
 
-    if len(seen_savedata0_folders) > 1:
-        return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
+        for savedata0_folder in seen_savedata0_folders:
+            pass
+        
+        await log_message(ctx,f'Extracting savedata0 from {link}')
+        try:
+            await extract_single_file(archive_name,savedata0_folder.path,output_folder,'x')
+        except Exception as e:
+            return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+        if not savedata0_folder.path == Path('savedata0'):
+            await log_message(ctx,f'Doing some file management with {link}')
+            await shutil.move(Path(output_folder, savedata0_folder.path),output_folder)
+            if savedata0_folder.path.parts[0] != Path('savedata0'):
+                await shutil.rmtree(Path(output_folder,savedata0_folder.path.parts[0]))
 
-    for x in seen_savedata0_folders:
-        savedata0_folder = x
-    
-    await log_message(ctx,f'Extracting savedata0 from {link}')
-    try:
-        await extract_single_file(archive_name,savedata0_folder.path,output_folder,'x')
-    except Exception as e:
-        return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
-    if not savedata0_folder.path == Path('savedata0'):
-        await log_message(ctx,f'Doing some file management with {link}')
-        shutil.move(Path(output_folder, savedata0_folder.path),output_folder)
-        if savedata0_folder.path.parts[0] != Path('savedata0'):
-            shutil.rmtree(Path(output_folder,savedata0_folder.path.parts[0]))
-
-    return ''
-
-
+        return ''
+    else:
+        await log_message(ctx,f'Extracting decrypted save from {link}')
+        new_savedata0_folder_made = Path(output_folder,'savedata0')
+        new_savedata0_folder_made.mkdir(parents=True, exist_ok=True)
+        await extract_full_archive(archive_name,new_savedata0_folder_made,'x')
+        if unpack_first_root_folder:
+            await log_message(ctx,f'Doing some file management with {link}')
+            checker = AsyncPath(new_savedata0_folder_made)
+            thing_count = 0
+            async for thing in checker.iterdir():
+                thing_count += 1
+            if thing_count != 1:
+                return ''
+            
+            async for file_name in thing.iterdir():
+                await shutil.move(file_name,new_savedata0_folder_made)
+        
 async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID) -> str:
     """\
     function to download ps4 encrypted saves from a user given link, if anything goes wrong then a string error is returned, otherwise empty string (falsely).
@@ -1045,7 +1079,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                 raise
         await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\nPlease download this asap as it can be deleted at any time')
     else:
-        # shutil.move(new_zip_name,new_zip_name.name)
+        # await shutil.move(new_zip_name,new_zip_name.name)
         await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment')
         await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
         # os.remove(new_zip_name.name)
@@ -1097,7 +1131,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = result
-            if arg_name == 'decrypted_save_file':
+            if arg_name in ('decrypted_save_file','decrypted_save_folder'):
                 if is_str_int(link) and int(link) > 1:
                     try:
                         link = get_saved_url(ctx.author_id,int(link))
@@ -1105,7 +1139,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                         await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
                         return False
                 await log_message(ctx,f'Downloading {link} savedata0 folder or zip')
-                result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder)
+                result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder,arg_name=='decrypted_save_folder',cheat.kwargs['unpack_first_root_folder'])
                 if result:
                     await log_user_error(ctx,result)
                     return False
@@ -1361,7 +1395,7 @@ async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_
     
     with gzip.open(downloaded_ftp_save, 'rb') as f_in:
         with open(downloaded_ftp_save.with_suffix('.gz'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
-            shutil.copyfileobj(f_in, f_out)
+            await shutil.copyfileobj(f_in, f_out)
     os.replace(downloaded_ftp_save.with_suffix('.gz'),downloaded_ftp_save)
 dying_light_2_export = advanced_mode_export.group(name='dying_light_2_export',description='Export .sav files')
 @dying_light_2_export.subcommand(sub_cmd_name='dying_light_2_export_sav',sub_cmd_description="Export a .sav file (eg save_main_0.sav) from your save")
@@ -1491,10 +1525,14 @@ strider = cheats_base_command.group(name="strider", description="Cheats for Stri
     ])
 async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(strider_change_difficulty,kwargs))
-async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,decrypted_save_file: Path, clean_encrypted_file: CleanEncryptedSaveOption):
+async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,clean_encrypted_file: CleanEncryptedSaveOption, decrypted_save_file: Path = None, decrypted_save_folder: Path = None, unpack_first_root_folder: bool = False):
     """
     Encrypted save
     """
+    if decrypted_save_file and decrypted_save_folder:
+        raise AssertionError('cannot have both decrypted_save_file and decrypted_save_folder')
+    if decrypted_save_folder:
+        decrypted_save_file = decrypted_save_folder
     parent_mount, mount_last_name = Path(mount_dir).parent.as_posix(), Path(mount_dir).name
     
     if clean_encrypted_file.value:
@@ -1524,8 +1562,38 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     )
 async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
+    kwargs['unpack_first_root_folder'] = False
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
+@interactions.slash_command(name="easier_encrypt", description=f"Encrypt a save (max 1 save per command) only jb PS4 decrypted save")
+@interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('decrypted_save_folder','A link to a folder or zip containing your decrypted',interactions.OptionType.STRING,True)
+#@interactions.slash_option('clean_encrypted_file','If True, deletes all in encrypted file; only use when decrypted folder has all files. Default: False',interactions.OptionType.BOOLEAN,False)
+@interactions.slash_option(
+    name="unpack_first_root_folder",
+    description="If Yes, then it move contents of top most folder to root, otherwise it wont, default is Yes",
+    required=False,
+    opt_type=interactions.OptionType.BOOLEAN,
+    choices=[ # TODO make theese choices stick out from each other more
+        interactions.SlashCommandChoice(name="Yes", value=True),
+        interactions.SlashCommandChoice(name="No", value=False),
+    ]
+    )
+@interactions.slash_option(
+    name="clean_encrypted_file",
+    description="Delete all in encrypted file; only use when decrypted folder has all files",
+    required=False,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[ # TODO make theese choices stick out from each other more
+        interactions.SlashCommandChoice(name="Delete all in encrypted file but *keep sce_sys folder*; only use when decrypted folder has all files", value=1),
+        interactions.SlashCommandChoice(name="Delete all in encrypted file **INCLUDING sce_sys folder**; only use if decrypted folder has al files", value=2),
+    ]
+    )
+async def do_easier_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
+    kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
+    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
@@ -1719,7 +1787,7 @@ async def upload_dl2_sav_gz_decompressed(ftp: aioftp.Client, mount_dir: str, sav
     
     with open(dl_link_sav_decompressed, 'rb') as f_in:
         with gzip.open(dl_link_sav_decompressed.with_suffix('.gz'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
-            shutil.copyfileobj(f_in, f_out)
+            await shutil.copyfileobj(f_in, f_out)
     os.replace(dl_link_sav_decompressed.with_suffix('.gz'),dl_link_sav_decompressed)
     
     await ftp.upload(dl_link_sav_decompressed,ftp_save[0],write_into=True)
@@ -1939,7 +2007,7 @@ async def see_cheat_chain(ctx: interactions.SlashContext):
 
 @interactions.slash_command(name="ping",description="Test if the bot is responding")
 async def ping_test(ctx: interactions.SlashContext):
-    global bot
+    await ctx.defer()
     await ps4_life_check(ctx)
     cool_ping_msg = f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms'
     
