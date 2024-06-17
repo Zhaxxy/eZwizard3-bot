@@ -92,7 +92,7 @@ discord_token:
 # Go to https://ca.account.sony.com/api/v1/ssocookie while signed into psn and put the string here
 ssocookie: 
     glgagbgcSDh3t50ABpfwINS9kfugLPqDY8Lzfz3UabgE2w3OAhss6tWEJCOH54Sm 
-# :shrug: Watch https://youtu.be/fkWM7A-MxR0 up untill you get your credentials.json, make sure file in same folder as the program
+# Watch https://youtu.be/HCjAK0QA_3w on how to get this file!
 google_credentials_file: 
     credentials.json 
 # This one is easy, you can get it by looking at View Connection Status in Network settings (IP Address)
