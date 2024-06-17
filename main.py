@@ -715,7 +715,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
             }
 
             if not seen_savedata0_folders:
-                return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and upload that'
+                return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and upload that, or use the /easier_encrypt command'
 
             if len(seen_savedata0_folders) > 1:
                 return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
@@ -782,7 +782,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
             if (not p.is_file) and ('savedata0' in p.path.parts) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
         }
         if not seen_savedata0_folders:
-            return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that'
+            return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that, or use the /easier_encrypt command'
 
         if len(seen_savedata0_folders) > 1:
             return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
