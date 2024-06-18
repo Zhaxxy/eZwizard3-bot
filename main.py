@@ -951,7 +951,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                     if is_user_verbose_mode(ctx_author_id):
                         error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
                     else:
-                        error_msg = f'```{type(e).__name__}: {e}```'
+                        error_msg = f'```{e}```'
                         leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
                     return f'{leader}Could not apply cheat {chet.pretty()}to {pretty_save_dir}.\n\nreason: {error_msg}'
             # await log_message(ctx,'Connecting to PS4 ftp to do resign')
@@ -1007,7 +1007,7 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                         if is_user_verbose_mode(ctx_author_id):
                             error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
                         else:
-                            error_msg = f'```{type(e).__name__}: {e}```'
+                            error_msg = f'```{e}```'
                             leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
                         return f'{leader}Could not custom decrypt your save {pretty_save_dir}.\n\nreason {error_msg}'
             else:
