@@ -2032,11 +2032,11 @@ async def ping_test(ctx: interactions.SlashContext):
 @interactions.slash_option(
     name="my_file_id",
     description='The ID you put in to access this url',
-    required=True,
+    required=False,
     opt_type=interactions.OptionType.INTEGER,
     min_value=2
     )
-async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment, my_file_id: int):
+async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment, my_file_id: int | None = None):
     ctx = await set_up_ctx(ctx)
 
     if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
@@ -2047,6 +2047,12 @@ async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachm
         return
 
     await log_message(ctx,'Getting url')
+    if my_file_id is None:
+        my_saved_urls = get_all_saved_urls(ctx.author_id)
+        if not my_saved_urls:
+            my_file_id = 2
+        else:
+            my_file_id = max(int(i) for i in my_saved_urls) + 1
     save_url(ctx.author_id,my_file.url,my_file_id)
     await log_user_success(ctx,f'the url is {my_file.url}, or use {my_file_id} in a field that needs a url, like save_files or dl_link')
 
