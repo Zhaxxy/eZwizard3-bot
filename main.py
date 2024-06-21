@@ -624,7 +624,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
         except Exception as e:
             return f'Could not get file metadata from {link}, got error {type(e).__name__}: {e}, maybe its not public?'
         if validation_result := validation(zip_file.file_name_as_path):
-            return f'invalid file {link} reason: {validation_result}'
+            return f'{link} failed validation reason: {validation_result}'
         
         if zip_file.size > max_size:
             return f'The file {link} is too big, we only accept {max_size}bytes, if you think this is wrong please report it'
@@ -659,7 +659,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                     except IndexError:
                         filename = link.split('/')[-1].split('?')[0]
                     if validation_result := validation(filename):
-                        return f'invalid file {link} reason: {validation_result}'
+                        return f'{link} failed validation reason: {validation_result}'
                     file_size = response.headers.get('Content-Length')
                     if file_size is None:
                         return 'There was no Content-Length header'
@@ -863,6 +863,8 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
     async with TemporaryDirectory() as tp:
         direct_zip = await download_direct_link(ctx,link,tp,filename_valid_extension)
         if isinstance(direct_zip,str):
+            if 'failed validation reason:' in direct_zip: # TODO this method means if i change the error msg in download_direct_link and not this, then this if statement never happens
+                return f'{direct_zip} **(do not put decrypted saves into the save_files option)**'
             return direct_zip
         return await extract_ps4_encrypted_saves_archive(ctx,link,output_folder,account_id,direct_zip)
 
@@ -1575,7 +1577,7 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
     description="If Yes, then it move contents of top most folder to root, otherwise it wont, default is Yes",
     required=False,
     opt_type=interactions.OptionType.BOOLEAN,
-    choices=[ # TODO make theese choices stick out from each other more
+    choices=[
         interactions.SlashCommandChoice(name="Yes", value=True),
         interactions.SlashCommandChoice(name="No", value=False),
     ]
@@ -2081,7 +2083,16 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
 
 
 @interactions.slash_command(name='set_verbose_mode',description="Do you want error messages more verbose (detailed)?")
-@interactions.slash_option('verbose_mode','Do you want error messages more verbose (detailed)?',interactions.OptionType.BOOLEAN,True)
+@interactions.slash_option(
+    name="verbose_mode",
+    description="Do you want error messages more verbose (detailed)?",
+    required=True,
+    opt_type=interactions.OptionType.BOOLEAN,
+    choices=[
+        interactions.SlashCommandChoice(name="Yes (On)", value=True),
+        interactions.SlashCommandChoice(name="No (Off)", value=False),
+    ]
+    )
 async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
     ctx = await set_up_ctx(ctx)
     set_user_verbose_mode(ctx.author_id,verbose_mode)
