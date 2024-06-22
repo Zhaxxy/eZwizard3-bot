@@ -930,7 +930,7 @@ async def resign_mounted_save(ctx: interactions.SlashContext | None, ftp: aioftp
         return old_account_id
 
 
-async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str) -> str | tuple[list | PS4AccountID]:
+async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str) -> str | tuple[list | PS4AccountID | str]:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
@@ -939,14 +939,29 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
             if not mp:
                 return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})'
             # input(f'{mp}\n {new_mount_dir}')
+            
+            # We need to get real filename as the white_file.name can be differnt (such as a ` (1)` subfixed to it)
+            async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+                try:
+                    await ftp.change_directory(Path(new_mount_dir,'sce_sys').as_posix())
+                    async with TemporaryDirectory() as tp:
+                        tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
+                        await ftp.download('param.sfo',tp_param_sfo,write_into=True)
+                        with open(tp_param_sfo,'rb') as f:
+                            f.seek(0x9F8)
+                            real_name = b''.join(iter(lambda: f.read(1),b'\x00')).decode('ascii')
+                except Exception:
+                    return f'Bad save {pretty_save_dir} missing param.sfo or broken param.sfo'
+            
             for index, chet in enumerate(cheats):
                 results = []
                 try:
                     # await log_message(ctx,'Connecting to PS4 ftp to do some cheats')
                     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-                        await ftp.change_directory(new_mount_dir) 
+                        await ftp.change_directory(new_mount_dir)
+                        
                         # await log_message(ctx,f'Applying cheat {chet.pretty()} {index + 1}/{len(cheats)} for {pretty_save_dir}')
-                        result = await chet.func(ftp,new_mount_dir,white_file.name,**chet.kwargs)
+                        result = await chet.func(ftp,new_mount_dir,real_name,**chet.kwargs)
                     results.append(result) if result else None
                 except Exception as e:
                     leader = ''
@@ -961,7 +976,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                 await ftp.change_directory(new_mount_dir) 
                 # await log_message(ctx,f'Resigning {pretty_save_dir} to {account_id.account_id}')
                 account_id_old = await resign_mounted_save(None,ftp,new_mount_dir,account_id)
-            return results,account_id_old
+            return results,account_id_old,real_name
     finally:
         if savedatax:
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1285,6 +1300,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 if download_ps4_saves_result:
                     await log_user_error(ctx,download_ps4_saves_result)
                     return
+                real_names = []
                 for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
                     await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
                     pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
@@ -1297,9 +1313,24 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         if a == WARNING_COULD_NOT_UNMOUNT_MSG:
                             breakpoint()
                         return
-                    results,old_account_id = a
+                    results,old_account_id,real_name = a
                     await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
+                    real_names.append(real_name)
             
+            await log_message(ctx,f'Making sure file names in {save_files} are all correct')
+            found_fakes = False
+            for real_name,user_namewqey_dont_use_me in zip(real_names,done_ps4_saves, strict=True):
+                bin_file, white_file = user_namewqey_dont_use_me
+                if white_file.name != real_name:
+                    await log_message(ctx,f'Renaming {white_file.name} to {real_name}')
+                    white_file.rename(white_file.parent / real_name)
+                    bin_file.rename(bin_file.parent / (real_name + '.bin'))
+                    found_fakes = True
+            
+            if found_fakes:
+                await log_message(ctx,f'Refreshing {save_files} interal list')
+                done_ps4_saves = list(list_ps4_saves(enc_tp))
+                
             await log_message(ctx,f'looking through results to do some renaming for {save_files}')
             for bin_file, white_file in done_ps4_saves:
                 for savename, gameid in results:
