@@ -1319,8 +1319,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             
             await log_message(ctx,f'Making sure file names in {save_files} are all correct')
             found_fakes = False
-            for real_name,user_namewqey_dont_use_me in zip(real_names,done_ps4_saves, strict=True):
-                bin_file, white_file = user_namewqey_dont_use_me
+            for real_name, (bin_file, white_file) in zip(real_names, done_ps4_saves, strict=True):
                 if white_file.name != real_name:
                     await log_message(ctx,f'Renaming {white_file.name} to {real_name}')
                     white_file.rename(white_file.parent / real_name)
