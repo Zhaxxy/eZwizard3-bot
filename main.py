@@ -14,6 +14,7 @@ from zlib import crc32 # put modules you need at the bottom of list for custom c
 import struct
 import gzip
 from sqlite3 import connect as sqlite3_connect
+_boot_start = time.perf_counter()
 
 import aioshutil as shutil
 from aiopath import AsyncPath
@@ -53,7 +54,7 @@ WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSI
 FILE_SIZE_TOTAL_LIMIT = 1_073_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
-ZIP_LOOSE_FILES_MAX_AMT = 100
+ZIP_LOOSE_FILES_MAX_AMT = 6986+1
 MAX_RESIGNS_PER_ONCE = 99
 DOWNLOAD_CHUNK_SIZE = 1024
 AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
@@ -1927,13 +1928,18 @@ littlebigplanet3_import = advanced_mode_import.group(name="littlebigplanet3", de
 async def do_import_bigfart(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(import_bigfart,kwargs))
 ############################04 Cool bot features
+_did_first_boot = True
 @interactions.listen()
 async def ready():
+    global _did_first_boot
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     await update_status()
     _update_status.start()
     await ps4.notify('eZwizard3-bot connected!')
     print('eZwizard3-bot connected!')
+    if _did_first_boot:
+        print(f'took {time.perf_counter() - _boot_start:.1f} seconds to boot')
+    _did_first_boot = False
 
 update_status_start = time.perf_counter()
 amnt_used_this_session = 0
@@ -2186,7 +2192,7 @@ async def main() -> int:
     async with PatchMemoryPS4900(ps4) as mem:
         print('Memory patched, ensuring all base saves exist!')
         for eeeee in SAVE_DIRS:
-            async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,eeeee) as mp:
+            async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,eeeee,blocks=32768) as mp:
                 if not mp:
                     raise ValueError(f'broken base save {eeeee}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
         print('done checking!')

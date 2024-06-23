@@ -300,7 +300,7 @@ async def get_user_id(ps4: PS4Debug ,mem: MemoryIsPatched) -> int:
         return id
 """ 
 
-async def mount_save(ps4: PS4Debug, mem: MemoryIsPatched, user_id: int,cusa_game_id: str, savedir: str, mountMode: int) -> SceSaveDataMountResult:
+async def mount_save(ps4: PS4Debug, mem: MemoryIsPatched, user_id: int,cusa_game_id: str, savedir: str, mountMode: int, blocks: int) -> SceSaveDataMountResult:
     size_of_SceSaveDataDirName = 32
     size_of_SceSaveDataMount = 80
     size_of_SceSaveDataMountResult = 64
@@ -314,7 +314,7 @@ async def mount_save(ps4: PS4Debug, mem: MemoryIsPatched, user_id: int,cusa_game
         
         await ps4.write_memory(mem.pid, dirNameAddr, savedir.encode('utf-8'))
         
-        mount = SceSaveDataMount(userId = user_id, dirName = dirNameAddr, blocks = 32768, mountMode = mountMode, fingerprint = fingerprintAddr, titleId = titleIdAddr)
+        mount = SceSaveDataMount(userId = user_id, dirName = dirNameAddr, blocks = blocks, mountMode = mountMode, fingerprint = fingerprintAddr, titleId = titleIdAddr)
         
         ########
         async with ps4.memory(mem.pid,size_of_SceSaveDataMount + size_of_SceSaveDataMountResult) as memory2:

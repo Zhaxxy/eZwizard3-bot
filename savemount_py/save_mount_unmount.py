@@ -18,16 +18,17 @@ class PatchMemoryPS4900:
         await self.mem._remove_patches(self.ps4)
 
 class MountSave:
-    def __init__(self,ps4: PS4Debug,mem: MemoryIsPatched,user_id: int,title_id: str, save_dir: str, mount_mode: int = 0x8 | 2) -> None:
+    def __init__(self,ps4: PS4Debug,mem: MemoryIsPatched,user_id: int,title_id: str, save_dir: str, mount_mode: int = 0x8 | 2, blocks: int = 32_768) -> None:
         self.ps4 = ps4
         self.mem = mem
         self.user_id = user_id
         self.title_id = title_id
         self.save_dir = save_dir
         self.mount_mode = mount_mode
-    
+        self.blocks = blocks
+        
     async def __aenter__(self) -> SceSaveDataMountResult:
-        self.mp = await mount_save(self.ps4,self.mem,self.user_id,self.title_id,self.save_dir,self.mount_mode)
+        self.mp = await mount_save(self.ps4,self.mem,self.user_id,self.title_id,self.save_dir,self.mount_mode,self.blocks)
         return self.mp
 
     async def __aexit__(self, exc_type=None, exc_value=None, exc_traceback=None):
