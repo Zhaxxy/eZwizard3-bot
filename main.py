@@ -1313,7 +1313,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                     if a == WARNING_COULD_NOT_UNMOUNT_MSG:
                         breakpoint()
                     return
-            your_saves_msg = 'savedata0 decrypted save (Please use /export command instead)'
+            your_saves_msg = 'savedata0 decrypted save (Please use /advanced_mode_export command instead)'
             if decrypt_fun:
                your_saves_msg = (decrypt_fun.__doc__ or 'paypal me some money eboot.bin@protonmail.com and i might fix this message').strip()
             await send_result_as_zip(ctx,save_files,dec_tp,dec_tp,Path(tp,my_token + '.zip'),your_saves_msg)
@@ -1473,8 +1473,6 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             await asyncio.get_running_loop().run_in_executor(None,custon_decss1)  # TODO could be dangerous we are not using the mounted_saves_at_once sempahore
 
 ############################01 Custom decryptions
-advanced_mode_export = interactions.SlashCommand(name="advanced_mode_export", description="Commands to do any extra decryptions or file management for certain saves")
-
 @interactions.slash_command(name="raw_decrypt_folder",description=f"use /advanced_mode_export instead (max {MAX_RESIGNS_PER_ONCE} save per command)")
 @dec_enc_save_files
 async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
