@@ -41,7 +41,7 @@ def is_str_int(thing: str,/) -> bool:
     try:
         int(thing)
         return True
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 

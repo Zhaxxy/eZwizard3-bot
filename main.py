@@ -14,6 +14,7 @@ from zlib import crc32 # put modules you need at the bottom of list for custom c
 import struct
 import gzip
 from sqlite3 import connect as sqlite3_connect
+from ftplib import FTP,error_reply 
 _boot_start = time.perf_counter()
 
 import aioshutil as shutil
@@ -51,10 +52,10 @@ CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled comman
 CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
-FILE_SIZE_TOTAL_LIMIT = 1_073_741_920
+FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
-ZIP_LOOSE_FILES_MAX_AMT = 6986+1
+ZIP_LOOSE_FILES_MAX_AMT = 9000+1
 MAX_RESIGNS_PER_ONCE = 99
 DOWNLOAD_CHUNK_SIZE = 1024
 AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
@@ -62,7 +63,8 @@ PS4_ICON0_DIMENSIONS = 228,128
 
 CONFIG = load_config()
 BASE_TITLE_ID = 'YAHY40786'
-SAVE_FOLDER_ENCRYPTED = f'/user/home/{CONFIG["user_id"]}/savedata/{BASE_TITLE_ID}'
+BASE_SAVEDATA_FOLDER = f'/user/home/{CONFIG["user_id"]}/savedata'
+SAVE_FOLDER_ENCRYPTED = f'{BASE_SAVEDATA_FOLDER}/{BASE_TITLE_ID}'
 MOUNTED_POINT = Path('/mnt/sandbox/NPXS20001_000')
 
 PS4_SAVE_KEYSTONES = {
@@ -256,11 +258,11 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
     
     for msg_chunk in chunker(full_msg,1999):
         if ctx.expired:
-            await channel.send(full_msg,ephemeral=False, file=file)
+            await channel.send(msg_chunk,ephemeral=False, file=file)
         else:
             if first_time:
                 placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
-            await ctx.send(full_msg,ephemeral=False, file=file) 
+            await ctx.send(msg_chunk,ephemeral=False, file=file) 
             if first_time:
                 await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
         first_time = False
@@ -279,6 +281,9 @@ class CleanEncryptedSaveOption(Enum):
     DONT_DELETE_ANYTHING = 0
     DELETE_ALL_BUT_KEEP_SCE_SYS = 1
     DELETE_ALL_INCLUDING_SCE_SYS = 2
+
+class SpecialSaveFiles(Enum):
+    MINECRAFT_1GB_MCWORLD = 0
 
 class SaveMountPointResourceError(Exception):
     """
@@ -656,8 +661,10 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
             async with session.get(link) as response:
                 if response.status == 200:
                     try:
-                        filename = response.headers.get('Content-Disposition','').split('filename=')[1].strip().replace('"','').replace("'",'')
-                    except IndexError:
+                        filename = response.content_disposition.filename
+                    except AttributeError:
+                        filename = link.split('/')[-1].split('?')[0]
+                    if not filename:
                         filename = link.split('/')[-1].split('?')[0]
                     if validation_result := validation(filename):
                         return f'{link} failed validation reason: {validation_result}'
@@ -691,7 +698,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                 else:
                     return f'Failed to download {link}. Status code: {response.status}'
         except Exception as e:
-            return f'Invalid url {link} ({type(e).__name__}: {e}), maybe you copied the wrong link?'
+            return f'Invalid url {link} ({type(e).__name__}: {format_exc()}), maybe you copied the wrong link?'
     return direct_zip
 
 
@@ -931,7 +938,19 @@ async def resign_mounted_save(ctx: interactions.SlashContext | None, ftp: aioftp
         return old_account_id
 
 
-async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str) -> str | tuple[list | PS4AccountID | str]:
+async def clean_base_mc_save(title_id: str, dir_name: str):
+    ps4 = PS4Debug(CONFIG['ps4_ip'])
+    async with MountSave(ps4,mem,int(CONFIG['user_id'],16),title_id,dir_name,blocks=32768) as mp:
+        if not mp:
+            raise ValueError(f'bad {title_id}/{dir_name} reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
+
+async def delete_base_save_just_ftp(title_id: str, dir_name: str):
+    async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+        await ftp.change_directory(f'{BASE_SAVEDATA_FOLDER}/{title_id}')
+        await ftp.remove(f'sdimg_{dir_name}')
+        await ftp.remove(f'{dir_name}.bin')
+        
+async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str, special_thing: SpecialSaveFiles | None) -> str | tuple[list | PS4AccountID | str]:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
@@ -940,7 +959,6 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
             if not mp:
                 return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})'
             # input(f'{mp}\n {new_mount_dir}')
-            
             # We need to get real filename as the white_file.name can be differnt (such as a ` (1)` subfixed to it)
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                 try:
@@ -953,7 +971,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                             real_name = b''.join(iter(lambda: f.read(1),b'\x00')).decode('ascii')
                 except Exception:
                     return f'Bad save {pretty_save_dir} missing param.sfo or broken param.sfo'
-            
+
             for index, chet in enumerate(cheats):
                 results = []
                 try:
@@ -977,6 +995,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                 await ftp.change_directory(new_mount_dir) 
                 # await log_message(ctx,f'Resigning {pretty_save_dir} to {account_id.account_id}')
                 account_id_old = await resign_mounted_save(None,ftp,new_mount_dir,account_id)
+
             return results,account_id_old,real_name
     finally:
         if savedatax:
@@ -997,11 +1016,62 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                             # breakpoint()
                             return WARNING_COULD_NOT_UNMOUNT_MSG
                     return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided'
-async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str]) -> str | tuple[list | PS4AccountID]:
+async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], special_thing: SpecialSaveFiles | str | None) -> str | tuple[list | PS4AccountID]:
+    if isinstance(special_thing,str):
+        special_thing = None
     pretty_save_dir = white_file.relative_to(parent_dir)
     mount_save_title_id = BASE_TITLE_ID if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
+    
+    if special_thing == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+        for chet in cheats:
+            if chet.kwargs.get('decrypted_save_folder'):
+                await log_message(ctx,f'Doing some file management for your mc world')
+                savedata0hehe = chet.kwargs.get('decrypted_save_folder') / 'savedata0'
+                await shutil.copytree(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys', savedata0hehe / 'sce_sys')
+                world_icon_jpeg_file = None
+                
+                if (savedata0hehe / 'world_icon.jpeg').is_file():
+                    world_icon_jpeg_file = savedata0hehe / 'world_icon.jpeg'
+                if (savedata0hehe / 'world_icon.jpg').is_file():
+                    world_icon_jpeg_file = savedata0hehe / 'world_icon.jpg'
+                if (savedata0hehe / 'world_icon.png').is_file():
+                    world_icon_jpeg_file = savedata0hehe / 'world_icon.png'
+                
+                if world_icon_jpeg_file:
+                    try:
+                        with Image.open(world_icon_jpeg_file) as img:
+                            pass
+                    except Exception:
+                        pass
+                    else:
+                        with Image.open(world_icon_jpeg_file) as img:
+                            width, height = img.size
+                            new_img = img.resize((int((width / height) * PS4_ICON0_DIMENSIONS[1]),PS4_ICON0_DIMENSIONS[1]),Image.Resampling.NEAREST)
+                            new_img.save(savedata0hehe/'sce_sys/icon0.png')
+                        
+                new_name = None
+                try:
+                    with open(savedata0hehe / 'levelname.txt','r') as f:
+                        new_name = f.read(0x80-1)
+                except Exception:
+                    pass
+                
+                if new_name:
+                    pretty_save_dir = new_name
+                    # desc_before_find = white_file.name.encode('ascii').ljust(0x24, b'\x00')
+                    desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                    with open(savedata0hehe / 'sce_sys/param.sfo','rb+') as f:
+                        data = f.read()
+                        desc_before_find_index = data.index(desc_before_find)
+                        f.seek(desc_before_find_index + len(desc_before_find))
+                        f.write(new_name.encode('utf-8'))
+                        
+                        f.seek(desc_before_find_index)
+                        f.write(white_file.name.encode('ascii').ljust(0x24, b'\x00'))
+                cheats.append(CheatFunc(re_region,{'gameid':chet.kwargs.pop('gameid')}))
+
     await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
-    custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id))
+    custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id,special_thing))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
 
@@ -1280,6 +1350,18 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
         return
     try:
         my_token = await get_time_as_string_token()
+        if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+            mc_filename = f'BedrockWorld{my_token.replace("_","")}@P547'
+            mc_base_title_id = 'CUSA00265'
+            real_save_dir_ftp = mc_filename
+            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to make base mc world {real_save_dir_ftp} (this may take a while if mutiple slots are in use)'))
+            async with mounted_saves_at_once:
+                tick_tock_task.cancel()
+                await log_message(ctx,f'Making base mc world {real_save_dir_ftp}')
+                custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp))
+                await asyncio.get_running_loop().run_in_executor(None,custon_decss1)
+        else:
+            real_save_dir_ftp = save_dir_ftp
         async with TemporaryDirectory() as tp:
             chet_files_custom = Path(tp, 'chet_files_custom')
             chet_files_custom.mkdir()
@@ -1297,25 +1379,39 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 await log_user_error(ctx,'unimplemented')
                 return
             else:
-                download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
-                if download_ps4_saves_result:
-                    await log_user_error(ctx,download_ps4_saves_result)
-                    return
+                if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+                    
+                    
+                    mc_new_white_path = Path(enc_tp, 'PS4_FOLDER_IN_ME', make_ps4_path(account_id,mc_base_title_id),mc_filename)
+                    mc_new_bin_path = Path(enc_tp, 'PS4_FOLDER_IN_ME', make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
+                    
+                    mc_new_white_path.parent.mkdir(parents=True)
+
+                    mc_new_white_path.write_bytes(b'\xFF')
+                    mc_new_bin_path.write_bytes(b'\xFF')
+                else:
+                    download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
+                    if download_ps4_saves_result:
+                        await log_user_error(ctx,download_ps4_saves_result)
+                        return
                 real_names = []
                 for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
-                    await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
+                    if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+                        pass
+                    else:
+                        await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
                     pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
                     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
                     async with mounted_saves_at_once:
                         tick_tock_task.cancel()
-                        a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,save_dir_ftp)
+                        a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,real_save_dir_ftp,save_files)
                     if isinstance(a,str):
                         await log_user_error(ctx,a)
                         if a == WARNING_COULD_NOT_UNMOUNT_MSG:
                             breakpoint()
                         return
                     results,old_account_id,real_name = a
-                    await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
+                    await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
                     real_names.append(real_name)
             
             await log_message(ctx,f'Making sure file names in {save_files} are all correct')
@@ -1365,7 +1461,9 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
     finally:
         await free_save_str(save_dir_ftp)
         delete_chain(ctx.author_id)
-
+        if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+            custon_decss1 = lambda: asyncio.run(delete_base_save_just_ftp(BASE_TITLE_ID,real_save_dir_ftp))
+            await asyncio.get_running_loop().run_in_executor(None,custon_decss1)  # TODO could be dangerous we are not using the mounted_saves_at_once sempahore
 
 ############################01 Custom decryptions
 advanced_mode_export = interactions.SlashCommand(name="advanced_mode_export", description="Commands to do any extra decryptions or file management for certain saves")
@@ -1577,6 +1675,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     
 
     await ftp.change_directory(parent_mount)
+    print('cato!')
     await ftp.upload(decrypted_save_file / 'savedata0',mount_last_name,write_into=True)
 @interactions.slash_command(name="encrypt", description=f"Encrypt a save (max 1 save per command) only jb PS4 decrypted save")
 @interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
@@ -1628,6 +1727,26 @@ async def do_easier_encrypt(ctx: interactions.SlashContext,save_files: str,accou
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
+@interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrpyted minecraft save")
+@account_id_opt
+@interactions.slash_option('mcworld_file','A link to a folder or zip containing your decrypted',interactions.OptionType.STRING,True)
+@interactions.slash_option(
+    name="gameid",
+    description="The region you want of the save",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.SlashCommandChoice(name="CUSA00265 (EU)", value='CUSA00265'),
+        interactions.SlashCommandChoice(name="CUSA00744 (US)", value='CUSA00744'),
+        interactions.SlashCommandChoice(name="CUSA00283 (JP)", value='CUSA00283'),
+    ]
+    )
+async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwargs):
+    kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS
+    kwargs['unpack_first_root_folder'] = True
+    kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
+    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_1GB_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
     re regioned save
