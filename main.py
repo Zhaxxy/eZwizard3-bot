@@ -698,7 +698,14 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                 else:
                     return f'Failed to download {link}. Status code: {response.status}'
         except Exception as e:
-            return f'Invalid url {link} ({type(e).__name__}: {format_exc()}), maybe you copied the wrong link?'
+            if is_user_verbose_mode(ctx.author_id):
+                leader = ''
+                error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+            else:
+                leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
+                error_msg = f'({e})'
+                
+            return leader + f'Invalid url {link} {error_msg}, maybe you copied the wrong link?'
     return direct_zip
 
 
