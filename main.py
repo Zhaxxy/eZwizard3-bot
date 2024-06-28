@@ -1382,8 +1382,8 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
                     
                     
-                    mc_new_white_path = Path(enc_tp, 'PS4_FOLDER_IN_ME', make_ps4_path(account_id,mc_base_title_id),mc_filename)
-                    mc_new_bin_path = Path(enc_tp, 'PS4_FOLDER_IN_ME', make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
+                    mc_new_white_path = Path(enc_tp, make_ps4_path(account_id,mc_base_title_id),mc_filename)
+                    mc_new_bin_path = Path(enc_tp , make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
                     
                     mc_new_white_path.parent.mkdir(parents=True)
 
