@@ -2062,7 +2062,7 @@ async def import_bigfart(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,
 
 async def upload_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_single: Path, filename_p: str | None = None):
     """
-    Encrypted save
+    Imported save (if it dont work please report to Zhaxxy what game it is)
     """
     await ftp.change_directory(mount_dir)
     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
