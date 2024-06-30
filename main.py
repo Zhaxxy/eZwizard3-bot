@@ -1756,13 +1756,13 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
     """
     re regioned save
     """
-    is_xenoverse = gameid in XENOVERSE_TITLE_IDS
+    # is_xenoverse = gameid in XENOVERSE_TITLE_IDS
    
-    if is_xenoverse:
-        seeks = (0x61C,0xA9C,0x9F8)
-    else:
-        found_titleids = tuple(m.start() + 0x9F8 for m in CUSA_TITLE_ID.finditer(save_name))
-        seeks = (0x61C,0x62C,0xA9C) + found_titleids
+    # if is_xenoverse:
+        # seeks = (0x61C,0xA9C,0x9F8)
+    # else:
+    found_titleids = tuple(m.start() + 0x9F8 for m in CUSA_TITLE_ID.finditer(save_name))
+    seeks = (0x61C,0x62C,0xA9C) + found_titleids
     
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
     async with TemporaryDirectory() as tp:
@@ -1778,14 +1778,14 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
             tp_keystone = Path(tp,'keystone')
             tp_keystone.write_bytes(new_param)
             await ftp.upload(tp_keystone,'keystone',write_into=True)
-    if is_xenoverse:
-        savename = gameid + save_name[9:]
-    else:
-        savename = None
-        for x in found_titleids:
-            x -= 0x9F8
-            savename = save_name.replace(save_name[x:x+9],gameid)
-            save_name = savename
+    # if is_xenoverse:
+        # savename = gameid + save_name[9:]
+    # else:
+    savename = None
+    for x in found_titleids:
+        x -= 0x9F8
+        savename = save_name.replace(save_name[x:x+9],gameid)
+        save_name = savename
     return CheatFuncResult(savename,gameid)
 @interactions.slash_command(name="re_region", description=f"Re region your save files! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files to be re regioned',interactions.OptionType.STRING,True)
