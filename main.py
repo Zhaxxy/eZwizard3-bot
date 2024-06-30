@@ -1340,7 +1340,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
             return
 
-    account_id = account_id_from_str(account_id,ctx.author_id,ctx)
+    account_id: str | PS4AccountID = account_id_from_str(account_id,ctx.author_id,ctx)
     if isinstance(account_id,str):
         await log_user_error(ctx,account_id)
         return
@@ -1426,7 +1426,35 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             for real_name, (bin_file, white_file) in zip(real_names, done_ps4_saves, strict=True):
                 if white_file.name != real_name:
                     await log_message(ctx,f'Renaming {white_file.name} to {real_name}')
-                    white_file.rename(white_file.parent / real_name)
+                    try:
+                        white_file.rename(white_file.parent / real_name)
+                    except FileExistsError:
+                        ben_white: Path = white_file.parent / real_name
+                        ben_bin: Path = bin_file.parent / (real_name + '.bin')
+                        
+                        if not ben_white.is_file():
+                            raise AssertionError(f'{white_file} -> {ben_white}')
+                        if not ben_bin.is_file():
+                            raise AssertionError(f'{bin_file} -> {ben_bin}')
+                        
+                        folder_above_ps4 = white_file.parent.parent.parent.parent.parent
+                        for _ in range(20):
+                            cooler_folder_above_ps4 = folder_above_ps4.parent / (f'RE_NAMED_SAVE_NUM{os.urandom(4).hex()}_{folder_above_ps4.name}')
+                            if cooler_folder_above_ps4.is_file():
+                                raise AssertionError(f'{cooler_folder_above_ps4 = } should not be a file at this moment')
+                            if not cooler_folder_above_ps4.is_dir():
+                                break
+                        else: # no break
+                            raise AssertionError('wtf extremely bad luck')
+
+
+                        (cooler_folder_above_ps4 / white_file.parent.relative_to(folder_above_ps4)).mkdir(parents=True)
+
+                        white_file = white_file.rename(cooler_folder_above_ps4 / white_file.relative_to(folder_above_ps4))
+                        bin_file = bin_file.rename(cooler_folder_above_ps4 / bin_file.relative_to(folder_above_ps4))
+                        
+                        white_file.rename(white_file.parent / real_name)
+
                     bin_file.rename(bin_file.parent / (real_name + '.bin'))
                     found_fakes = True
             
