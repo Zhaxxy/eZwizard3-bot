@@ -1402,6 +1402,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         await log_user_error(ctx,download_ps4_saves_result)
                         return
                 real_names = []
+                results_big = []
                 for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
                     if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
                         pass
@@ -1417,9 +1418,10 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         if a == WARNING_COULD_NOT_UNMOUNT_MSG:
                             breakpoint()
                         return
-                    results,old_account_id,real_name = a
+                    results_small,old_account_id,real_name = a
                     await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
                     real_names.append(real_name)
+                    results_big.append(results_small)
             
             await log_message(ctx,f'Making sure file names in {save_files} are all correct')
             found_fakes = False
@@ -1439,7 +1441,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         
                         folder_above_ps4 = white_file.parent.parent.parent.parent.parent
                         for _ in range(20):
-                            cooler_folder_above_ps4 = folder_above_ps4.parent / (f'RE_NAMED_SAVE_NUM{os.urandom(4).hex()}_{folder_above_ps4.name}')
+                            cooler_folder_above_ps4 = folder_above_ps4.parent / (f'RENAMED_SAVE_NUM{os.urandom(4).hex()}_{folder_above_ps4.name}')
                             if cooler_folder_above_ps4.is_file():
                                 raise AssertionError(f'{cooler_folder_above_ps4 = } should not be a file at this moment')
                             if not cooler_folder_above_ps4.is_dir():
@@ -1459,38 +1461,74 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     found_fakes = True
             
             if found_fakes:
-                await log_message(ctx,f'Refreshing {save_files} interal list')
+                await log_message(ctx,f'Refreshing {save_files} internal list 1/2')
                 done_ps4_saves = list(list_ps4_saves(enc_tp))
                 
             await log_message(ctx,f'looking through results to do some renaming for {save_files}')
-            for bin_file, white_file in done_ps4_saves:
+            for results, (bin_file, white_file) in zip(results_big, done_ps4_saves, strict=True):
                 for savename, gameid in results:
                     if savename:
                         try:
-                            white_file.rename(white_file.parent / savename)
-                        except (FileNotFoundError, FileExistsError):
-                            pass
-                        
-                        try:
-                            bin_file.rename(bin_file.parent / (savename + '.bin'))
-                        except (FileNotFoundError, FileExistsError):
-                            pass
+                            white_file = white_file.rename(white_file.parent / savename)
+                        except FileExistsError:
+                            ben_white: Path = white_file.parent / savename
+                            ben_bin: Path = bin_file.parent / (savename + '.bin')
+                            
+                            if not ben_white.is_file():
+                                raise AssertionError(f'{white_file} -> {ben_white}')
+                            if not ben_bin.is_file():
+                                raise AssertionError(f'{bin_file} -> {ben_bin}')
+                            
+                            folder_above_ps4 = white_file.parent.parent.parent.parent.parent
+                            for _ in range(20):
+                                cooler_folder_above_ps4 = folder_above_ps4.parent / (f'RE_REGIONED_SAVE_NUM{os.urandom(4).hex()}_{folder_above_ps4.name}')
+                                if cooler_folder_above_ps4.is_file():
+                                    raise AssertionError(f'{cooler_folder_above_ps4 = } should not be a file at this moment')
+                                if not cooler_folder_above_ps4.is_dir():
+                                    break
+                            else: # no break
+                                raise AssertionError('wtf extremely bad luck')
 
+
+                            (cooler_folder_above_ps4 / white_file.parent.relative_to(folder_above_ps4)).mkdir(parents=True)
+
+                            white_file = white_file.rename(cooler_folder_above_ps4 / white_file.relative_to(folder_above_ps4))
+                            bin_file = bin_file.rename(cooler_folder_above_ps4 / bin_file.relative_to(folder_above_ps4))
+                            
+                            white_file = white_file.rename(white_file.parent / savename)
+
+                        bin_file = bin_file.rename(bin_file.parent / (savename + '.bin'))
+                        print(f'{white_file = }')
                     if gameid:
-                        try:
-                            white_file.parent.rename(white_file.parent.parent / gameid)
-                        except FileNotFoundError:
-                            pass
-                if not account_id:
+                        new_gameid_folder = white_file.parent.parent / gameid
+                        new_gameid_folder.mkdir(exist_ok=True)
+                        
+                        white_file = white_file.rename(new_gameid_folder / white_file.name)
+                        bin_file = bin_file.rename(new_gameid_folder / bin_file.name)
+            
+            if not account_id:
+                have_not_done_at_least_1_account_id_change = False
+                await log_message(ctx,f'Refreshing {save_files} internal list 2/2')
+                done_ps4_saves = list(list_ps4_saves(enc_tp))
+                for bin_file, white_file in done_ps4_saves:
                     try:
                         white_file.parent.parent.rename(white_file.parent.parent.parent / old_account_id.account_id)
-                    except (FileNotFoundError, FileExistsError):
-                        pass
+                    except FileNotFoundError:
+                        if not have_not_done_at_least_1_account_id_change:
+                            raise
+                    have_not_done_at_least_1_account_id_change = True
             if False:
                 await log_message(ctx,'cleaning up the things you did')
                 await log_user_error(ctx,'unimplemented')
                 return
-                
+            
+            await log_message(ctx,f'Deleting empty folders in {save_files}')
+            async for x in AsyncPath(enc_tp).rglob('*'):
+                try:
+                    await x.rmdir()
+                except Exception:
+                    pass
+
             await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or 'paypal me some money eboot.bin@protonmail.com and i might fix this message').strip())
             return
     finally:
@@ -1865,7 +1903,7 @@ async def do_change_save_icon(ctx: interactions.SlashContext,save_files: str,acc
     kwargs['option'] = ChangeSaveIconOption(kwargs['option'])
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_icon,kwargs))
 
-async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_name: bytes) -> CheatFuncResult:
+async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_name: bytes) -> None:
     """
     save with new name in menu
     """
@@ -1892,7 +1930,7 @@ async def do_change_save_name(ctx: interactions.SlashContext,save_files: str,acc
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_name,kwargs))
 
 
-async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_desc: bytes) -> CheatFuncResult:
+async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_desc: bytes) -> None:
     """
     save with new name in menu
     """
@@ -2280,6 +2318,7 @@ async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
     
 async def main() -> int:
     global UPLOAD_SAVES_FOLDER_ID
+    check_base_saves = True # Do not edit unless you know what youre doing
     if is_in_test_mode():
         print('in test mode, only bot admins can use bot this session')
     print('attempting to make ezwizardtwo_saves folder on google drive account to store large saves')
@@ -2297,30 +2336,32 @@ async def main() -> int:
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
         await ftp.change_directory(f'/system_data/savedata/{CONFIG["user_id"]}/db/user')
         print('ftp works!')
-        print('Cleaning base saves')
-        try:
-            os.remove('savedata.db')
-        except FileNotFoundError:
-            pass
-        await ftp.download('savedata.db','savedata.db',write_into=True)
-        try:
-            con = sqlite3_connect('savedata.db')
-            cur = con.cursor()
-            cur.execute(f'DELETE FROM savedata WHERE title_id = "{BASE_TITLE_ID}"')
-            con.commit()
-        finally:
-            cur.close()
-            con.close()
-        await ftp.upload('savedata.db','savedata.db',write_into=True)
-        try:
-            await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata/{BASE_TITLE_ID}')
-        except Exception:
-            pass
-        else:
-            await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata/')
-            await ftp.remove(BASE_TITLE_ID)
-    os.remove('savedata.db')
-    print('done cleaning base saves')
+        if check_base_saves:
+            print('Cleaning base saves')
+            try:
+                os.remove('savedata.db')
+            except FileNotFoundError:
+                pass
+            await ftp.download('savedata.db','savedata.db',write_into=True)
+            try:
+                con = sqlite3_connect('savedata.db')
+                cur = con.cursor()
+                cur.execute(f'DELETE FROM savedata WHERE title_id = "{BASE_TITLE_ID}"')
+                con.commit()
+            finally:
+                cur.close()
+                con.close()
+            await ftp.upload('savedata.db','savedata.db',write_into=True)
+            try:
+                await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata/{BASE_TITLE_ID}')
+            except Exception:
+                pass
+            else:
+                await ftp.change_directory(f'/user/home/{CONFIG["user_id"]}/savedata/')
+                await ftp.remove(BASE_TITLE_ID)
+    if check_base_saves:
+        os.remove('savedata.db')
+        print('done cleaning base saves')
     
     
     print('initialising database')
@@ -2331,11 +2372,12 @@ async def main() -> int:
     global mem
     global bot
     async with PatchMemoryPS4900(ps4) as mem:
-        print('Memory patched, ensuring all base saves exist!')
-        for eeeee in SAVE_DIRS:
-            async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,eeeee,blocks=32768) as mp:
-                if not mp:
-                    raise ValueError(f'broken base save {eeeee}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
+        if check_base_saves:
+            print('Memory patched, ensuring all base saves exist!')
+            for eeeee in SAVE_DIRS:
+                async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,eeeee,blocks=32768) as mp:
+                    if not mp:
+                        raise ValueError(f'broken base save {eeeee}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
         print('done checking!')
         bot = interactions.Client(token=CONFIG['discord_token'])
         await bot.astart()
