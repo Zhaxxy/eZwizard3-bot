@@ -1201,6 +1201,9 @@ def account_id_opt(func):
     )(func)
 def filename_p_opt(func):
     return interactions.slash_option(name='filename_p',description='If multiple files are found, it will look for a file with this name, put path if in folder',opt_type=interactions.OptionType.STRING,required=False)(func)# (like man4/mysave.sav)')
+def verify_checksum_opt(func):
+    return interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)(func)
+
 
 async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Sequence[CheatFunc | DecFunc],chet_files_custom: Path, savedata0_folder:Path) -> bool:
     await log_message(ctx,f'Looking for any `dl_link`s or `savedata0`s to download')
@@ -1677,7 +1680,7 @@ game_dec_functions = { # Relying on the dict ordering here, "Game not here (migh
 async def do_multi_export(ctx: interactions.SlashContext,save_files: str,**kwargs): # TODO allow custom args for differnt dec functions, like verify_checksum
     export_func = game_dec_functions[kwargs.pop('game')]
     await base_do_dec(ctx,save_files,DecFunc(export_func,kwargs))
-###########################
+###########################0 Custom cheats
 cheats_base_command = interactions.SlashCommand(name="cheats", description="Commands for custom cheats for some games")
 
 async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
@@ -1728,7 +1731,74 @@ strider = cheats_base_command.group(name="strider", description="Cheats for Stri
 async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(strider_change_difficulty,kwargs))
 
+async def _base_xenoverse2_cheats(ftp: aioftp.Client, mount_dir: str, save_name: str,/,**kwargs):
+    the_real_cheat = kwargs.pop('the_real_cheat')
+    verify_checksum = kwargs.pop('verify_checksum')
+    filename_p = kwargs.pop('filename_p')
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+    
+    async with TemporaryDirectory() as tp:
+        xeno_save = Path(tp,ftp_save[0])
+        await ftp.download(ftp_save[0],xeno_save,write_into=True)
+        
+        with open(xeno_save, 'rb') as f_in:
+            with open(xeno_save.with_suffix('.dec'), 'wb') as f_out:
+                decrypt_xenoverse2_ps4(f_in,f_out,check_hash=verify_checksum)
+        
+        await the_real_cheat(xeno_save.with_suffix('.dec'),**kwargs)
+        
+        with open(xeno_save.with_suffix('.dec'),'rb') as f, open(xeno_save,'wb') as f_out:
+            encrypt_xenoverse2_ps4(f,f_out)
+        
+        await ftp.upload(xeno_save,ftp_save[0],write_into=True)
 
+def make_xenoverse2_cheat_func(the_real_cheat,/,kwargs) -> CheatFunc:
+    async def some_cheaty(ftp: aioftp.Client, mount_dir: str, save_name: str,/,**kwargs):
+        try:
+            kwargs['verify_checksum']
+        except KeyError:
+            kwargs['verify_checksum'] = True
+
+        try:
+            kwargs['filename_p']
+        except KeyError:
+            kwargs['filename_p'] = None
+        kwargs['the_real_cheat'] = the_real_cheat
+        await _base_xenoverse2_cheats(ftp, mount_dir, save_name, **kwargs)
+    
+    some_cheaty.__name__ = f'do_the_{some_cheaty.__name__}'
+    return CheatFunc(some_cheaty,kwargs)
+    
+    
+async def xenoverse2_change_tp_medals(dec_save: Path,/,*,tp_medals: int):
+    with open(dec_save,'rb+') as f:
+        f.seek(0x158) # Lucky the offset is not a mutiple of 0x20
+        f.write(struct.pack('<I',tp_medals))
+
+dragonball_xenoverse_2 = cheats_base_command.group(name="dragonball_xenoverse_2", description="Cheats for DRAGON BALL XENOVERSE 2")
+@dragonball_xenoverse_2.subcommand(sub_cmd_name="change_tp_medals", sub_cmd_description="Change the TP medals of your save")
+@interactions.slash_option('save_files','The save files to change TP medals of',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('tp_medals','The amount of TP medals you want',interactions.OptionType.INTEGER,True,min_value=0,max_value=0x7FFFFFFF)
+@filename_p_opt
+@verify_checksum_opt
+async def do_xenoverse2_change_tp_medals(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,account_id,make_xenoverse2_cheat_func(xenoverse2_change_tp_medals,kwargs))
+
+###########################0 some base folder things idk
 async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,clean_encrypted_file: CleanEncryptedSaveOption, decrypted_save_file: Path = None, decrypted_save_folder: Path = None, unpack_first_root_folder: bool = False):
     """
     Encrypted save (use /advanced_mode_import instead)
