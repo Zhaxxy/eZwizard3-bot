@@ -4,6 +4,7 @@ from io import StringIO
 from typing import NamedTuple, Literal
 from os import getcwd
 
+
 class SevenZipFile(NamedTuple):
     path: Path
     size: int
@@ -17,6 +18,7 @@ class SevenZipInfo(NamedTuple):
     
 SEVEN_ZIP_ARGS = ('7z',)
 VALID_7Z_EXTENSIONS = frozenset(('.mcworld','.7z', '.xz', '.bzip2', '.gzip', '.tar', '.zip', '.wim', '.apfs', '.ar', '.arj', '.cab', '.chm', '.cpio', '.cramfs', '.dmg', '.ext', '.fat', '.gpt', '.hfs', '.ihex', '.iso', '.lzh', '.lzma', '.mbr', '.msi', '.nsis', '.ntfs', '.qcow2', '.rar', '.rpm', '.squashfs', '.udf', '.uefi', '.vdi', '.vhd', '.vhdx', '.vmdk', '.xar', '.z'))
+
 
 def test_7z():
     global SEVEN_ZIP_ARGS
@@ -40,6 +42,7 @@ def test_7z():
     if version != '23.01':
         raise Exception(f'Too new or old of a 7zip version {version} should be 23.01')
 test_7z()
+
 
 async def get_archive_info(path_to_archive: Path | str) -> SevenZipInfo:
     proc = await asyncio.create_subprocess_exec(
@@ -114,6 +117,7 @@ async def extract_single_file(path_to_archive: Path | str, name_of_file: Path | 
     if 'No files to process\n' in stdout:
         raise Exception(f'did not find {name_of_file} in the thing')
 
+
 def filename_valid_extension(filename: Path | str) -> str:
     """
     from https://www.7-zip.org/
@@ -124,6 +128,16 @@ def filename_valid_extension(filename: Path | str) -> str:
     else:
         return f'{filename}\'s extension {extension} is not a valid archive'
 
+
+def filename_is_not_an_archive(filename: Path | str) -> str:
+    """
+    from https://www.7-zip.org/
+    """
+    extension = Path(filename).suffix.casefold()
+    if extension not in VALID_7Z_EXTENSIONS:
+        return ''
+    else:
+        return f'{filename}\'s extension {extension} is an archive, we dont except archives/folder for this option'
 """    
 async def main():
     await extract_single_file('a.rar',r'PS4\SAVEDATA\4bacdde2acfa85ba\CUSA00473\LBPxSAVE.bin')
