@@ -1792,7 +1792,7 @@ dragonball_xenoverse_2 = cheats_base_command.group(name="dragonball_xenoverse_2"
 @dragonball_xenoverse_2.subcommand(sub_cmd_name="change_tp_medals", sub_cmd_description="Change the TP medals of your save")
 @interactions.slash_option('save_files','The save files to change TP medals of',interactions.OptionType.STRING,True)
 @account_id_opt
-@interactions.slash_option('tp_medals','The amount of TP medals you want',interactions.OptionType.INTEGER,True,min_value=0,max_value=0x7FFFFFFF)
+@interactions.slash_option('tp_medals','The amount of TP medals you want',interactions.OptionType.INTEGER,True,min_value=-0x80000000,max_value=0x7FFFFFFF)
 @filename_p_opt
 @verify_checksum_opt
 async def do_xenoverse2_change_tp_medals(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
