@@ -1786,7 +1786,7 @@ def make_xenoverse2_cheat_func(the_real_cheat,/,kwargs) -> CheatFunc:
 async def xenoverse2_change_tp_medals(dec_save: Path,/,*,tp_medals: int):
     with open(dec_save,'rb+') as f:
         f.seek(0x158) # Lucky the offset is not a mutiple of 0x20
-        f.write(struct.pack('<I',tp_medals))
+        f.write(struct.pack('<i',tp_medals))
 
 dragonball_xenoverse_2 = cheats_base_command.group(name="dragonball_xenoverse_2", description="Cheats for DRAGON BALL XENOVERSE 2")
 @dragonball_xenoverse_2.subcommand(sub_cmd_name="change_tp_medals", sub_cmd_description="Change the TP medals of your save")
