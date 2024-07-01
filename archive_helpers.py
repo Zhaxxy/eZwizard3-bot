@@ -137,7 +137,7 @@ def filename_is_not_an_archive(filename: Path | str) -> str:
     if extension not in VALID_7Z_EXTENSIONS:
         return ''
     else:
-        return f'{filename}\'s extension {extension} is an archive, we dont except archives/folder for this option'
+        return f'{filename}\'s extension {extension} is an archive, we dont accept archives/folder for this option'
 """    
 async def main():
     await extract_single_file('a.rar',r'PS4\SAVEDATA\4bacdde2acfa85ba\CUSA00473\LBPxSAVE.bin')
