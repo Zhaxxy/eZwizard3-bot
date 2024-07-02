@@ -171,7 +171,7 @@ def is_in_test_mode() -> bool:
         return False
 
 
-_token_getter = asyncio.Semaphore(1)
+_token_getter = asyncio.Lock()
 async def get_time_as_string_token() -> str:
     async with _token_getter:
         return datetime.now().strftime("%d_%m_%Y__%H_%M_%S")
