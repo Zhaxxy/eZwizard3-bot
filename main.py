@@ -334,7 +334,7 @@ class PS4AccountID:
     __slots__ = ('_account_id',)
     def __init__(self, account_id: str):
         if len(account_id) != 16:
-            raise ValueError('Invalid account id, lenght is not 16')
+            raise ValueError('Invalid account id, length is not 16')
         int(account_id,16)
         self._account_id = account_id.casefold()
     
