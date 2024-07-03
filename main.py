@@ -897,7 +897,7 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     # await log_message(ctx,'Ensuring base save exists on PS4 before uploading')
     # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,save_dir_ftp) as mp:
         # pass
-    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrpyted save (this may take a while if mutiple slots are in use)'))
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrypted save (this may take a while if mutiple slots are in use)'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
         await log_message(ctx,f'Uploading {pretty_save_dir} to PS4')
@@ -916,7 +916,7 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file_out.relative_to(parent_dir)
-    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to download encrpyted save (this may take a while if mutiple slots are in use)'))
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to download encrypted save (this may take a while if mutiple slots are in use)'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
         await log_message(ctx,f'Downloading {pretty_save_dir} from PS4')
@@ -1868,7 +1868,7 @@ async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
-@interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrpyted minecraft save")
+@interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrypted minecraft save")
 @account_id_opt
 @interactions.slash_option('mcworld_file','A link to a folder or zip containing your decrypted',interactions.OptionType.STRING,True)
 @interactions.slash_option(
