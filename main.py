@@ -17,6 +17,7 @@ from sqlite3 import connect as sqlite3_connect
 from ftplib import FTP,error_reply 
 _boot_start = time.perf_counter()
 
+from async_lru import alru_cache
 import aioshutil as shutil
 from aiopath import AsyncPath
 from psnawp_api import PSNAWP
@@ -34,6 +35,7 @@ from string_helpers import extract_drive_folder_id, extract_drive_file_id, is_ps
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
+from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
 try:
     from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
     from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
@@ -2306,7 +2308,7 @@ async def ping_test(ctx: interactions.SlashContext):
         else:
             cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
         
-    await ctx.send(cool_ping_msg,ephemeral=False)
+    await ctx.send(cool_ping_msg + '\n\n' + await ezwizard3_info(),ephemeral=False)
 
 
 @interactions.slash_command(name='file2url',description="Convenience command to get url from discord attachment")
@@ -2385,8 +2387,51 @@ async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
         await log_user_success(ctx,'Verbose mode (more detailed error messages) is **ON**')
     else:
         await log_user_success(ctx,'Verbose mode (more detailed error messages) is *OFF*')
+
+
+@alru_cache
+async def ezwizard3_info() -> str:
+    if not GIT_EXISTS:
+        return 'bruh, This instance does not use git, please tell the instance owner to use git clone instead of download zip'
+    lah_message = 'Official code.\n'
+    git_url,git_branch = await get_git_url()
+    if git_url not in ('git@github.com:Zhaxxy/eZwizard3-bot.git','https://github.com/Zhaxxy/eZwizard3-bot.git') or git_branch != 'origin':
+        lah_message = '**Unofficial code!\n**'
+    
+    if await is_modfied():
+        lah_message += '**Unrecognised Modfied code!**\n'
+    if not await is_updated():
+        lah_message += f'**Update available!**\nCurrent version: {await get_commit_count()}\nNewest version: {await get_remote_count()}'
+    else:
+        lah_message += f'Current version: {await get_commit_count()}'
+    
+    return lah_message
     
 async def main() -> int:
+    global GIT_EXISTS
+    GIT_EXISTS = False
+    print('doing some git stuff')
+    try:
+        await check_if_git_exists()
+    except Exception:
+        print('WARNING!: could not find git, please install git then git clone this project instead of zip download')
+    else:
+        try:
+            git_url,git_branch = await get_git_url()
+        except Exception:
+            print('WARNING!: git is installed but this is not a git repo, please git clone this project instead of zip download')
+        else:
+            GIT_EXISTS = True
+            if git_url not in ('git@github.com:Zhaxxy/eZwizard3-bot.git','https://github.com/Zhaxxy/eZwizard3-bot.git') or git_branch != 'origin':
+                print('INFO!: unoffical branch of eZwizard3-bot, perhaps consider making a pull request of your changes to the main repo')
+            if await is_modfied():
+                print('WARNING!: uncommited changes, please commit your changes or do git stash to revert them')
+            if not await is_updated():
+                print('INFO!: your eZwizard3-bot is out of date, run `git pull` then `python -m pip install -r requirements -U`')
+            await get_remote_count()
+            await get_commit_count()
+            await ezwizard3_info()
+            
     global UPLOAD_SAVES_FOLDER_ID
     check_base_saves = True # Do not edit unless you know what youre doing
     if is_in_test_mode():
