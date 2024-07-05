@@ -1186,7 +1186,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
 def dec_enc_save_files(func):
     return interactions.slash_option(
     name="save_files",
-    description="a google drive folder link containing your encrypted saves to be decrpyted",
+    description="a google drive folder link containing your encrypted saves to be decrypted",
     required=True,
     opt_type=interactions.OptionType.STRING
     )(func)
