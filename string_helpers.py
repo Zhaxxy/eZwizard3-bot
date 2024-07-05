@@ -243,7 +243,6 @@ Like a somebodyyyyyyy
 one two buckel my shoe
 three four buckle some more
 five six YOU STU{IID NI
-im alone
 Рита и Барсик
 """.strip().split('\n')
 
