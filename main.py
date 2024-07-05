@@ -2308,8 +2308,8 @@ async def ping_test(ctx: interactions.SlashContext):
         else:
             cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
         
-    await ctx.send(cool_ping_msg + '\n\n' + await ezwizard3_info(),ephemeral=False)
-
+    await ctx.send(cool_ping_msg,ephemeral=False)
+    await ctx.send(await ezwizard3_info())
 
 @interactions.slash_command(name='file2url',description="Convenience command to get url from discord attachment")
 @interactions.slash_option(
@@ -2389,7 +2389,6 @@ async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
         await log_user_success(ctx,'Verbose mode (more detailed error messages) is *OFF*')
 
 
-@alru_cache
 async def ezwizard3_info() -> str:
     if not GIT_EXISTS:
         return 'bruh, This instance does not use git, please tell the instance owner to use git clone instead of download zip'
@@ -2428,9 +2427,8 @@ async def main() -> int:
                 print('WARNING!: uncommited changes, please commit your changes or do git stash to revert them')
             if not await is_updated():
                 print('INFO!: your eZwizard3-bot is out of date, run `git pull` then `python -m pip install -r requirements -U`')
-            await get_remote_count()
+            # await get_remote_count()
             await get_commit_count()
-            await ezwizard3_info()
             
     global UPLOAD_SAVES_FOLDER_ID
     check_base_saves = True # Do not edit unless you know what youre doing

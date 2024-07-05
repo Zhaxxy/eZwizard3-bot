@@ -71,7 +71,7 @@ async def get_commit_count(git_repo_dir: str | Path = getcwd()) -> int:
     count_commit,_ = await run_git_command(('rev-list', '--count', 'HEAD'),git_repo_dir)
     return int(count_commit)
     
-@alru_cache(maxsize=None)
+
 async def get_remote_count() -> int:
     remote_url,_ = await get_git_url()
     async with TemporaryDirectory() as tp:
