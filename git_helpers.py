@@ -61,7 +61,6 @@ async def is_modfied() -> bool:
     return True
 
 
-@alru_cache(maxsize=None)
 async def is_updated() -> bool:
     out,_ = await run_git_command(('fetch','--dry-run'))
     return not out
