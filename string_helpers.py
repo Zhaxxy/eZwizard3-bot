@@ -245,6 +245,7 @@ three four buckle some more
 five six YOU STU{IID NI
 Рита и Барсик
 slipin_jimmy.mp4
+ご飯を待ちすぎてアクビが出る猫(^^♪ 
 """.strip().split('\n')
 
 
