@@ -16,3 +16,4 @@ google-auth-oauthlib
 pycryptodome
 aiopath
 aioshutil
+async-lru
