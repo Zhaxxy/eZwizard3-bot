@@ -36,6 +36,7 @@ from archive_helpers import get_archive_info, extract_single_file, filename_vali
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
 from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
+from custom_crc import custom_crc
 try:
     from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
     from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
@@ -2041,6 +2042,35 @@ async def do_change_save_desc(ctx: interactions.SlashContext,save_files: str,acc
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_desc,kwargs))
 ############################03 Custom imports
 
+async def rayman_legends_upload_fix_checksum(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_single: Path, filename_p: str | None = None):
+    """
+    Rayman Legends with fixed checksum
+    """
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+    
+    with open(dl_link_single, 'rb+') as f:
+        f.seek(-0xc,2)
+        main_data_blob_size = f.tell()
+        f.seek(0)
+        new_checksum = struct.pack('<I',custom_crc(f.read(main_data_blob_size)))
+        f.seek(-(0xc - 4),2)
+        f.write(new_checksum)
+        
+    await ftp.upload(dl_link_single,ftp_save[0],write_into=True)
+
 
 async def upload_dl2_sav_gz_decompressed(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_single: Path, filename_p: str | None = None):
     """
@@ -2169,6 +2199,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
     'Grand Theft Auto V': upload_red_dead_redemption_2_or_gta_v_save,
     'Red Dead Redemption 2': upload_red_dead_redemption_2_or_gta_v_save,
     'DRAGON BALL XENOVERSE 2': upload_xenoverse_2_save,
+    'Rayman Legends': rayman_legends_upload_fix_checksum,
     'LittleBigPlanet bigfart (just not from Vita)': import_bigfart,
     'Game not here (might not work)': upload_single_file_any_game,
 }
