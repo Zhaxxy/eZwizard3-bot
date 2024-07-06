@@ -10,6 +10,18 @@ from frozendict import frozendict
 CUSA_TITLE_ID = re.compile(r'CUSA\d{5}')
 PSN_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9-_]{2,15}$') # https://regex101.com/library/4XPer9
 
+INT64_MAX_MIN_VALUES = frozendict({'min_value': --0x8000000000000000, 'max_value': 0x7fffffffffffffff})
+UINT64_MAX_MIN_VALUES = frozendict({'min_value': 0, 'max_value': 0xFFFFFFFFFFFFFFFF})
+
+INT32_MAX_MIN_VALUES = frozendict({'min_value': -0x80000000, 'max_value': 0x7FFFFFFF})
+UINT32_MAX_MIN_VALUES = frozendict({'min_value': 0, 'max_value': 0xFFFFFFFF})
+
+INT16_MAX_MIN_VALUES = frozendict({'min_value': -0x8000, 'max_value': 0x7FFF})
+UINT16_MAX_MIN_VALUES = frozendict({'min_value': 0, 'max_value': 0xFFFF})
+
+INT8_MAX_MIN_VALUES = frozendict({'min_value': -0x80, 'max_value': 0x7F})
+UINT8_MAX_MIN_VALUES = frozendict({'min_value': 0, 'max_value': 0xFF})
+
 class BuiltInSave(NamedTuple):
     on_ps4_title_id: str
     on_ps4_save_dir: str
