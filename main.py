@@ -1042,6 +1042,10 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
             if chet.kwargs.get('decrypted_save_folder'):
                 await log_message(ctx,f'Doing some file management for your mc world')
                 savedata0hehe = chet.kwargs.get('decrypted_save_folder') / 'savedata0'
+
+                if not (savedata0hehe / 'level.dat').is_file():
+                    return 'The mcworld file you sent, is not a valid mcworld file (missing level.dat file) perhaps you sent a folder or zip containg a mcworld, send the mcworld directly'
+
                 await shutil.copytree(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys', savedata0hehe / 'sce_sys')
                 world_icon_jpeg_file = None
                 
@@ -1878,7 +1882,7 @@ async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files
 
 @interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrypted minecraft save")
 @account_id_opt
-@interactions.slash_option('mcworld_file','A link to a folder or zip containing your decrypted',interactions.OptionType.STRING,True)
+@interactions.slash_option('mcworld_file','A link to your mcworld file, NOT a folder!',interactions.OptionType.STRING,True)
 @interactions.slash_option(
     name="gameid",
     description="The region you want of the save",
