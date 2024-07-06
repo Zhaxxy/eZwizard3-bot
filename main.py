@@ -2064,7 +2064,7 @@ async def rayman_legends_upload_fix_checksum(ftp: aioftp.Client, mount_dir: str,
     with open(dl_link_single, 'rb+') as f:
         f.seek(-0xc,2)
         main_data_blob_size = f.tell()
-        if len(main_data_blob_size) > 10_000_000:
+        if main_data_blob_size > 10_000_000:
             raise ValueError('save too big, is likley not a Rayman Legends save')
         f.seek(0)
         new_checksum = struct.pack('<I',custom_crc(f.read(main_data_blob_size)))
