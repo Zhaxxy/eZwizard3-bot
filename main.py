@@ -765,7 +765,10 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
                 thing_count += 1
             if thing_count != 1:
                 return ''
-            
+
+            if await thing.is_file(): # This is incase a user sends a folder with a single file
+                return ''
+
             async for file_name in thing.iterdir():
                 await shutil.move(file_name,new_savedata0_folder_made)
             
@@ -831,6 +834,9 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
             async for thing in checker.iterdir():
                 thing_count += 1
             if thing_count != 1:
+                return ''
+            
+            if await thing.is_file(): # This is incase a user sends a zip with a single file
                 return ''
             
             async for file_name in thing.iterdir():
