@@ -1892,6 +1892,7 @@ async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files
         interactions.SlashCommandChoice(name="CUSA00265 (EU)", value='CUSA00265'),
         interactions.SlashCommandChoice(name="CUSA00744 (US)", value='CUSA00744'),
         interactions.SlashCommandChoice(name="CUSA00283 (JP)", value='CUSA00283'),
+        interactions.SlashCommandChoice(name="CUSA44267 (US Preview)", value='CUSA44267'),
     ]
     )
 async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwargs):
