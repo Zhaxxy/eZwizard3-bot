@@ -33,7 +33,7 @@ from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of 
 
 from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES, extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
-from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id
+from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
 from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
 from custom_crc import custom_crc
@@ -172,6 +172,10 @@ def is_in_test_mode() -> bool:
         return sys.argv[1].casefold() == '-t'
     except IndexError:
         return False
+
+
+def is_user_bot_admin(ctx_author_id: str,/) -> bool:
+    return ctx_author_id in CONFIG['bot_admins']
 
 
 _token_getter = asyncio.Lock()
@@ -1276,7 +1280,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
-    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
+    if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -1342,7 +1346,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
 
-    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
+    if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -2281,7 +2285,7 @@ psnawp = PSNAWP(CONFIG["ssocookie"])
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
+    if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -2318,7 +2322,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
 async def delete_cheat_chain(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
+    if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -2347,7 +2351,7 @@ async def ping_test(ctx: interactions.SlashContext):
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'
     if is_in_test_mode():
-        if ctx.author_id in CONFIG['bot_admins']:
+        if is_user_bot_admin(ctx.author_id):
             cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE} but you can as you\'re a bot admin!'
         else:
             cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
@@ -2372,7 +2376,7 @@ async def ping_test(ctx: interactions.SlashContext):
 async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachment, my_file_id: int | None = None):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
+    if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -2393,13 +2397,13 @@ async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachm
 async def delete_files2urls(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
     delete_saved_urls(ctx.author_id)
-    await log_user_success(ctx,'Deleted all urls saved succesfully!')
+    await log_user_success(ctx,'Deleted all urls saved successfully!')
 
 @interactions.slash_command(name='see_saved_files2urls',description="See all your saved urls with the file2url command")
 async def see_saved_files2urls(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
 
-    if is_in_test_mode() and ctx.author_id not in CONFIG['bot_admins']:
+    if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
@@ -2433,6 +2437,7 @@ async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
         await log_user_success(ctx,'Verbose mode (more detailed error messages) is *OFF*')
 
 
+
 async def ezwizard3_info() -> str:
     if not GIT_EXISTS:
         return 'bruh, This instance does not use git, please tell the instance owner to use git clone instead of download zip'
@@ -2449,7 +2454,21 @@ async def ezwizard3_info() -> str:
         lah_message += f'Current version: {await get_commit_count()}'
     
     return lah_message
-    
+
+
+@interactions.slash_command(name='delete_all_google_drive_saves',description="Only run this command if the gdrive is full, will delete all gdrive files bot has given to users")
+async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
+    global UPLOAD_SAVES_FOLDER_ID
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command, please ask one to run this command if google drive is full')
+
+
+    await delete_google_drive_file_or_file_permentaly(UPLOAD_SAVES_FOLDER_ID)
+    UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
+    return await log_user_success(ctx,'All saves deleted successfully')
+
+
 async def main() -> int:
     global GIT_EXISTS
     GIT_EXISTS = False

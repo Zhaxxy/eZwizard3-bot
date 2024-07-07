@@ -288,18 +288,30 @@ async def google_drive_upload_file(file2upload: Path, folder_id: str, make_publi
     return upload_res['webContentLink']
 
 
-async def main():
-    a = await list_files_in_gdrive_folder('17gymS1K07HYv5JpDvtdSSv67FOT-jG4Z',await gdrive_folder_link_to_name('17gymS1K07HYv5JpDvtdSSv67FOT-jG4Z'))
-    from pprint import pprint as pp
-    
-    print('YO')
-    pp(a)
+async def delete_google_drive_file_or_file_permentaly(thefileid: str, /):
+    async with agg() as ag:
+        service = await ag.discover("drive", "v3")
+        await ag.as_user(service.files.delete(fileId=thefileid))
 
-    # pp(get_valid_saves_out_names_only(a))
-    # print(await get_gdrive_folder_size('17gymS1K07HYv5JpDvtdSSv67FOT-jG4Z'))#
+
+async def main():
+    # a = await list_files_in_gdrive_folder('17gymS1K07HYv5JpDvtdSSv67FOT-jG4Z',await gdrive_folder_link_to_name('17gymS1K07HYv5JpDvtdSSv67FOT-jG4Z'))
+    # from pprint import pprint as pp
     
-    a = await google_drive_upload_file('requirments.txt','1LMTVk-QBYKgK4Fe7ajT4U_DTtpTXAp34')
-    print(a)
+    # print('YO')
+    # pp(a)
+
+    # # pp(get_valid_saves_out_names_only(a))
+    # # print(await get_gdrive_folder_size('17gymS1K07HYv5JpDvtdSSv67FOT-jG4Z'))
+    
+    # a = await google_drive_upload_file('requirements.txt','1LMTVk-QBYKgK4Fe7ajT4U_DTtpTXAp34')
+    # print(a)
+    # async with agg() as ag:
+        # service = await ag.discover("drive", "v3")
+        # await ag.as_user(service.files.delete(fileId='1HzrPW9l445zjYhO3lcexQCwAGY48nfvV'))
+
+    print('why you running me lil bro')
+
 
 if __name__ == "__main__":
     asyncio.run(main())
