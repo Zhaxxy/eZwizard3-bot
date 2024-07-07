@@ -977,7 +977,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
             savedatax = mp.savedatax
             new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
             if not mp:
-                return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})'
+                return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")}) (base save {mount_save_title_id}/{save_dir_ftp})'
             # input(f'{mp}\n {new_mount_dir}')
             # We need to get real filename as the white_file.name can be differnt (such as a ` (1)` subfixed to it)
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1107,7 +1107,7 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
             savedatax = mp.savedatax
             new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
             if not mp:
-                return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})'
+                return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")}) (base save {mount_save_title_id}/{save_dir_ftp})'
             if decrypt_fun:
                 # await log_message(ctx,f'Doing custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
