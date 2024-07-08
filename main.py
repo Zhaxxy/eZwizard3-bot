@@ -34,7 +34,7 @@ from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of 
 from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES, extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
-from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
+from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
 from savemount_py.firmware_getter_from_libc_ps4 import get_fw_version
 from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
 from custom_crc import custom_crc
@@ -2644,8 +2644,9 @@ async def main() -> int:
         with open('libc.sprx','rb') as f:
             ps4_fw_version = get_fw_version(f)
         if ps4_fw_version != 9:
-            raise Exception(f'We only {" ".join(SUPPORTED_MEM_PATCH_FW_VERSIONS)}, please ask to add {ps4_fw_version} to https://github.com/Zhaxxy/eZwizard3-bot/issues')
-        os.remove('libc.sprx')
+            raise Exception(f'We only {" ".join(str(x) for x in SUPPORTED_MEM_PATCH_FW_VERSIONS)}, please ask to add {ps4_fw_version} to https://github.com/Zhaxxy/eZwizard3-bot/issues')
+        finally:
+            os.remove('libc.sprx')
         print('Done checking PS4 Firmware version')
         await ftp.change_directory(f'/system_data/savedata/{CONFIG["user_id"]}/db/user')
         if check_base_saves:
