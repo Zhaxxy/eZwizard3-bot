@@ -1748,6 +1748,17 @@ strider = cheats_base_command.group(name="strider", description="Cheats for Stri
 async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(strider_change_difficulty,kwargs))
 
+def make_cheat_func(base_cheat_applier, the_real_cheat, /, kwargs) -> CheatFunc:
+    async def some_cheaty(ftp: aioftp.Client, mount_dir: str, save_name: str, /, **kwargs):
+        kwargs.setdefault('verify_checksum', True)
+        kwargs.setdefault('filename_p', None)
+        kwargs['the_real_cheat'] = the_real_cheat
+        await base_cheat_applier(ftp, mount_dir, save_name, **kwargs)
+    
+    some_cheaty.__name__ = f'do_the_{the_real_cheat.__name__}'
+    some_cheaty.__doc__ = the_real_cheat.__doc__
+    return CheatFunc(some_cheaty, kwargs)
+
 async def _base_xenoverse2_cheats(ftp: aioftp.Client, mount_dir: str, save_name: str,/,**kwargs):
     the_real_cheat = kwargs.pop('the_real_cheat')
     verify_checksum = kwargs.pop('verify_checksum')
@@ -1782,22 +1793,9 @@ async def _base_xenoverse2_cheats(ftp: aioftp.Client, mount_dir: str, save_name:
         
         await ftp.upload(xeno_save,ftp_save[0],write_into=True)
 
-def make_xenoverse2_cheat_func(the_real_cheat,/,kwargs) -> CheatFunc:
-    async def some_cheaty(ftp: aioftp.Client, mount_dir: str, save_name: str,/,**kwargs):
-        try:
-            kwargs['verify_checksum']
-        except KeyError:
-            kwargs['verify_checksum'] = True
 
-        try:
-            kwargs['filename_p']
-        except KeyError:
-            kwargs['filename_p'] = None
-        kwargs['the_real_cheat'] = the_real_cheat
-        await _base_xenoverse2_cheats(ftp, mount_dir, save_name, **kwargs)
-    
-    some_cheaty.__name__ = f'do_the_{some_cheaty.__name__}'
-    return CheatFunc(some_cheaty,kwargs)
+def make_xenoverse2_cheat_func(the_real_cheat, /, kwargs) -> CheatFunc:
+    return make_cheat_func(_base_xenoverse2_cheats, the_real_cheat, kwargs)
     
     
 async def xenoverse2_change_tp_medals(dec_save: Path,/,*,tp_medals: int):
@@ -1815,6 +1813,86 @@ dragonball_xenoverse_2 = cheats_base_command.group(name="dragonball_xenoverse_2"
 async def do_xenoverse2_change_tp_medals(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,make_xenoverse2_cheat_func(xenoverse2_change_tp_medals,kwargs))
 
+async def _base_rayman_legend_cheats(ftp: aioftp.Client, mount_dir: str, save_name: str,/,**kwargs):
+    the_real_cheat = kwargs.pop('the_real_cheat')
+    verify_checksum = kwargs.pop('verify_checksum')
+    filename_p = kwargs.pop('filename_p')
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
+    try:
+        ftp_save, = files
+    except ValueError:
+        if filename_p is None:
+            raise ValueError(f'we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+        
+        for path,info in files:
+            if str(path).replace('\\','/').casefold() == filename_p.casefold():
+                ftp_save = (path,info)
+                break
+        else: # nobreak
+            raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
+    
+    async with TemporaryDirectory() as tp:
+        savefile_rayman_legends = Path(tp,ftp_save[0])
+        await ftp.download(ftp_save[0],savefile_rayman_legends,write_into=True)
+
+        if verify_checksum:
+            with open(savefile_rayman_legends, 'rb+') as f:
+                f.seek(-0xc,2)
+                main_data_blob_size = f.tell()
+                if main_data_blob_size > 10_000_000:
+                    raise ValueError('save too big, is likley not a Rayman Legends save')
+                f.seek(0)
+                new_checksum = struct.pack('<I',custom_crc(f.read(main_data_blob_size)))
+                f.seek(-(0xc - 4),2)
+                old_cheksum = f.read(4)
+                if not old_cheksum == new_checksum:
+                    raise ValueError(f'Checksum missmatch {old_cheksum = } != {new_checksum = }')
+
+        await the_real_cheat(savefile_rayman_legends,**kwargs)
+
+        with open(savefile_rayman_legends, 'rb+') as f:
+            f.seek(-0xc,2)
+            main_data_blob_size = f.tell()
+            if main_data_blob_size > 10_000_000:
+                raise ValueError('save too big, is likley not a Rayman Legends save')
+            f.seek(0)
+            new_checksum = struct.pack('<I',custom_crc(f.read(main_data_blob_size)))
+            f.seek(-(0xc - 4),2)
+            f.write(new_checksum)
+        
+        await ftp.upload(savefile_rayman_legends,ftp_save[0],write_into=True)
+
+
+def make_rayman_legend_cheat_func(the_real_cheat, /, kwargs) -> CheatFunc:
+    return make_cheat_func(_base_rayman_legend_cheats, the_real_cheat, kwargs)
+    
+    
+async def rayman_legends_change_lums(dec_save: Path,/,*,lums: int):
+    """
+    Rayman Legends with changed Lums
+    """
+    with open(dec_save,'rb+') as f:
+        lums_struct_i_think_offset = f.read().index(b'\xfbZ\x99\xa7') + 4
+        f.seek(lums_struct_i_think_offset + 0x54)
+        
+        prev_user_of_save = b''.join(iter(lambda: f.read(1),b'\x00')).decode('ascii')
+        
+        if not is_psn_name(prev_user_of_save):
+            raise ValueError(f'Expected to find a psn username at {lums_struct_i_think_offset + 0x54}')
+        
+        f.seek(lums_struct_i_think_offset + 0x34)
+        f.write(struct.pack('>I',lums))
+
+rayman_legends = cheats_base_command.group(name="rayman_legends", description="Cheats for Rayman Legends")
+@rayman_legends.subcommand(sub_cmd_name="change_lums", sub_cmd_description="Change the Lums of your save")
+@interactions.slash_option('save_files','The save files to change Lums of',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('lums','The amount of Lums you want',interactions.OptionType.INTEGER,True,**UINT32_MAX_MIN_VALUES)
+@filename_p_opt
+@verify_checksum_opt
+async def do_rayman_legends_change_lums(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,account_id,make_rayman_legend_cheat_func(rayman_legends_change_lums,kwargs))
 ###########################0 some base folder things idk
 async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,clean_encrypted_file: CleanEncryptedSaveOption, decrypted_save_file: Path = None, decrypted_save_folder: Path = None, unpack_first_root_folder: bool = False):
     """
