@@ -291,11 +291,15 @@ class CleanEncryptedSaveOption(Enum):
 
 class SpecialSaveFiles(Enum):
     MINECRAFT_1GB_MCWORLD = 0
+    ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT = 1
 
 class SaveMountPointResourceError(Exception):
     """
     Raised when theres no more free resources
     """
+
+
+#
 
 
 class _ResourceManager:
@@ -588,7 +592,16 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             ps4_saves.append((zip_file.path,white_file))
         if not ps4_saves:
             return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAXXXXX folder? we also do not support nested archives so make sure there are no archives in this. your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
-
+        
+        try:
+            ctx.special_save_files_thing
+        except AttributeError:
+            pass
+        else:
+            if ctx.special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
+                if len(ps4_saves) != 1:
+                    return f'The archive {link} has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes'
+        
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
             return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
         
@@ -865,6 +878,15 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         if not ps4_saves:
             return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAXXXXX folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
+
+        try:
+            ctx.special_save_files_thing
+        except AttributeError:
+            pass
+        else:
+            if ctx.special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
+                if len(ps4_saves) != 1:
+                    return f'The folder {link} has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes'
 
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
             return f'The folder {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
@@ -1220,7 +1242,17 @@ def filename_p_opt(func):
     return interactions.slash_option(name='filename_p',description='If multiple files are found, it will look for a file with this name, put path if in folder',opt_type=interactions.OptionType.STRING,required=False)(func)# (like man4/mysave.sav)')
 def verify_checksum_opt(func):
     return interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)(func)
-
+def allow_mulit_enc_opt(func):
+    return interactions.slash_option(
+    name="allow_mulit_enc",
+    description="Upload the same decrypted save to multiple encrypted saves? This is likely not what you want.",
+    required=False,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[ 
+        interactions.SlashCommandChoice(name="Yes i do, i know what im doing", value=True),
+        interactions.SlashCommandChoice(name="No", value=False),
+    ]
+    )(func)
 
 async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Sequence[CheatFunc | DecFunc],chet_files_custom: Path, savedata0_folder:Path) -> bool:
     await log_message(ctx,f'Looking for any `dl_link`s or `savedata0`s to download')
@@ -1929,7 +1961,11 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
         interactions.SlashCommandChoice(name="Delete all in encrypted file **INCLUDING sce_sys folder**; only use if decrypted folder has al files", value=2),
     ]
     )
+@allow_mulit_enc_opt
 async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    if not kwargs.pop('allow_mulit_enc_opt',None):
+        ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = False
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
@@ -1942,7 +1978,7 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
     name="unpack_first_root_folder",
     description="If Yes, then it move contents of top most folder to root, otherwise it wont, default is Yes",
     required=False,
-    opt_type=interactions.OptionType.BOOLEAN,
+    opt_type=interactions.OptionType.INTEGER,
     choices=[
         interactions.SlashCommandChoice(name="Yes", value=True),
         interactions.SlashCommandChoice(name="No", value=False),
@@ -1958,7 +1994,11 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
         interactions.SlashCommandChoice(name="Delete all in encrypted file **INCLUDING sce_sys folder**; only use if decrypted folder has al files", value=2),
     ]
     )
+@allow_mulit_enc_opt
 async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    if not kwargs.pop('allow_mulit_enc_opt',None):
+        ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
@@ -2301,7 +2341,11 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
         interactions.SlashCommandChoice(name=gamenamey, value=gamenamey) for gamenamey in game_enc_functions.keys()
     ])
 @filename_p_opt
+@allow_mulit_enc_opt
 async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
+    if not kwargs.pop('allow_mulit_enc_opt',None):
+        ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+
     import_func = game_enc_functions[kwargs.pop('game')]
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(import_func,kwargs))
 ############################04 Cool bot features
@@ -2500,7 +2544,7 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
     name="verbose_mode",
     description="Do you want error messages more verbose (detailed)?",
     required=True,
-    opt_type=interactions.OptionType.BOOLEAN,
+    opt_type=interactions.OptionType.INTEGER,
     choices=[
         interactions.SlashCommandChoice(name="Yes (On)", value=True),
         interactions.SlashCommandChoice(name="No (Off)", value=False),
