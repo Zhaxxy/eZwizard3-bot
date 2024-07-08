@@ -2643,10 +2643,9 @@ async def main() -> int:
         await ftp.download('libc.sprx','libc.sprx',write_into=True)
         with open('libc.sprx','rb') as f:
             ps4_fw_version = get_fw_version(f)
+        os.remove('libc.sprx')
         if ps4_fw_version != 9:
             raise Exception(f'We only {" ".join(str(x) for x in SUPPORTED_MEM_PATCH_FW_VERSIONS)}, please ask to add {ps4_fw_version} to https://github.com/Zhaxxy/eZwizard3-bot/issues')
-        finally:
-            os.remove('libc.sprx')
         print('Done checking PS4 Firmware version')
         await ftp.change_directory(f'/system_data/savedata/{CONFIG["user_id"]}/db/user')
         if check_base_saves:
