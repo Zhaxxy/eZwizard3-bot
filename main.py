@@ -437,7 +437,7 @@ def get_total_amnt_used():
 
 
 def save_url(author_id: str, url: str, url_id: int):
-    if type(url_id) != int or url_id <= 1:
+    if (not isinstance(url_id,int)) or url_id <= 1:
         raise TypeError(f'Invalid url_id {url_id}')
     author_id = str(author_id)
     url_id = str(url_id)
@@ -453,7 +453,7 @@ def save_url(author_id: str, url: str, url_id: int):
 
 
 def get_saved_url(author_id: str, url_id: int) -> str:
-    if type(url_id) != int or url_id <= 1:
+    if (not isinstance(url_id,int)) or url_id <= 1:
         raise TypeError(f'Invalid url_id {url_id}')
     author_id = str(author_id)
     url_id = str(url_id)
