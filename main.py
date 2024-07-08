@@ -35,6 +35,7 @@ from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MA
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug
+from savemount_py.firmware_getter_from_libc_ps4 import get_fw_version
 from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
 from custom_crc import custom_crc
 try:
@@ -2632,8 +2633,21 @@ async def main() -> int:
 
     print('testing if ftp works')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-        await ftp.change_directory(f'/system_data/savedata/{CONFIG["user_id"]}/db/user')
+        await ftp.change_directory('/system/common/lib')
         print('ftp works!')
+        print('Checking PS4 Firmware version')
+        try:
+            os.remove('libc.sprx')
+        except FileNotFoundError:
+            pass
+        await ftp.download('libc.sprx','libc.sprx',write_into=True)
+        with open('libc.sprx','rb') as f:
+            ps4_fw_version = get_fw_version(f)
+        if ps4_fw_version != 9:
+            raise Exception(f'We only support 9.00 atm, please ask to add {ps4_fw_version} to https://github.com/Zhaxxy/eZwizard3-bot/issues')
+        os.remove('libc.sprx')
+        print('Done checking PS4 Firmware version')
+        await ftp.change_directory(f'/system_data/savedata/{CONFIG["user_id"]}/db/user')
         if check_base_saves:
             print('Cleaning base saves')
             try:
