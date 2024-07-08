@@ -188,7 +188,7 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
     await ctx.defer()
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
-    ctx.mode = mode
+    ctx.ezwizard_mode = mode
     await log_message(ctx,'Pleast wait, if over a minute is spent here do the command again!',_do_print = False)
     return ctx
 
