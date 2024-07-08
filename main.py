@@ -335,7 +335,7 @@ async def free_save_str(save_str: str,/) -> None:
 async def get_amnt_free_save_strs() -> int:
     return await _save_mount_points.get_free_resources_count()
 
-mounted_saves_at_once = asyncio.Semaphore(1) # 3 i sadly got an unmount error, and with 2 too
+mounted_saves_at_once = asyncio.Semaphore(12) # 3 i sadly got an unmount error, and with 2 too
 
 class PS4AccountID:
     __slots__ = ('_account_id',)

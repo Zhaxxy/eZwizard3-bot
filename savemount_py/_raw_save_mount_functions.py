@@ -1,3 +1,4 @@
+from threading import Lock
 import struct
 from dataclasses import dataclass
 from typing import NamedTuple, Tuple
@@ -57,6 +58,9 @@ class ToRemovePatches(NamedTuple):
     pid: int
     address: int
     data: bytes
+
+
+SAVE_MOUNT_LOCk = Lock()
 
 
 @dataclass(frozen = True, slots = True)
@@ -301,48 +305,50 @@ async def get_user_id(ps4: PS4Debug ,mem: MemoryIsPatched) -> int:
 """ 
 
 async def mount_save(ps4: PS4Debug, mem: MemoryIsPatched, user_id: int,cusa_game_id: str, savedir: str, mountMode: int, blocks: int) -> SceSaveDataMountResult:
-    size_of_SceSaveDataDirName = 32
-    size_of_SceSaveDataMount = 80
-    size_of_SceSaveDataMountResult = 64
-    # await get_user_id(ps4,mem)
-    async with ps4.memory(mem.pid,size_of_SceSaveDataDirName + 0x10 + 0x41) as memory1:
-        dirNameAddr = memory1.address
-        titleIdAddr = dirNameAddr + size_of_SceSaveDataDirName
-        fingerprintAddr = titleIdAddr + 0x10
-        await ps4.write_memory(mem.pid, titleIdAddr, cusa_game_id.encode('utf-8'))
-        await ps4.write_memory(mem.pid, fingerprintAddr, b"0000000000000000000000000000000000000000000000000000000000000000")
-        
-        await ps4.write_memory(mem.pid, dirNameAddr, savedir.encode('utf-8'))
-        
-        mount = SceSaveDataMount(userId = user_id, dirName = dirNameAddr, blocks = blocks, mountMode = mountMode, fingerprint = fingerprintAddr, titleId = titleIdAddr)
-        
-        ########
-        async with ps4.memory(mem.pid,size_of_SceSaveDataMount + size_of_SceSaveDataMountResult) as memory2:
-            mountAddr = memory2.address
-            mountResultAddr = mountAddr + size_of_SceSaveDataMount
-            await ps4.write_memory(mem.pid , mountAddr, mount.to_bytes())
-            await ps4.write_memory(mem.pid , mountResultAddr, b'\x00' * size_of_SceSaveDataMountResult)
+    with SAVE_MOUNT_LOCk:
+        size_of_SceSaveDataDirName = 32
+        size_of_SceSaveDataMount = 80
+        size_of_SceSaveDataMountResult = 64
+        # await get_user_id(ps4,mem)
+        async with ps4.memory(mem.pid,size_of_SceSaveDataDirName + 0x10 + 0x41) as memory1:
+            dirNameAddr = memory1.address
+            titleIdAddr = dirNameAddr + size_of_SceSaveDataDirName
+            fingerprintAddr = titleIdAddr + 0x10
+            await ps4.write_memory(mem.pid, titleIdAddr, cusa_game_id.encode('utf-8'))
+            await ps4.write_memory(mem.pid, fingerprintAddr, b"0000000000000000000000000000000000000000000000000000000000000000")
             
-            ret = await ps4.call(mem.pid, mem.libSceSaveDataBase + of.sceSaveDataMount, mountAddr, mountResultAddr, rpc_stub = mem.stub)
-            result = SceSaveDataMountResult(SceSaveDataMountPoint=b'\x00' * size_of_SceSaveDataDirName, requiredBlocks=0, mountStatus=0, error_code = ret[0])
+            await ps4.write_memory(mem.pid, dirNameAddr, savedir.encode('utf-8'))
             
-            if ret[0] == 0:
-                mount_bytes = await ps4.read_memory(mem.pid, mountResultAddr, size_of_SceSaveDataMountResult)
+            mount = SceSaveDataMount(userId = user_id, dirName = dirNameAddr, blocks = blocks, mountMode = mountMode, fingerprint = fingerprintAddr, titleId = titleIdAddr)
+            
+            ########
+            async with ps4.memory(mem.pid,size_of_SceSaveDataMount + size_of_SceSaveDataMountResult) as memory2:
+                mountAddr = memory2.address
+                mountResultAddr = mountAddr + size_of_SceSaveDataMount
+                await ps4.write_memory(mem.pid , mountAddr, mount.to_bytes())
+                await ps4.write_memory(mem.pid , mountResultAddr, b'\x00' * size_of_SceSaveDataMountResult)
                 
-                mount_point = mount_bytes[:0x20]
-                requried_blocks = struct.unpack('<Q',mount_bytes[0x20:0x28])[0]
-                mount_status = struct.unpack('<I',mount_bytes[0x28:0x2C])[0]
+                ret = await ps4.call(mem.pid, mem.libSceSaveDataBase + of.sceSaveDataMount, mountAddr, mountResultAddr, rpc_stub = mem.stub)
+                result = SceSaveDataMountResult(SceSaveDataMountPoint=b'\x00' * size_of_SceSaveDataDirName, requiredBlocks=0, mountStatus=0, error_code = ret[0])
                 
-                result = SceSaveDataMountResult(SceSaveDataMountPoint = mount_point, requiredBlocks = requried_blocks, mountStatus = mount_status, error_code = ret[0]) 
+                if ret[0] == 0:
+                    mount_bytes = await ps4.read_memory(mem.pid, mountResultAddr, size_of_SceSaveDataMountResult)
+                    
+                    mount_point = mount_bytes[:0x20]
+                    requried_blocks = struct.unpack('<Q',mount_bytes[0x20:0x28])[0]
+                    mount_status = struct.unpack('<I',mount_bytes[0x28:0x2C])[0]
+                    
+                    result = SceSaveDataMountResult(SceSaveDataMountPoint = mount_point, requiredBlocks = requried_blocks, mountStatus = mount_status, error_code = ret[0]) 
 
-    return result
+        return result
 
 
 async def unmount_save(ps4: PS4Debug, mem: MemoryIsPatched, mp: SceSaveDataMountResult) -> int:
-    async with ps4.memory(mem.pid, length = len(mp.SceSaveDataMountPoint)) as memory:
-        await memory.write(mp.SceSaveDataMountPoint)
-        ret = await ps4.call(mem.pid,mem.libSceSaveDataBase + of.sceSaveDataUmount,memory.address,rpc_stub = mem.stub)
-        return ret[0]
+    with SAVE_MOUNT_LOCk:
+        async with ps4.memory(mem.pid, length = len(mp.SceSaveDataMountPoint)) as memory:
+            await memory.write(mp.SceSaveDataMountPoint)
+            ret = await ps4.call(mem.pid,mem.libSceSaveDataBase + of.sceSaveDataUmount,memory.address,rpc_stub = mem.stub)
+            return ret[0]
 
 """
 import asyncio
