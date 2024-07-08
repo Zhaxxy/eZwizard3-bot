@@ -1871,29 +1871,53 @@ async def _base_rayman_legend_cheats(ftp: aioftp.Client, mount_dir: str, save_na
 
         if verify_checksum:
             with open(savefile_rayman_legends, 'rb+') as f:
-                f.seek(-0xc,2)
-                main_data_blob_size = f.tell()
-                if main_data_blob_size > 10_000_000:
+                # Read from end up untill we reach as FF FF FF FF block
+                f.seek(0,2)
+                end_of_file_offset = f.tell()
+                if end_of_file_offset > 10_000_000:
                     raise ValueError('save too big, is likley not a Rayman Legends save')
                 f.seek(0)
+                data = f.read()
+                last_fffff_block_index = data.rfind(b'\xFF\xFF\xFF\xFF')
+                if last_fffff_block_index == -1:
+                    raise ValueError('can not find last ff block')
+                last_fffff_block_index += 4
+                checksum_offset = last_fffff_block_index + 0x10
+                main_data_blob_size = last_fffff_block_index + (0x10 - 4) # 4 bytes before checksum
+                f.seek(0)
+                
                 new_checksum = struct.pack('<I',custom_crc(f.read(main_data_blob_size)))
-                f.seek(-(0xc - 4),2)
+                f.seek(checksum_offset)
                 old_cheksum = f.read(4)
                 if not old_cheksum == new_checksum:
+                    old_cheksum = old_cheksum.hex()
+                    new_checksum = new_checksum.hex()
                     raise ValueError(f'Checksum missmatch {old_cheksum = } != {new_checksum = }')
+
 
         await the_real_cheat(savefile_rayman_legends,**kwargs)
 
         with open(savefile_rayman_legends, 'rb+') as f:
-            f.seek(-0xc,2)
-            main_data_blob_size = f.tell()
-            if main_data_blob_size > 10_000_000:
+            # Read from end up untill we reach as FF FF FF FF block
+            f.seek(0,2)
+            end_of_file_offset = f.tell()
+            if end_of_file_offset > 10_000_000:
                 raise ValueError('save too big, is likley not a Rayman Legends save')
             f.seek(0)
+            data = f.read()
+            last_fffff_block_index = data.rfind(b'\xFF\xFF\xFF\xFF')
+            if last_fffff_block_index == -1:
+                raise ValueError('can not find last ff block')
+            last_fffff_block_index += 4
+            checksum_offset = last_fffff_block_index + 0x10
+            main_data_blob_size = last_fffff_block_index + (0x10 - 4) # 4 bytes before checksum
+            f.seek(0)
+            
             new_checksum = struct.pack('<I',custom_crc(f.read(main_data_blob_size)))
-            f.seek(-(0xc - 4),2)
+            f.seek(checksum_offset)
             f.write(new_checksum)
-        
+
+
         await ftp.upload(savefile_rayman_legends,ftp_save[0],write_into=True)
 
 
@@ -2185,13 +2209,23 @@ async def rayman_legends_upload_fix_checksum(ftp: aioftp.Client, mount_dir: str,
             raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
     
     with open(dl_link_single, 'rb+') as f:
-        f.seek(-0xc,2)
-        main_data_blob_size = f.tell()
-        if main_data_blob_size > 10_000_000:
+        # Read from end up untill we reach as FF FF FF FF block
+        f.seek(0,2)
+        end_of_file_offset = f.tell()
+        if end_of_file_offset > 10_000_000:
             raise ValueError('save too big, is likley not a Rayman Legends save')
         f.seek(0)
+        data = f.read()
+        last_fffff_block_index = data.rfind(b'\xFF\xFF\xFF\xFF')
+        if last_fffff_block_index == -1:
+            raise ValueError('can not find last ff block')
+        last_fffff_block_index += 4
+        checksum_offset = last_fffff_block_index + 0x10
+        main_data_blob_size = last_fffff_block_index + (0x10 - 4) # 4 bytes before checksum
+        f.seek(0)
+        
         new_checksum = struct.pack('<I',custom_crc(f.read(main_data_blob_size)))
-        f.seek(-(0xc - 4),2)
+        f.seek(checksum_offset)
         f.write(new_checksum)
         
     await ftp.upload(dl_link_single,ftp_save[0],write_into=True)
