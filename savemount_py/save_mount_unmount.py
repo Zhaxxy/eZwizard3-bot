@@ -7,11 +7,12 @@ except ModuleNotFoundError:
     from savemount_py._raw_save_mount_functions import patch_memory_for_saves_900, mount_save, unmount_save, MemoryIsPatched, SceSaveDataMountResult
 
 class PatchMemoryPS4900:
-    def __init__(self, ps4: PS4Debug) -> None:
+    def __init__(self, ps4: PS4Debug, fw_version: int) -> None:
         self.ps4 = ps4
-    
+        self.fw_version = fw_version
+        
     async def __aenter__(self) -> MemoryIsPatched:
-        self.mem = await patch_memory_for_saves_900(self.ps4)
+        self.mem = await patch_memory_for_saves_900(self.ps4,self.fw_version)
         return self.mem
     
     async def __aexit__(self, exc_type, exc_value, exc_traceback):

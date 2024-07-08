@@ -2644,7 +2644,7 @@ async def main() -> int:
         with open('libc.sprx','rb') as f:
             ps4_fw_version = get_fw_version(f)
         if ps4_fw_version != 9:
-            raise Exception(f'We only support 9.00 atm, please ask to add {ps4_fw_version} to https://github.com/Zhaxxy/eZwizard3-bot/issues')
+            raise Exception(f'We only {" ".join(SUPPORTED_MEM_PATCH_FW_VERSIONS)}, please ask to add {ps4_fw_version} to https://github.com/Zhaxxy/eZwizard3-bot/issues')
         os.remove('libc.sprx')
         print('Done checking PS4 Firmware version')
         await ftp.change_directory(f'/system_data/savedata/{CONFIG["user_id"]}/db/user')
@@ -2683,7 +2683,7 @@ async def main() -> int:
     print('Patching memory')
     global mem
     global bot
-    async with PatchMemoryPS4900(ps4) as mem:
+    async with PatchMemoryPS4900(ps4,ps4_fw_version) as mem:
         if check_base_saves:
             print('Memory patched, ensuring all base saves exist!')
             for eeeee in SAVE_DIRS:

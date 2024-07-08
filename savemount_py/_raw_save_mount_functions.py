@@ -5,6 +5,10 @@ from typing import NamedTuple, Tuple
 
 from ps4debug import PS4Debug
 
+SUPPORTED_MEM_PATCH_FW_VERSIONS = (
+    9,
+)
+
 class Of_Offsets:
     sceSaveDataInitialize3 = 0x00027FA0
     sceUserServiceGetUserName = 0x000045A0
@@ -137,7 +141,9 @@ class ProcessNotFound(Exception):
     """
 
     
-async def patch_memory_for_saves_900(ps4: PS4Debug) -> MemoryIsPatched:
+async def patch_memory_for_saves_900(ps4: PS4Debug, fw_version: int) -> MemoryIsPatched:
+    if fw_version not in SUPPORTED_MEM_PATCH_FW_VERSIONS:
+        raise ValueError(f'fimrware {fw_version} is not supported, only {SUPPORTED_MEM_PATCH_FW_VERSIONS}')
     processes = await ps4.get_processes()
     
     su = next((p for p in processes if p.name == 'SceShellUI'), None)
@@ -181,17 +187,18 @@ async def patch_memory_for_saves_900(ps4: PS4Debug) -> MemoryIsPatched:
     
     patches_made = []
     
-    data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00035DA8,length=1)
-    patches_made.append(ToRemovePatches(pid, libSceSaveDataBase + 0x00035DA8,data))
-    await ps4.write_memory(pid,libSceSaveDataBase + 0x00035DA8, b'\x00') # 'sce_' patch
+    if fw_version == 9:
+        data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00035DA8,length=1)
+        patches_made.append(ToRemovePatches(pid, libSceSaveDataBase + 0x00035DA8,data))
+        await ps4.write_memory(pid,libSceSaveDataBase + 0x00035DA8, b'\x00') # 'sce_' patch
 
-    data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00034679,length=1)
-    patches_made.append(ToRemovePatches(pid,libSceSaveDataBase + 0x00034679,data))
-    await ps4.write_memory(pid,libSceSaveDataBase + 0x00034679, b'\x00') # 'sce_sdmemory' patch
-    
-    # data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00000E81,length=1)
-    # patches_made.append(ToRemovePatches(pid,libSceSaveDataBase + 0x00000E81,data))
-    # await ps4.write_memory(pid,libSceSaveDataBase + 0x00000E81, b'\x30') # '_' patch
+        data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00034679,length=1)
+        patches_made.append(ToRemovePatches(pid,libSceSaveDataBase + 0x00034679,data))
+        await ps4.write_memory(pid,libSceSaveDataBase + 0x00034679, b'\x00') # 'sce_sdmemory' patch
+        
+        # data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00000E81,length=1)
+        # patches_made.append(ToRemovePatches(pid,libSceSaveDataBase + 0x00000E81,data))
+        # await ps4.write_memory(pid,libSceSaveDataBase + 0x00000E81, b'\x30') # '_' patch
     
     l = await ps4.get_processes()
     
@@ -202,65 +209,66 @@ async def patch_memory_for_saves_900(ps4: PS4Debug) -> MemoryIsPatched:
     ex = next((p for p in m if p.name == 'executable'), None) # theres mutiple wtf, lets hope this works
         
     # SHELLCORE PATCHES (SceShellCore)
-    # Patch 1
-    data = await ps4.read_memory(s.pid, ex.start + 0x00E351D9, length=1)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E351D9, data))
-    await ps4.write_memory(s.pid, ex.start + 0x00E351D9, b'\x00')  # 'sce_sdmemory' patch
+    if fw_version == 9:
+        # Patch 1
+        data = await ps4.read_memory(s.pid, ex.start + 0x00E351D9, length=1)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E351D9, data))
+        await ps4.write_memory(s.pid, ex.start + 0x00E351D9, b'\x00')  # 'sce_sdmemory' patch
 
-    # Patch 2
-    data = await ps4.read_memory(s.pid, ex.start + 0x00E35218, length=1)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E35218, data))
-    await ps4.write_memory(s.pid, ex.start + 0x00E35218, b'\x00')  # 'sce_sdmemory1' patch
+        # Patch 2
+        data = await ps4.read_memory(s.pid, ex.start + 0x00E35218, length=1)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E35218, data))
+        await ps4.write_memory(s.pid, ex.start + 0x00E35218, b'\x00')  # 'sce_sdmemory1' patch
 
-    # Patch 3
-    data = await ps4.read_memory(s.pid, ex.start + 0x00E35226, length=1)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E35226, data))
-    await ps4.write_memory(s.pid, ex.start + 0x00E35226, b'\x00')  # 'sce_sdmemory2' patch
+        # Patch 3
+        data = await ps4.read_memory(s.pid, ex.start + 0x00E35226, length=1)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E35226, data))
+        await ps4.write_memory(s.pid, ex.start + 0x00E35226, b'\x00')  # 'sce_sdmemory2' patch
 
-    # Patch 4
-    data = await ps4.read_memory(s.pid, ex.start + 0x00E35234, length=1)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E35234, data))
-    await ps4.write_memory(s.pid, ex.start + 0x00E35234, b'\x00')  # 'sce_sdmemory3' patch
+        # Patch 4
+        data = await ps4.read_memory(s.pid, ex.start + 0x00E35234, length=1)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x00E35234, data))
+        await ps4.write_memory(s.pid, ex.start + 0x00E35234, b'\x00')  # 'sce_sdmemory3' patch
 
-    # Patch 5
-    data = await ps4.read_memory(s.pid, ex.start + 0x008AEAE0, length=4)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x008AEAE0, data))
-    await ps4.write_memory(s.pid, ex.start + 0x008AEAE0, b'\x48\x32\xC0\xC3')  # verify keystone patch
+        # Patch 5
+        data = await ps4.read_memory(s.pid, ex.start + 0x008AEAE0, length=4)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x008AEAE0, data))
+        await ps4.write_memory(s.pid, ex.start + 0x008AEAE0, b'\x48\x32\xC0\xC3')  # verify keystone patch
 
-    # Patch 6
-    data = await ps4.read_memory(s.pid, ex.start + 0x0006C560, length=3)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006C560, data))
-    await ps4.write_memory(s.pid, ex.start + 0x0006C560, b'\x31\xC0\xC3')  # transfer mount permission patch
+        # Patch 6
+        data = await ps4.read_memory(s.pid, ex.start + 0x0006C560, length=3)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006C560, data))
+        await ps4.write_memory(s.pid, ex.start + 0x0006C560, b'\x31\xC0\xC3')  # transfer mount permission patch
 
-    # Patch 7
-    data = await ps4.read_memory(s.pid, ex.start + 0x000C9000, length=3)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x000C9000, data))
-    await ps4.write_memory(s.pid, ex.start + 0x000C9000, b'\x31\xC0\xC3')  # patch psn check
+        # Patch 7
+        data = await ps4.read_memory(s.pid, ex.start + 0x000C9000, length=3)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x000C9000, data))
+        await ps4.write_memory(s.pid, ex.start + 0x000C9000, b'\x31\xC0\xC3')  # patch psn check
 
-    # Patch 8
-    data = await ps4.read_memory(s.pid, ex.start + 0x0006DC5D, length=2)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006DC5D, data))
-    await ps4.write_memory(s.pid, ex.start + 0x0006DC5D, b'\x90\x90')  #       ^
+        # Patch 8
+        data = await ps4.read_memory(s.pid, ex.start + 0x0006DC5D, length=2)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006DC5D, data))
+        await ps4.write_memory(s.pid, ex.start + 0x0006DC5D, b'\x90\x90')  #       ^
 
-    # Patch 9
-    data = await ps4.read_memory(s.pid, ex.start + 0x0006C0A8, length=6)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006C0A8, data))
-    await ps4.write_memory(s.pid, ex.start + 0x0006C0A8, b'\x90\x90\x90\x90\x90\x90')  # something something patches
+        # Patch 9
+        data = await ps4.read_memory(s.pid, ex.start + 0x0006C0A8, length=6)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006C0A8, data))
+        await ps4.write_memory(s.pid, ex.start + 0x0006C0A8, b'\x90\x90\x90\x90\x90\x90')  # something something patches
 
-    # Patch 10
-    data = await ps4.read_memory(s.pid, ex.start + 0x0006BA62, length=6)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006BA62, data))
-    await ps4.write_memory(s.pid, ex.start + 0x0006BA62, b'\x90\x90\x90\x90\x90\x90')  # don't even remember doing this
+        # Patch 10
+        data = await ps4.read_memory(s.pid, ex.start + 0x0006BA62, length=6)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006BA62, data))
+        await ps4.write_memory(s.pid, ex.start + 0x0006BA62, b'\x90\x90\x90\x90\x90\x90')  # don't even remember doing this
 
-    # Patch 11
-    data = await ps4.read_memory(s.pid, ex.start + 0x0006B2C4, length=2)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006B2C4, data))
-    await ps4.write_memory(s.pid, ex.start + 0x0006B2C4, b'\x90\x90')  # nevah jump
+        # Patch 11
+        data = await ps4.read_memory(s.pid, ex.start + 0x0006B2C4, length=2)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006B2C4, data))
+        await ps4.write_memory(s.pid, ex.start + 0x0006B2C4, b'\x90\x90')  # nevah jump
 
-    # Patch 12
-    data = await ps4.read_memory(s.pid, ex.start + 0x0006B51E, length=2)
-    patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006B51E, data))
-    await ps4.write_memory(s.pid, ex.start + 0x0006B51E, b'\x90\xE9')  # always jump
+        # Patch 12
+        data = await ps4.read_memory(s.pid, ex.start + 0x0006B51E, length=2)
+        patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006B51E, data))
+        await ps4.write_memory(s.pid, ex.start + 0x0006B51E, b'\x90\xE9')  # always jump
     # WRITE CUSTOM FUNCTIONS (libSceLibcInternal)
     GetSaveDirectoriesAddr = await ps4.allocate_memory(pid, 0x8000)
     await ps4.write_memory(pid, GetSaveDirectoriesAddr, fu.GetSaveDirectories)
