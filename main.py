@@ -9,6 +9,7 @@ from io import BytesIO
 import time
 import zipfile
 import os
+from stat import S_IWRITE
 from datetime import datetime
 from zlib import crc32 # put modules you need at the bottom of list for custom cheats, in correct block
 import struct
@@ -18,6 +19,7 @@ from ftplib import FTP,error_reply
 _boot_start = time.perf_counter()
 
 from async_lru import alru_cache
+import ujson as json
 import aioshutil as shutil
 from aiopath import AsyncPath
 from psnawp_api import PSNAWP
@@ -59,7 +61,7 @@ WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSI
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
-ZIP_LOOSE_FILES_MAX_AMT = 9000+1
+ZIP_LOOSE_FILES_MAX_AMT = 14567+1
 MAX_RESIGNS_PER_ONCE = 99
 DOWNLOAD_CHUNK_SIZE = 1024
 AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
@@ -1115,6 +1117,51 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                         
                         f.seek(desc_before_find_index)
                         f.write(white_file.name.encode('ascii').ljust(0x24, b'\x00'))
+                
+                await log_message(ctx,f'Checking for any resource/behaviour packs not added to json files')
+                
+                async def fix_packs(packs_json: str, packs_folder: str, pretty_thing: str):
+                    try:
+                        with open(savedata0hehe / packs_json,'r') as f:
+                            resource_packs_json_list = json.loads(f.read())
+                    except Exception:
+                        await log_message(ctx,f'Could not load {packs_json} file, ignoring {pretty_thing} packs')
+                    else:
+                        for resource_folder in (savedata0hehe / packs_folder).iterdir():
+                            try:
+                                with open(resource_folder / 'manifest.json','r') as f:
+                                    manifest = json.loads(f.read())
+                            except Exception:
+                                await log_message(ctx,f'Could not load manifest.json file for {resource_folder.name}, ignoring it')
+                                continue
+                            
+                            try:
+                                manifest_uuid = manifest['header']['uuid']
+                            except Exception:
+                                await log_message(ctx,f'Could not get uuid from manifest.json file for {resource_folder.name}, perhaps older or newer mcworld?')
+                                continue
+                            
+                            try:
+                                manifest_version = manifest['header']['version']
+                            except Exception:
+                                await log_message(ctx,f'Could not get version from manifest.json file for {resource_folder.name}, perhaps older or newer mcworld?')
+                                continue
+                            
+                            for item in resource_packs_json_list:
+                                if manifest_uuid == item['pack_id']:
+                                    break
+                            else: # no break
+                                resource_packs_json_list.append({"pack_id":manifest_uuid,"version":manifest_version})
+                                await log_message(ctx,f'Added {resource_folder.name} to {packs_json}')
+                        try:
+                            os.chmod(savedata0hehe / packs_json, S_IWRITE) # 7-Zip for some reason making extracted files read only, here we make it read and write for pack_json
+                        except Exception:
+                            pass
+                        with open(savedata0hehe / packs_json,'w') as f:
+                            f.write(json.dumps(resource_packs_json_list))
+                
+                await fix_packs('world_behavior_packs.json','behavior_packs','behaviour')
+                await fix_packs('world_resource_packs.json','resource_packs','resource')
                 cheats.append(CheatFunc(re_region,{'gameid':chet.kwargs.pop('gameid')}))
 
     await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
@@ -1189,11 +1236,11 @@ def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: P
 
 async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str = 'paypal me some money eboot.bin@protonmail.com and i might fix this message'):
     global amnt_used_this_session
-    await log_message(ctx,f'Zipping up modified {link_for_pretty} saves')
+    await log_message(ctx,f'Zipping up modified {link_for_pretty} saves (2 more steps left)')
     await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
 
     if new_zip_name.stat().st_size > ATTACHMENT_MAX_FILE_SIZE:
-        await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive')
+        await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!)')
         try:
             google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
         except Exception as e:
@@ -1201,7 +1248,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                 pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
                 await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
                 await asyncio.sleep(2*60)
-                await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive')
+                await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!)')
                 try:
                     google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
                 except Exception as e2:
@@ -1215,7 +1262,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\nPlease download this asap as it can be deleted at any time')
     else:
         # await shutil.move(new_zip_name,new_zip_name.name)
-        await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment')
+        await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment (last step!)')
         await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
         # os.remove(new_zip_name.name)
     amnt_used_this_session += 1
