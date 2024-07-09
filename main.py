@@ -1040,8 +1040,33 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                 await ftp.change_directory(new_mount_dir) 
                 # await log_message(ctx,f'Resigning {pretty_save_dir} to {account_id.account_id}')
                 account_id_old = await resign_mounted_save(None,ftp,new_mount_dir,account_id)
-
-            return results,account_id_old,real_name
+            
+            return_payload = results,account_id_old,real_name
+            
+            async with setting_global_image_lock:
+                try:
+                    extra_opt = ChangeSaveIconOption(int((Path(__file__).parent / 'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').read_text()))
+                except FileNotFoundError:
+                    return return_payload
+                
+                img_path = (Path(__file__).parent / 'DO_NOT_DELETE_global_image_watermark.png')
+                
+                if not img_path.is_file():
+                    return return_payload
+                
+                async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+                    await ftp.change_directory(new_mount_dir) 
+                    try:
+                        await change_save_icon(ftp,new_mount_dir,real_name,dl_link_image_overlay=img_path,option=extra_opt)
+                    except Exception as e:
+                        leader = ''
+                        if is_user_verbose_mode(ctx_author_id):
+                            error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+                        else:
+                            error_msg = f'```{e}```'
+                            leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
+                        return f'{leader}Could not apply cheat {chet.pretty()}to {pretty_save_dir}.\n\nreason: {error_msg}'
+            return return_payload
     finally:
         if savedatax:
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -2156,7 +2181,8 @@ async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
                 icon_overlay = icon_overlay.resize((int((width / height) * PS4_ICON0_DIMENSIONS[1]),PS4_ICON0_DIMENSIONS[1]))
             elif option == ChangeSaveIconOption.IGNORE_ASPECT_BILINEAR:
                 icon_overlay = icon_overlay.resize(PS4_ICON0_DIMENSIONS)
-            
+            else:
+                raise TypeError(f'Unrecongised option {option}')
             with Image.open(og_icon0_path) as im:
                 im.paste(icon_overlay,(0,0),icon_overlay)
                 im.save(og_icon0_path)
@@ -2673,6 +2699,65 @@ async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
     return await log_user_success(ctx,'All saves deleted successfully')
 
 
+setting_global_image_lock = asyncio.Lock()
+@interactions.slash_command(name='set_global_watermark',description="Allows a bot instance admin to set a global watermark to all saves icons")
+@interactions.slash_option(
+    name="global_image_link",
+    description="A direct download to your image, will be saved to current dir",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    )
+@interactions.slash_option(
+    name="option",
+    description="Some options you might want",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[
+        interactions.SlashCommandChoice(name="Keep aspect ratio and use nearest neighbour for resizing", value=1),
+        interactions.SlashCommandChoice(name="Ignore aspect ratio and use nearest neighbour for resizing", value=2),
+        interactions.SlashCommandChoice(name="Keep aspect ratio and use bilnear for resizing", value=3),
+        interactions.SlashCommandChoice(name="Ignore aspect ratio and use bilnear for resizing", value=4),
+    ]
+    )
+async def do_global_image_link(ctx: interactions.SlashContext, global_image_link: str, option: int):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
+    async with setting_global_image_lock:
+        if is_str_int(global_image_link) and int(global_image_link) > 1:
+            try:
+                global_image_link = get_saved_url(ctx.author_id,int(global_image_link))
+            except KeyError:
+                await log_user_error(ctx,f'You dont have any url saved for {global_image_link}, try running the file2url command again!')
+                return False
+        print(f'{global_image_link = }')
+        await log_message(ctx,f'Downloading {global_image_link}')
+        async with TemporaryDirectory() as tp:
+            result = await download_direct_link(ctx,global_image_link,tp,max_size=DL_FILE_TOTAL_LIMIT)
+            if isinstance(result,str):
+                await log_user_error(ctx,result)
+                return False
+            try:
+                with Image.open(result) as img:
+                    pass
+            except Exception:
+                return await log_user_error(ctx,f'{global_image_link} is not a valid image, please give a image link')
+            
+            with Image.open(result).convert("RGBA") as img:
+                img.save(Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png')
+            
+            (Path(__file__).parent / f'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').write_text(str(option))
+            
+            return await log_user_success(ctx,f'Global watermark image {global_image_link} set successfully, to disable, run remove_global_watermark or run this command again for differnt image')
+
+@interactions.slash_command(name='remove_global_watermark',description="Removes current global icon watermark")
+async def do_remove_global_watermark(ctx: interactions.SlashContext):
+    ctx = await set_up_ctx(ctx)
+    async with setting_global_image_lock:
+        (Path(__file__).parent / f'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').unlink(missing_ok=True)
+        (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
+    return await log_user_success(ctx,f'Global watermark image removed successfully')
+    
 async def main() -> int:
     global GIT_EXISTS
     GIT_EXISTS = False
@@ -2698,7 +2783,7 @@ async def main() -> int:
             await get_commit_count()
             
     global UPLOAD_SAVES_FOLDER_ID
-    check_base_saves = True # Do not edit unless you know what youre doing
+    check_base_saves = 0 # Do not edit unless you know what youre doing
     if is_in_test_mode():
         print('in test mode, only bot admins can use bot this session')
     print('attempting to make ezwizardtwo_saves folder on google drive account to store large saves')
