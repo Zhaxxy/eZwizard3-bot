@@ -17,3 +17,4 @@ pycryptodome
 aiopath
 aioshutil
 async-lru
+ujson
