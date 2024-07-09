@@ -2783,7 +2783,7 @@ async def main() -> int:
             await get_commit_count()
             
     global UPLOAD_SAVES_FOLDER_ID
-    check_base_saves = 0 # Do not edit unless you know what youre doing
+    check_base_saves = True # Do not edit unless you know what youre doing
     if is_in_test_mode():
         print('in test mode, only bot admins can use bot this session')
     print('attempting to make ezwizardtwo_saves folder on google drive account to store large saves')
