@@ -212,6 +212,15 @@ async def get_gdrive_folder_size(folder_id: str) -> tuple[int, int]:
     return total_size, total_files
 
 
+async def get_file_or_folder_info_from_id(file_id_or_folder_id: str) -> GDriveFile:
+    async with agg() as ag:
+        service = await ag.discover("drive", "v3")
+        response = await ag.as_user(
+            service.files.get(fileId=file_id_or_folder_id, fields='name, size, mimeType')
+        )
+        return GDriveFile(Path(response['name']),file_id_or_folder_id,int(response['size']),response['mimeType'] != 'application/vnd.google-apps.folder')
+
+
 async def get_file_info_from_id(file_id: str) -> GDriveFile:
     async with agg() as ag:
         service = await ag.discover("drive", "v3")

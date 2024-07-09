@@ -2699,6 +2699,35 @@ async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
     return await log_user_success(ctx,'All saves deleted successfully')
 
 
+@interactions.slash_command(name='delete_certain_gdrive_save',description="Only run this command if the gdrive is full, will delete a certain google drive file sent by bot")
+@interactions.slash_option(
+    name="gdrive_url_from_bot",
+    description="A google drive link the bot has given",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    )
+async def do_delete_certain_gdrive_save(ctx: interactions.SlashContext, gdrive_url_from_bot: str):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command, please ask one to run this command if google drive is full')
+
+    gdrive_url_from_bot_id = extract_drive_file_id(gdrive_url_from_bot)
+    
+    if not gdrive_url_from_bot_id:
+        return await log_user_error(ctx,f'{gdrive_url_from_bot} is not a valid google drive link, please copy the exact link the bot sent')
+    
+    try:
+        a = await get_file_info_from_id(gdrive_url_from_bot_id)
+    except Exception as e:
+        return await log_user_error(ctx,f'Could not get file metadata from {gdrive_url_from_bot}, got error {type(e).__name__}: {e}')
+
+    try:
+        await delete_google_drive_file_or_file_permentaly(gdrive_url_from_bot_id)
+    except Exception:
+        return await log_user_error(ctx,f'Could not delete {gdrive_url_from_bot}, are you sure its from the same bot as you running this command?')
+    
+    await log_user_success(ctx,f'Deleted {gdrive_url_from_bot} successfully')
+    
 setting_global_image_lock = asyncio.Lock()
 @interactions.slash_command(name='set_global_watermark',description="Allows a bot instance admin to set a global watermark to all saves icons")
 @interactions.slash_option(
@@ -2750,6 +2779,7 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
             
             return await log_user_success(ctx,f'Global watermark image {global_image_link} set successfully, to disable, run remove_global_watermark or run this command again for differnt image')
 
+
 @interactions.slash_command(name='remove_global_watermark',description="Removes current global icon watermark")
 async def do_remove_global_watermark(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
@@ -2759,7 +2789,8 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
         (Path(__file__).parent / f'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').unlink(missing_ok=True)
         (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
     return await log_user_success(ctx,f'Global watermark image removed successfully')
-    
+
+
 async def main() -> int:
     global GIT_EXISTS
     GIT_EXISTS = False
