@@ -2753,6 +2753,8 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
 @interactions.slash_command(name='remove_global_watermark',description="Removes current global icon watermark")
 async def do_remove_global_watermark(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
     async with setting_global_image_lock:
         (Path(__file__).parent / f'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').unlink(missing_ok=True)
         (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
