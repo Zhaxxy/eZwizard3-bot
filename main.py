@@ -983,9 +983,9 @@ async def resign_mounted_save(ctx: interactions.SlashContext | None, ftp: aioftp
         return old_account_id
 
 
-async def clean_base_mc_save(title_id: str, dir_name: str):
+async def clean_base_mc_save(title_id: str, dir_name: str, blocks: int):
     ps4 = PS4Debug(CONFIG['ps4_ip'])
-    async with MountSave(ps4,mem,int(CONFIG['user_id'],16),title_id,dir_name,blocks=32768) as mp:
+    async with MountSave(ps4,mem,int(CONFIG['user_id'],16),title_id,dir_name,blocks=blocks) as mp:
         if not mp:
             raise ValueError(f'bad {title_id}/{dir_name} reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
 
@@ -1102,6 +1102,15 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                     return 'The mcworld file you sent, is not a valid mcworld file (missing level.dat file) perhaps you sent a folder or zip containg a mcworld, send the mcworld directly'
 
                 await shutil.copytree(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys', savedata0hehe / 'sce_sys')
+                
+                da_blocks = chet.kwargs.pop('mc_encrypted_save_size')
+                desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                with open(savedata0hehe / 'sce_sys/param.sfo','rb+') as f:
+                    data = f.read()
+                    desc_before_find_index = data.index(desc_before_find)
+                    f.seek(desc_before_find_index - 8)
+                    f.write(struct.pack('<q',da_blocks))
+                    
                 world_icon_jpeg_file = None
                 
                 if (savedata0hehe / 'world_icon.jpeg').is_file():
@@ -1490,7 +1499,9 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             async with mounted_saves_at_once:
                 tick_tock_task.cancel()
                 await log_message(ctx,f'Making base mc world {real_save_dir_ftp}')
-                custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp))
+                owner_of_blocks_blocks = cheat.kwargs.get('mc_encrypted_save_size',None)
+                assert isinstance(owner_of_blocks_blocks,int)
+                custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=owner_of_blocks_blocks))
                 await asyncio.get_running_loop().run_in_executor(None,custon_decss1)
         else:
             real_save_dir_ftp = save_dir_ftp
@@ -2103,6 +2114,20 @@ async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files
 @interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrypted minecraft save")
 @account_id_opt
 @interactions.slash_option('mcworld_file','A link to your mcworld file, NOT a folder!',interactions.OptionType.STRING,True)
+@interactions.slash_option(
+    name="mc_encrypted_save_size",
+    description="The size of the result encrypted save, if issue happens use a larger mc_encrypted_save_size",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[
+        interactions.SlashCommandChoice(name="1GB (Safest)", value=32768),
+        interactions.SlashCommandChoice(name="512mb (can fail at apply cheats step)", value=32768//2),
+        interactions.SlashCommandChoice(name="256mb (can fail at apply cheats step)", value=(32768//2)//2),
+        interactions.SlashCommandChoice(name="128mb (can fail at apply cheats step)", value=((32768//2)//2)//2),
+        interactions.SlashCommandChoice(name="64mb (can fail at apply cheats step)", value=(((32768//2)//2)//2)//2),
+        interactions.SlashCommandChoice(name="32mb (can fail at apply cheats step)", value=((((32768//2)//2)//2)//2)//2),
+    ]   
+    )
 @interactions.slash_option(
     name="gameid",
     description="The region you want of the save",
