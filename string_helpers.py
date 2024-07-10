@@ -22,6 +22,7 @@ UINT16_MAX_MIN_VALUES = frozendict({'min_value': 0, 'max_value': 0xFFFF})
 INT8_MAX_MIN_VALUES = frozendict({'min_value': -0x80, 'max_value': 0x7F})
 UINT8_MAX_MIN_VALUES = frozendict({'min_value': 0, 'max_value': 0xFF})
 
+
 class BuiltInSave(NamedTuple):
     on_ps4_title_id: str
     on_ps4_save_dir: str

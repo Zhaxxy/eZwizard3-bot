@@ -33,7 +33,7 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES, extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name
+from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
@@ -2029,15 +2029,16 @@ async def rayman_legends_change_lums(dec_save: Path,/,*,lums: int):
     Rayman Legends with changed Lums
     """
     with open(dec_save,'rb+') as f:
-        lums_struct_i_think_offset = f.read().index(b'\xfbZ\x99\xa7') + 4
-        f.seek(lums_struct_i_think_offset + 0x54)
+        start_struct = bytes.fromhex('FB 5A 99 A7')
+        struct_i_think_offset = f.read().index(start_struct) + len(start_struct)
+        f.seek(struct_i_think_offset + 0x54)
         
         prev_user_of_save = b''.join(iter(lambda: f.read(1),b'\x00')).decode('ascii')
         
         if not is_psn_name(prev_user_of_save):
-            raise ValueError(f'Expected to find a psn username at {lums_struct_i_think_offset + 0x54}')
+            raise ValueError(f'Expected to find a psn username at {struct_i_think_offset + 0x54}')
         
-        f.seek(lums_struct_i_think_offset + 0x34)
+        f.seek(struct_i_think_offset + 0x34)
         f.write(struct.pack('>I',lums))
 
 rayman_legends = cheats_base_command.group(name="rayman_legends", description="Cheats for Rayman Legends")
@@ -2049,6 +2050,27 @@ rayman_legends = cheats_base_command.group(name="rayman_legends", description="C
 @verify_checksum_opt
 async def do_rayman_legends_change_lums(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     await base_do_cheats(ctx,save_files,account_id,make_rayman_legend_cheat_func(rayman_legends_change_lums,kwargs))
+
+async def rayman_legends_change_jump_count(dec_save: Path,/,*,jump_count: int):
+    """
+    Rayman Legends with changed jump count
+    """
+    with open(dec_save,'rb+') as f:
+        start_struct = bytes.fromhex('00 00 00 2A 00 00 00 00 00 00 00 00 00 00 00 00')
+        struct_i_think_offset = f.read().index(start_struct) + len(start_struct)
+
+        f.seek(struct_i_think_offset + 0x64)
+        f.write(struct.pack('>f',jump_count))
+
+
+@rayman_legends.subcommand(sub_cmd_name="change_jump_count", sub_cmd_description="Change the jump count of your save")
+@interactions.slash_option('save_files','The save files to change jump count of',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option('jump_count','The jump count you want',interactions.OptionType.INTEGER,True)
+@filename_p_opt
+@verify_checksum_opt
+async def do_rayman_legends_change_jump_count(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,account_id,make_rayman_legend_cheat_func(rayman_legends_change_jump_count,kwargs))
 ###########################0 some base folder things idk
 async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,clean_encrypted_file: CleanEncryptedSaveOption, decrypted_save_file: Path = None, decrypted_save_folder: Path = None, unpack_first_root_folder: bool = False):
     """
