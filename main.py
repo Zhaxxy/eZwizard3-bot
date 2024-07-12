@@ -1108,7 +1108,11 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
 
                 if not (savedata0hehe / 'level.dat').is_file():
                     return 'The mcworld file you sent, is not a valid mcworld file (missing level.dat file) perhaps you sent a folder or zip containg a mcworld, send the mcworld directly'
-
+                
+                if (savedata0hehe / 'sce_sys').is_dir():
+                    await shutil.rmtree(savedata0hehe / 'sce_sys')
+                (savedata0hehe / 'sce_sys').unlink(missing_ok=True)
+                
                 await shutil.copytree(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys', savedata0hehe / 'sce_sys')
                 
                 da_blocks = chet.kwargs.pop('mc_encrypted_save_size')
