@@ -73,12 +73,12 @@ def extract_drive_file_id(link: str,/) -> str:
     
     return ''
 
-
+MAKE_FOLDER_NAME_SAFE_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_'
 def make_folder_name_safe(some_string_path_ig: str, /) -> str:
     some_string_path_ig = str(some_string_path_ig).replace(' ','_').replace('/','_').replace('\\','_')
     some_string_path_ig = some_string_path_ig.removeprefix('PS4_FOLDER_IN_ME_')
     leader = 'PS4_FOLDER_IN_ME_' if is_ps4_title_id(some_string_path_ig.replace('_','')) else ''
-    result = leader + ("".join(c for c in some_string_path_ig if c.isalnum() or c in ('_','-')).rstrip())
+    result = leader + ("".join(c for c in some_string_path_ig if c in MAKE_FOLDER_NAME_SAFE_CHARS).rstrip())
     return result[:254] if result else 'no_name'
 
 
