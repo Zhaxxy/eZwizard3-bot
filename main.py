@@ -40,6 +40,7 @@ from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmou
 from savemount_py.firmware_getter_from_libc_ps4 import get_fw_version
 from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
 from custom_crc import custom_crc
+from dry_db_stuff import ps3_level_backup_to_l0_ps4
 try:
     from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
     from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
@@ -188,11 +189,17 @@ async def get_time_as_string_token() -> str:
 
 
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
-    await ctx.defer()
+    nth_time = 1
+    try:
+        ctx.ezwizard_setup_done += 1
+        nth_time = ctx.ezwizard_setup_done
+    except AttributeError:
+        await ctx.defer()
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
     ctx.ezwizard_mode = mode
-    await log_message(ctx,'Pleast wait, if over a minute is spent here do the command again!',_do_print = False)
+    await log_message(ctx,f'Pleast wait, if over a minute is spent here do the command again! {nth_time}th time here',_do_print = False)
+    ctx.ezwizard_setup_done = 1
     return ctx
 
 
@@ -295,6 +302,12 @@ class CleanEncryptedSaveOption(Enum):
 class SpecialSaveFiles(Enum):
     MINECRAFT_1GB_MCWORLD = 0
     ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT = 1
+    LBP3_LEVEL_BACKUP = 2
+    LBP3_ADV_BACKUP = 3
+
+class Lbp3BackupThing(NamedTuple):
+    title_id: str
+    start_of_file_name: str
 
 class SaveMountPointResourceError(Exception):
     """
@@ -692,6 +705,8 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                     if validation_result := validation(filename):
                         return f'{link} failed validation reason: {validation_result}'
                     file_size = response.headers.get('Content-Length')
+                    if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/'):
+                        file_size = 3
                     if file_size is None:
                         return 'There was no Content-Length header'
                     try:
@@ -715,7 +730,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                             f.write(chunk)
                             downloaded_size += DOWNLOAD_CHUNK_SIZE
                             chunks_done += 1
-                            if downloaded_size > FILE_SIZE_TOTAL_LIMIT:
+                            if downloaded_size > max_size:
                                 return f'YOU LIED! {link} is too big, we only accept {max_size/1_048_576}mb, if you think this is wrong please report it'
                     await log_message(ctx,f'Downloaded {link} {downloaded_size/1_048_576}mb')
                 else:
@@ -1173,6 +1188,8 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                     except Exception:
                         await log_message(ctx,f'Could not load {packs_json} file, ignoring {pretty_thing} packs')
                     else:
+                        if not (savedata0hehe / packs_folder).is_dir():
+                            return await log_message(ctx,f'{packs_folder} doesnt exist')
                         for resource_folder in (savedata0hehe / packs_folder).iterdir():
                             try:
                                 with open(resource_folder / 'manifest.json','r') as f:
@@ -1381,6 +1398,8 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     return False
                 cheat.kwargs[arg_name] = result
             if arg_name in ('decrypted_save_file','decrypted_save_folder'):
+                if isinstance(link,Path):
+                    continue
                 if is_str_int(link) and int(link) > 1:
                     try:
                         link = get_saved_url(ctx.author_id,int(link))
@@ -1523,6 +1542,25 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 assert isinstance(owner_of_blocks_blocks,int)
                 custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=owner_of_blocks_blocks))
                 await asyncio.get_running_loop().run_in_executor(None,custon_decss1)
+        elif isinstance(save_files,Lbp3BackupThing):
+            mc_filename = save_files.start_of_file_name + my_token.replace("_","")
+            mc_base_title_id = save_files.title_id
+            real_save_dir_ftp = mc_filename
+            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to make base lbp3 level backup {real_save_dir_ftp} (this may take a while if mutiple slots are in use)'))
+            async with mounted_saves_at_once:
+                tick_tock_task.cancel()
+                await log_message(ctx,f'Making base lbp3 level backup {real_save_dir_ftp}')
+                custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=480))
+                await asyncio.get_running_loop().run_in_executor(None,custon_decss1)
+            await log_message(ctx,f'Setting level filename to {mc_filename}')
+            temp_savedata0 = cheat.kwargs['decrypted_save_file']
+            with open(temp_savedata0 / 'savedata0/sce_sys/param.sfo','rb+') as f:
+                desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                data = f.read()
+                desc_before_find_index = data.index(desc_before_find)
+                f.seek(desc_before_find_index)
+                f.write(mc_filename.encode('ascii'))
+                
         else:
             real_save_dir_ftp = save_dir_ftp
         async with TemporaryDirectory() as tp:
@@ -1533,7 +1571,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             savedata0_folder = Path(tp,'savedata0_folder')
             savedata0_folder.mkdir()
             my_cheats_chain = get_cheat_chain(ctx.author_id) + [cheat]
-
+            
             if not await pre_process_cheat_args(ctx,my_cheats_chain,chet_files_custom,savedata0_folder):
                 return
             
@@ -1542,9 +1580,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 await log_user_error(ctx,'unimplemented')
                 return
             else:
-                if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
-                    
-                    
+                if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD or isinstance(save_files,Lbp3BackupThing):
                     mc_new_white_path = Path(enc_tp, make_ps4_path(account_id,mc_base_title_id),mc_filename)
                     mc_new_bin_path = Path(enc_tp , make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
                     
@@ -1561,6 +1597,8 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 results_big = []
                 for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
                     if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+                        pass
+                    elif isinstance(save_files,Lbp3BackupThing):
                         pass
                     else:
                         await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
@@ -1690,7 +1728,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
     finally:
         await free_save_str(save_dir_ftp)
         delete_chain(ctx.author_id)
-        if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+        if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD or isinstance(save_files,Lbp3BackupThing):
             custon_decss1 = lambda: asyncio.run(delete_base_save_just_ftp(BASE_TITLE_ID,real_save_dir_ftp))
             await asyncio.get_running_loop().run_in_executor(None,custon_decss1)  # TODO could be dangerous we are not using the mounted_saves_at_once sempahore
 
@@ -2081,7 +2119,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     Encrypted save (use /advanced_mode_import instead)
     """
     if decrypted_save_file and decrypted_save_folder:
-        raise AssertionError('cannot have both decrypted_save_file and decrypted_save_folder')
+        raise TypeError('cannot have both decrypted_save_file and decrypted_save_folder')
     if decrypted_save_folder:
         decrypted_save_file = decrypted_save_folder
     parent_mount, mount_last_name = Path(mount_dir).parent.as_posix(), Path(mount_dir).name
@@ -2188,7 +2226,97 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
     kwargs['unpack_first_root_folder'] = True
     kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
     await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_1GB_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
-    
+
+
+@interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
+@account_id_opt
+@interactions.slash_option('slotid_from_drydb','The slot id from dry.db of the level you want, you can search for it on https://maticzpl.xyz/lbpfind',interactions.OptionType.INTEGER,True,min_value=56,max_value=100515565)
+@interactions.slash_option(
+    name="gameid",
+    description="The region you want of the save",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.SlashCommandChoice(name="CUSA00063 (EU)", value='CUSA00063'),
+        interactions.SlashCommandChoice(name="CUSA00473 (US)", value='CUSA00473'),
+        interactions.SlashCommandChoice(name="CUSA00693 (AS asia)", value='CUSA00693'),
+        interactions.SlashCommandChoice(name="CUSA00762 (GB UK)", value='CUSA00762'),
+        interactions.SlashCommandChoice(name="CUSA00810 (US LATAM)", value='CUSA00810'),
+    ]
+    )
+async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: str, **kwargs):
+    ctx = await set_up_ctx(ctx)
+    if not ZAPRIT_FISH_IS_UP:
+        return await ctx.log_user_error('Sorry, but zaprit.fish is down')
+    slotid_from_drydb = kwargs.pop('slotid_from_drydb')
+    gameid = kwargs.pop('gameid')
+    async with TemporaryDirectory() as tp:
+        tp = Path(tp)
+        await log_message(ctx,f'Downloading slot {slotid_from_drydb}')
+        result = await download_direct_link(ctx,f'https://zaprit.fish/dl_archive/{slotid_from_drydb}',tp)
+        if isinstance(result,str):
+            await log_user_error(ctx,result + ' could be an invalid slotid?')
+            return 
+        await extract_full_archive(result,tp,'x')
+        for level_backup_folder in tp.iterdir():
+            if level_backup_folder.is_dir():
+                break
+        else: # no break
+            await ctx.log_user_error(ctx,'the zip the zaprit fish gave had no level backup')
+        
+        savedata0_folder = tp / 'savedata0_folder' / 'savedata0'
+        savedata0_folder.mkdir(parents=True)
+        
+        await log_message(ctx,f'Converting {slotid_from_drydb} to L0 file')
+        with open(savedata0_folder / 'L0','wb') as f:
+            level_name, level_desc,is_adventure,icon0_path = await asyncio.get_event_loop().run_in_executor(None, ps3_level_backup_to_l0_ps4,level_backup_folder,f)
+        
+        await log_message(ctx,f'Doing some file management for {slotid_from_drydb}')
+        await shutil.copytree(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys', savedata0_folder / 'sce_sys')
+        
+        lbp3_keystone = b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb7/\xad\xc3\xf9\xc7\xfc\xfaAR\xca\x82{\xcfo\xac\xcf\xd2m\x1f\x8f\x80!%[MK\xbc\x02\xb7\x04_\x91L\x99\xfc\xb3\xde^\x87\xc0\x9c\xdb\x90\xaf\xdb\xba\xde\xf3\x80L\xee\xa9\x11w9E\x9a\xa7y[O\xc9\xaa'
+        
+        await AsyncPath(savedata0_folder / 'sce_sys/keystone').write_bytes(lbp3_keystone)
+        if isinstance(icon0_path,Path):
+            await shutil.move(icon0_path,savedata0_folder / 'sce_sys/icon0.png')
+        elif isinstance(icon0_path,str):
+            result = await download_direct_link(ctx,f'https://zaprit.fish/icon/{icon0_path}',tp)
+            if isinstance(result,str):
+                await log_user_error(ctx,result)
+                return 
+            await shutil.move(result,savedata0_folder / 'sce_sys/icon0.png')
+            
+        base_name = f'{gameid}x00ADV' if is_adventure else f'{gameid}x00LEVEL'
+        seeks = (0x61C,0x62C,0xA9C)
+        tp_param_sfo = savedata0_folder / 'sce_sys/param.sfo'
+        with open(tp_param_sfo,'rb+') as f:
+            for seek in seeks:
+                f.seek(seek)
+                f.write(gameid.encode('ascii'))
+        psstring_new_name = f'lbp3PS4: {level_name}'.encode('ascii')[:0x79]
+        with open(tp_param_sfo,'rb+') as f:
+            data = f.read()
+            obs_index = data.index(b'obs\x00')
+            f.seek(obs_index + len(b'obs\x00'))
+            assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
+            f.seek(-1, 1)
+            assert len(psstring_new_name) < 0x80, f'{psstring_new_name} is too long!'
+            f.write(psstring_new_name)
+        psstring_new_desc = f'{level_desc}'.encode('ascii')[:0x79]
+        desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        with open(tp_param_sfo,'rb+') as f:
+            data = f.read()
+            desc_before_find_index = data.index(desc_before_find)
+            f.seek(desc_before_find_index + len(desc_before_find))
+            # assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
+            # f.seek(-1, 1)
+            assert len(psstring_new_desc) < 0x80, f'{psstring_new_desc} is too long!'
+            f.write(psstring_new_desc)
+        with open(tp_param_sfo,'rb+') as f:
+            f.seek(0x9F8-8)
+            f.write(struct.pack('<q',480))
+        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
+        
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
     re regioned save
@@ -2861,7 +2989,22 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
 
 async def main() -> int:
     global GIT_EXISTS
+    global ZAPRIT_FISH_IS_UP
     GIT_EXISTS = False
+    ZAPRIT_FISH_IS_UP = False
+    
+    print('Checking if zaprit.fish is up')
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get('https://zaprit.fish/dl_archive/1902012') as response:
+                if response.status == 200:
+                    ZAPRIT_FISH_IS_UP = True
+                    print('zaprit.fish is up and working!')
+                else:
+                    print(f'Did not get 200 when trying zaprit.fish/dl_archive, got {response.status}, lbp_level_archive2ps4 wont work')
+        except Exception as e:
+            print(f'Error when connecting to zaprit.fish, got {e}, lbp_level_archive2ps4 wont work')
+    
     print('doing some git stuff')
     try:
         await check_if_git_exists()
