@@ -407,7 +407,7 @@ class CheatFunc(NamedTuple):
     func: Coroutine[None, None, str | None]
     kwargs: dict[str,Any]
 
-    def pretty(self):
+    def pretty(self) -> str:
         return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})```"
 
 class CheatFuncResult(NamedTuple):
@@ -419,7 +419,7 @@ class DecFunc(NamedTuple):
     func: Coroutine
     kwargs: dict[str,Any]
 
-    def pretty(self):
+    def pretty(self) -> str:
         return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})```"
 
     @property
