@@ -33,7 +33,7 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name
+from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
@@ -398,12 +398,17 @@ class PS4AccountID:
     def from_account_id_number(cls, account_id_int: str | int):
         return cls(f'{int(account_id_int):016x}')
 
+def remove_pc_user_from_path(the_path: object,/) -> object:
+    if not isinstance(the_path,(Path,AsyncPath)):
+        return the_path
+    return the_path.relative_to(PARENT_TEMP_DIR)
+
 class CheatFunc(NamedTuple):
     func: Coroutine[None, None, str | None]
     kwargs: dict[str,Any]
 
-    def pretty(self): # TODO make this not expose username in Path objects, make it just print name string instead ig
-        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={b!r}' for a,b in self.kwargs.items())})```"
+    def pretty(self):
+        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})```"
 
 class CheatFuncResult(NamedTuple):
     savename: str | None
@@ -414,8 +419,8 @@ class DecFunc(NamedTuple):
     func: Coroutine
     kwargs: dict[str,Any]
 
-    def pretty(self): # TODO make this not expose username in Path objects, make it just print name string instead ig
-        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={b!r}' for a,b in self.kwargs.items())})```"
+    def pretty(self):
+        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})```"
 
     @property
     def __doc__(self) -> str | None:

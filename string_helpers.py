@@ -3,9 +3,14 @@ from typing import NoReturn, NamedTuple
 import json
 import re
 from random import choice as random_choice
+from tempfile import TemporaryDirectory
 
 import yaml
 from frozendict import frozendict
+
+with TemporaryDirectory() as _tp_to_get_parent_temp_dir:
+    PARENT_TEMP_DIR: Path = Path(_tp_to_get_parent_temp_dir).parent
+del _tp_to_get_parent_temp_dir # Global variable cleanup
 
 CUSA_TITLE_ID = re.compile(r'CUSA\d{5}')
 PSN_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9-_]{2,15}$') # https://regex101.com/library/4XPer9
