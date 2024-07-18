@@ -247,7 +247,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         error_msg = ctx.omljustusethe0optionsaccountid + error_msg
     except AttributeError:
         pass
-    full_msg = f'<@{ctx.author_id}> Uh oh: {error_msg}'
+    full_msg = f'<@{ctx.author_id}> The command finished with error: {error_msg}'
     first_time = True
     
     for msg_chunk in chunker(full_msg,1999):
@@ -270,7 +270,7 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
         success_msg = ctx.omljustusethe0optionsaccountid + success_msg
     except AttributeError:
         pass
-    full_msg = f'<@{ctx.author_id}>: {success_msg}'
+    full_msg = f'<@{ctx.author_id}> The command finished sucesfully: {success_msg}'
     first_time = True
     
     for msg_chunk in chunker(full_msg,1999):
@@ -308,7 +308,10 @@ class SpecialSaveFiles(Enum):
 class Lbp3BackupThing(NamedTuple):
     title_id: str
     start_of_file_name: str
-
+    level_name: str
+    level_desc: str
+    is_adventure: bool
+    
 class SaveMountPointResourceError(Exception):
     """
     Raised when theres no more free resources
@@ -1743,6 +1746,11 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
 async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
     await base_do_dec(ctx,save_files)
 
+# @interactions.slash_command(name="ps4saves_to_mcworlds",description=f"use /advanced_mode_export instead (max {MAX_RESIGNS_PER_ONCE} save per command)")
+# @dec_enc_save_files
+# async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
+    # await base_do_dec(ctx,save_files)
+# ctx.special_save_files_thing
 
 async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
     """
@@ -2298,7 +2306,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             for seek in seeks:
                 f.seek(seek)
                 f.write(gameid.encode('ascii'))
-        psstring_new_name = f'lbp3PS4: {level_name}'.encode('ascii')[:0x79]
+        psstring_new_name = f'lbp3PS4: {level_name}'.encode('utf-8')[:0x79]
         with open(tp_param_sfo,'rb+') as f:
             data = f.read()
             obs_index = data.index(b'obs\x00')
@@ -2307,7 +2315,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             f.seek(-1, 1)
             assert len(psstring_new_name) < 0x80, f'{psstring_new_name} is too long!'
             f.write(psstring_new_name)
-        psstring_new_desc = f'{level_desc}'.encode('ascii')[:0x79]
+        psstring_new_desc = f'{level_desc}'.encode('utf-8')[:0x79]
         desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
         with open(tp_param_sfo,'rb+') as f:
             data = f.read()
@@ -2320,7 +2328,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         with open(tp_param_sfo,'rb+') as f:
             f.seek(0x9F8-8)
             f.write(struct.pack('<q',480))
-        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
+        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
         
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """

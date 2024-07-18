@@ -128,27 +128,38 @@ def ps3_level_backup_to_l0_ps4(level_backup_folder_path: Path | str, l0_output: 
             raise ValueError('Could not find slt file, possible is a malicous level backup')
         
 
-        subprocess.run(JSONINATOR_ARGS + (slt_file,slt_file.with_suffix('.json')),capture_output = True, shell=False)
-        new_slt_dict = json.loads(slt_file.with_suffix('.json').read_text())
-        try:
-            level_name = new_slt_dict["resource"]["slots"][0]["name"]
-        except (KeyError,IndexError):
-            level_name = 'Unnamed Level'
-        try:
-            level_desc = new_slt_dict["resource"]["slots"][0]["description"]
-        except (KeyError,IndexError):
-            level_desc = 'There is no description for this level'
-        try:
-            is_adventure = bool(new_slt_dict["resource"]["slots"][0]["adventure"])
-        except (KeyError,IndexError):
-            is_adventure = False
-        try:
-            icon_tex_hash = new_slt_dict["resource"]["slots"][0]["icon"]["value"]
-            if not (isinstance(icon_tex_hash,str) and len(icon_tex_hash) == 40):
-                icon_tex_hash = None
-        except (KeyError,IndexError):
+        json_res = subprocess.run(JSONINATOR_ARGS + (slt_file,slt_file.with_suffix('.json')),capture_output = True, shell=False)
+        succy = True
+        if not json_res.returncode:
+            try:
+                new_slt_dict = json.loads(slt_file.with_suffix('.json').read_text(encoding="utf-8"))
+            except Exception:
+                raise
+            else:
+                try:
+                    level_name = new_slt_dict["resource"]["slots"][0]["name"]
+                except (KeyError,IndexError):
+                    level_name = 'Unnamed Level'
+                try:
+                    level_desc = new_slt_dict["resource"]["slots"][0]["description"]
+                except (KeyError,IndexError):
+                    level_desc = 'There is no description for this level'
+                # try:
+                    # is_adventure = bool(new_slt_dict["resource"]["slots"][0]["adventure"])
+                # except (KeyError,IndexError):
+                    # is_adventure = False
+                try:
+                    icon_tex_hash = new_slt_dict["resource"]["slots"][0]["icon"]["value"]
+                    if not (isinstance(icon_tex_hash,str) and len(icon_tex_hash) == 40):
+                        icon_tex_hash = None
+                except (KeyError,IndexError):
+                    icon_tex_hash = None
+                succy = False
+        if succy:
+            level_name = 'Failed to parse slt file'
+            level_desc = f'{json_res.returncode} error: {json_res.stdout}{json_res.stderr}'
             icon_tex_hash = None
-        
+        is_adventure = 'ADV' in level_backup_folder_path.name.upper()
         # new_slt_dict['revision'] = 35128313
         # new_slt_dict = json.loads(UMWHATDASIGMA)
         
