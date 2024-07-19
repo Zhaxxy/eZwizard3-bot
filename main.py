@@ -311,6 +311,7 @@ class Lbp3BackupThing(NamedTuple):
     level_name: str
     level_desc: str
     is_adventure: bool
+    new_blocks_size: int
     
 class SaveMountPointResourceError(Exception):
     """
@@ -700,7 +701,10 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
             link = await get_direct_dl_link_from_mediafire_link(link)
         except Exception as e:
             return f'Bad mediafire link {type(e).__name__}: {e}'
-    async with aiohttp.ClientSession() as session:
+    session_timeout = None
+    if link.startswith('https://zaprit.fish/dl_archive/'):
+        session_timeout = aiohttp.ClientTimeout(total=None,sock_connect=60*10,sock_read=60*10)
+    async with aiohttp.ClientSession(timeout=session_timeout) as session:
         try:
             async with session.get(link) as response:
                 if response.status == 200:
@@ -1558,7 +1562,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             async with mounted_saves_at_once:
                 tick_tock_task.cancel()
                 await log_message(ctx,f'Making base lbp3 level backup {real_save_dir_ftp}')
-                custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=480))
+                custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=save_files.new_blocks_size))
                 await asyncio.get_running_loop().run_in_executor(None,custon_decss1)
             await log_message(ctx,f'Setting level filename to {mc_filename}')
             temp_savedata0 = cheat.kwargs['decrypted_save_file']
@@ -2325,10 +2329,22 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             # f.seek(-1, 1)
             assert len(psstring_new_desc) < 0x80, f'{psstring_new_desc} is too long!'
             f.write(psstring_new_desc)
+        
+        
+        await log_message(ctx,f'Getting decrypted save size for {slotid_from_drydb}')
+        
+        # new_blocks_size = sum((x.stat()).st_size for x in savedata0_folder.rglob('*'))
+        async_savedata0_folder = AsyncPath(savedata0_folder)
+        new_blocks_size = 0
+        async for x in async_savedata0_folder.rglob('*'):
+            new_blocks_size += (await x.stat()).st_size
+
+
+        new_blocks_size = (new_blocks_size//32768) + (3_145_728//32768) # min save is 3mb
         with open(tp_param_sfo,'rb+') as f:
             f.seek(0x9F8-8)
-            f.write(struct.pack('<q',480))
-        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
+            f.write(struct.pack('<q',new_blocks_size))
+        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
         
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
