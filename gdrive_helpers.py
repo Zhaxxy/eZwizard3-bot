@@ -36,21 +36,26 @@ class PS4GDriveFileSave(NamedTuple):
     white_file: GDriveFile
 
 
-def load_creds(cred_json_name: str = 'credentials.json'):
+def load_creds(cred_json_name: str = "credentials.json"):
     creds = None
-    if os.path.exists("DO_NOT_DELETE_automatically_generated_gdrive_token.json"):
-        creds = Credentials.from_authorized_user_file("DO_NOT_DELETE_automatically_generated_gdrive_token.json",['https://www.googleapis.com/auth/drive'])
-      
+    creds_file = Path("DO_NOT_DELETE_automatically_generated_gdrive_token.json")
+    if creds_file.exists():
+        creds = Credentials.from_authorized_user_file(
+            "DO_NOT_DELETE_automatically_generated_gdrive_token.json",
+            ["https://www.googleapis.com/auth/drive"],
+        )
+
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(cred_json_name,['https://www.googleapis.com/auth/drive'])
+            flow = InstalledAppFlow.from_client_secrets_file(
+                cred_json_name, ["https://www.googleapis.com/auth/drive"]
+            )
             creds = flow.run_local_server(port=0)
-        with open('DO_NOT_DELETE_automatically_generated_gdrive_token.json','w') as f:
+        with creds_file.open("w") as f:
             f.write(creds.to_json())
-    build('drive','v3',credentials=creds)
-    # return creds,drive_service
+    build("drive", "v3", credentials=creds)
 
 CONFIG = load_config()
 
@@ -259,7 +264,7 @@ async def download_folder(folder_id: str, dest_path: Path | str):
         file_id = file['id']
         file_mime_type = file['mimeType']
 
-        file_path = os.path.join(dest_path, file_name)
+        file_path = Path(dest_path, file_name)
 
         if file_mime_type == 'application/vnd.google-apps.folder':
             os.makedirs(file_path, exist_ok=True)
