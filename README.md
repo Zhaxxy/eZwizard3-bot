@@ -9,3 +9,6 @@ If theres more then one connection to the ps4 at a time it is very likley that t
 bot can sometimes get stuck at some part which involves the mounted_saves_at_once semaphore, which will cause it to get stuck on other commands, which will start spamming chats with tick tocks eventually, my suspicon is that it has something to do with the discord api libary interactions.py which im using
 
 I seem to have fixed bot of the above using mutiple messures, but it could still happen i just havent seen it happen after my fixes, even with external ftp clients attached
+
+## lbp_level_archive2ps4 issues
+if the level backup `L0` file is 34603008 bytes or bigger, itll say Unexpected error when trying to import it, I have not found the exact max limit but its at least `16384000` bytes
