@@ -3017,6 +3017,7 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
 
 
 async def main() -> int:
+    check_base_saves = True # Do not edit unless you know what youre doing
     global GIT_EXISTS
     global ZAPRIT_FISH_IS_UP
     GIT_EXISTS = False
@@ -3056,7 +3057,6 @@ async def main() -> int:
             await get_commit_count()
             
     global UPLOAD_SAVES_FOLDER_ID
-    check_base_saves = True # Do not edit unless you know what youre doing
     if is_in_test_mode():
         print('in test mode, only bot admins can use bot this session')
     print('attempting to make ezwizardtwo_saves folder on google drive account to store large saves')
@@ -3113,7 +3113,8 @@ async def main() -> int:
     if check_base_saves:
         os.remove('savedata.db')
         print('done cleaning base saves')
-    
+    if not check_base_saves:
+        print('WARNING!: check_base_saves is turned off, please do not commit and push changes with this off, and make sure you are not testing mounting and unmounting with this off')
     
     print('initialising database')
     initialise_database()
