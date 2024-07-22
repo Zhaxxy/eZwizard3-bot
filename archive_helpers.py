@@ -56,7 +56,7 @@ async def get_archive_info(path_to_archive: Path | str) -> SevenZipInfo:
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
         stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
-    if stderr or proc.returncode:
+    if proc.returncode:
         raise Exception(f'bad zip file? error code {proc.returncode} error: {stderr}{stdout}')
     
     files = {}
@@ -94,7 +94,7 @@ async def extract_full_archive(path_to_archive: Path | str, output_loc: Path | s
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
         stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
-    if stderr or proc.returncode:
+    if proc.returncode:
         raise Exception(f'bad zip file? error code {proc.returncode} error: {stderr}{stdout}')
 
 
@@ -111,7 +111,7 @@ async def extract_single_file(path_to_archive: Path | str, name_of_file: Path | 
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
         stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
-    if stderr or proc.returncode:
+    if proc.returncode:
         raise Exception(f'bad zip file? error code {proc.returncode} error: {stderr}{stdout}')
     
     if 'No files to process\n' in stdout:
