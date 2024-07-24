@@ -68,6 +68,8 @@ DOWNLOAD_CHUNK_SIZE = 1024
 AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE = 50_000
 PS4_ICON0_DIMENSIONS = 228,128
 
+LBP3_PS4_L0_FILE_MAX_SIZE = 0x2_000_000 # too me 30 - 60 mins straight to find this!
+
 CONFIG = load_config()
 BASE_TITLE_ID = 'YAHY40786'
 BASE_SAVEDATA_FOLDER = f'/user/home/{CONFIG["user_id"]}/savedata'
@@ -2269,10 +2271,10 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
     gameid = kwargs.pop('gameid')
     async with TemporaryDirectory() as tp:
         tp = Path(tp)
-        await log_message(ctx,f'Downloading slot {slotid_from_drydb}')
+        await log_message(ctx,f'Downloading slot `{slotid_from_drydb}`')
         result = await download_direct_link(ctx,f'https://zaprit.fish/dl_archive/{slotid_from_drydb}',tp)
         if isinstance(result,str):
-            await log_user_error(ctx,result + ' could be an invalid slotid?')
+            await log_user_error(ctx,result + ' could be an invalid slotid? if you got 524 then try the command again')
             return 
         await extract_full_archive(result,tp,'x')
         for level_backup_folder in tp.iterdir():
@@ -2284,11 +2286,16 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         savedata0_folder = tp / 'savedata0_folder' / 'savedata0'
         savedata0_folder.mkdir(parents=True)
         
-        await log_message(ctx,f'Converting {slotid_from_drydb} to L0 file')
+        await log_message(ctx,f'Converting slot `{slotid_from_drydb}` to L0 file')
         with open(savedata0_folder / 'L0','wb') as f:
             level_name, level_desc,is_adventure,icon0_path = await asyncio.get_event_loop().run_in_executor(None, ps3_level_backup_to_l0_ps4,level_backup_folder,f)
+            l0_size = f.tell()
         
-        await log_message(ctx,f'Doing some file management for {slotid_from_drydb}')
+        if l0_size > LBP3_PS4_L0_FILE_MAX_SIZE:
+            await log_user_error(ctx,f'The slot `{slotid_from_drydb}` is too big ({l0_size / (1024 ** 2)}mib), the max lbp3 ps4 level backup can only be {LBP3_PS4_L0_FILE_MAX_SIZE / (1024 ** 2)}mib')
+            return 
+        
+        await log_message(ctx,f'Doing some file management for slot `{slotid_from_drydb}` ')
         await shutil.copytree(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys', savedata0_folder / 'sce_sys')
         
         lbp3_keystone = b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb7/\xad\xc3\xf9\xc7\xfc\xfaAR\xca\x82{\xcfo\xac\xcf\xd2m\x1f\x8f\x80!%[MK\xbc\x02\xb7\x04_\x91L\x99\xfc\xb3\xde^\x87\xc0\x9c\xdb\x90\xaf\xdb\xba\xde\xf3\x80L\xee\xa9\x11w9E\x9a\xa7y[O\xc9\xaa'
@@ -2331,7 +2338,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             f.write(psstring_new_desc)
         
         
-        await log_message(ctx,f'Getting decrypted save size for {slotid_from_drydb}')
+        await log_message(ctx,f'Getting decrypted save size for slot `{slotid_from_drydb}`')
         
         # new_blocks_size = sum((x.stat()).st_size for x in savedata0_folder.rglob('*'))
         async_savedata0_folder = AsyncPath(savedata0_folder)

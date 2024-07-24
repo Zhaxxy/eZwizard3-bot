@@ -180,8 +180,6 @@ def ps3_level_backup_to_l0_ps4(level_backup_folder_path: Path | str, l0_output: 
         slt_file_hash = hashlib.sha1()
         slt_file_hash.update(slt_file.read_bytes())
         
-        # Path(far4s,'ben.bin').write_bytes(b'g'*(34603008))
-        
         if icon_tex_hash:
             if Path(far4s / icon_tex_hash).is_file():
                 icon0_thing = Path(far4s / icon_tex_hash).name
