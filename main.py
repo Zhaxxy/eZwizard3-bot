@@ -33,7 +33,7 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR
+from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
@@ -600,7 +600,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
 
         if zip_info.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'The decompressed {link} is too big, the max is {FILE_SIZE_TOTAL_LIMIT/1_048_576}mb'
+            return f'The decompressed {link} is too big, the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
         
         await log_message(ctx,f'Looking for saves in {link}')
         ps4_saves: list[tuple[Path,Path]] = []
@@ -680,7 +680,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
             return f'{link} failed validation reason: {validation_result}'
         
         if zip_file.size > max_size:
-            return f'The file {link} is too big, we only accept {max_size}bytes, if you think this is wrong please report it'
+            return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
         if zip_file.size < 1:
             return f'The file {link} is too small lmao wyd'
 
@@ -728,7 +728,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                     except ValueError:
                         return f'Content-Length {file_size!r} was not a valid number'
                     if file_size > max_size:
-                        return f'The file {link} is too big, we only accept {max_size/1_048_576}mb, if you think this is wrong please report it'
+                        return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
                     if file_size < 2:
                         return f'The file {link} is too small lmao'
                     downloaded_size = 0
@@ -745,8 +745,8 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                             downloaded_size += DOWNLOAD_CHUNK_SIZE
                             chunks_done += 1
                             if downloaded_size > max_size:
-                                return f'YOU LIED! {link} is too big, we only accept {max_size/1_048_576}mb, if you think this is wrong please report it'
-                    await log_message(ctx,f'Downloaded {link} {downloaded_size/1_048_576}mb')
+                                return f'YOU LIED! {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                    await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
                 else:
                     return f'Failed to download {link}. Status code: {response.status}'
         except Exception as e:
@@ -796,7 +796,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         except Exception:
             return 'blud thinks hes funny'
         if test[0] > FILE_SIZE_TOTAL_LIMIT:
-            return f'The decrypted save {link} is too big, maybe you uploaded a wrong file to it? max is {FILE_SIZE_TOTAL_LIMIT/1_048_576}mb'
+            return f'The decrypted save {link} is too big, maybe you uploaded a wrong file to it? max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
             return f'The decrypted save {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
 
@@ -840,7 +840,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
 
     if a.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-        return f'The decompressed {link} is too big, the max is {FILE_SIZE_TOTAL_LIMIT} bytes'
+        return f'The decompressed {link} is too big, the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
         return f'The decompressed {link} has too many loose files ({len(a.files)}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
@@ -924,7 +924,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
             return f'The folder {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
 
         if total_ps4_saves_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'The total number of saves in {link} is too big, the max size of saves is {FILE_SIZE_TOTAL_LIMIT/1_048_576}mb, {total_ps4_saves_size} bytes is too big'
+            return f'The total number of saves in {link} is too big, the max size of saves is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}, {pretty_bytes(total_ps4_saves_size)} is too big'
 
         for bin_file,white_file in ps4_saves:
             if bin_file.size != 96:
@@ -1323,9 +1323,10 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
     global amnt_used_this_session
     await log_message(ctx,f'Zipping up modified {link_for_pretty} saves (2 more steps left)')
     await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
-
-    if new_zip_name.stat().st_size > ATTACHMENT_MAX_FILE_SIZE:
-        await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!)')
+    
+    real_file_size = new_zip_name.stat().st_size
+    if real_file_size > ATTACHMENT_MAX_FILE_SIZE:
+        await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!) ({pretty_bytes(real_file_size)} file)')
         try:
             google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
         except Exception as e:
@@ -1333,7 +1334,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                 pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
                 await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
                 await asyncio.sleep(2*60)
-                await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!)')
+                await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!) ({pretty_bytes(real_file_size)} file)')
                 try:
                     google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
                 except Exception as e2:
@@ -1344,10 +1345,10 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                         raise
             else:
                 raise
-        await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\nPlease download this asap as it can be deleted at any time')
+        await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\nPlease download this asap as it can be deleted at any time ({pretty_bytes(real_file_size)} file)')
     else:
         # await shutil.move(new_zip_name,new_zip_name.name)
-        await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment (last step!)')
+        await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment (last step!) ({pretty_bytes(real_file_size)} file)')
         await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
         # os.remove(new_zip_name.name)
     amnt_used_this_session += 1
@@ -2292,7 +2293,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             l0_size = f.tell()
         
         if l0_size > LBP3_PS4_L0_FILE_MAX_SIZE:
-            await log_user_error(ctx,f'The slot `{slotid_from_drydb}` is too big ({l0_size / (1024 ** 2)}mib), the max lbp3 ps4 level backup can only be {LBP3_PS4_L0_FILE_MAX_SIZE / (1024 ** 2)}mib')
+            await log_user_error(ctx,f'The slot `{slotid_from_drydb}` is too big ({pretty_bytes(l0_size)}), the max lbp3 ps4 level backup can only be {pretty_bytes(LBP3_PS4_L0_FILE_MAX_SIZE)}')
             return 
         
         await log_message(ctx,f'Doing some file management for slot `{slotid_from_drydb}` ')

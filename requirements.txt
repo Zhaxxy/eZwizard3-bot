@@ -18,3 +18,4 @@ aiopath
 aioshutil
 async-lru
 ujson
+humanize

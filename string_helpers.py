@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 import yaml
 from frozendict import frozendict
+import humanize
 
 with TemporaryDirectory() as _tp_to_get_parent_temp_dir:
     PARENT_TEMP_DIR: Path = Path(_tp_to_get_parent_temp_dir).parent
@@ -41,6 +42,11 @@ class BuiltInSave(NamedTuple):
 
     def as_entry_str(self) -> str:
         return ' '.join(self)
+
+
+def pretty_bytes(num: int, fmt: str = "%f") -> str:
+    n = humanize.naturalsize(num, format=fmt, binary=True) # https://stackoverflow.com/questions/77616090/python-humanize-naturalsize-remove-trailing-0s-in-the-fraction
+    return re.sub(r"\.0+(?=\D)", "", n)
 
 
 def is_ps4_title_id(input_str: str,/) -> bool: 
@@ -248,7 +254,6 @@ Die Katze bellt die Fliege an
 what ever happened to eZwizard1, was there ever a eZwizard1?
 thesoundsofchildrenbeingtoturedinhell.png
 $Afx/ProcessorID
-RuntimeError: coroutine ignored GeneratorExit, more like kys: kys ignored kys (keep yourself safe)
 ben you are getting too close to me
 Суперкот
 LittleBigPlanet 7ny% - Full Series Speedrun! (8:46:26)
