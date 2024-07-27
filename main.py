@@ -1045,9 +1045,9 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                             real_name = b''.join(iter(lambda: f.read(1),b'\x00')).decode('ascii')
                 except Exception:
                     return f'Bad save {pretty_save_dir} missing param.sfo or broken param.sfo'
-
+            
+            results = []
             for index, chet in enumerate(cheats):
-                results = []
                 try:
                     # await log_message(ctx,'Connecting to PS4 ftp to do some cheats')
                     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
