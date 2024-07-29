@@ -737,7 +737,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                     with open(direct_zip, 'wb') as f:
                         while True:
                             if not(chunks_done % AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE):
-                                await log_message(ctx,f'Downloaded {link} {downloaded_size/1_048_576}mb')
+                                await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
                             chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE)
                             if not chunk:
                                 break
