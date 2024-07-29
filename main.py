@@ -2831,7 +2831,7 @@ async def update_status():
 
     old_amnt_of_free = amnt_of_free
 
-psnawp = PSNAWP(CONFIG["ssocookie"])
+
 @interactions.slash_command(name="my_account_id",description="Get your Account ID from your psn name")
 @interactions.slash_option(
     name="psn_name",
@@ -3126,6 +3126,12 @@ async def main() -> int:
     global ZAPRIT_FISH_IS_UP
     GIT_EXISTS = False
     ZAPRIT_FISH_IS_UP = False
+    
+    global psnawp
+    print('Checking if npsso cookie is valid')
+    psnawp = PSNAWP(CONFIG["ssocookie"])
+    user = psnawp.user(online_id='Zhaxxy')
+    print('npsso cookie works!')
     
     print('Checking if zaprit.fish is up')
     async with aiohttp.ClientSession() as session:
