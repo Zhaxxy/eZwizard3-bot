@@ -1997,6 +1997,9 @@ littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", descript
     opt_type=interactions.OptionType.STRING
 )
 async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    if not any(key.startswith('dl_link_mod_file') for key in kwargs.keys()):
+        ctx = await set_up_ctx(ctx)
+        return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(install_mods_for_lbp3_ps4,kwargs))
 
 async def strider_change_difficulty(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,difficulty: str):
