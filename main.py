@@ -2338,6 +2338,8 @@ async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files
     ]
     )
 async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwargs):
+    if account_id == '1':
+        return await log_user_error(ctx,'Cannot get original account id of save, perhaps you didnt mean to put 1 in account_id')
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS
     kwargs['unpack_first_root_folder'] = True
     kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
@@ -2362,8 +2364,10 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
     )
 async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: str, **kwargs):
     ctx = await set_up_ctx(ctx)
+    if account_id == '1':
+        return await log_user_error(ctx,'Cannot get original account id of save, perhaps you didnt mean to put 1 in account_id')
     if not ZAPRIT_FISH_IS_UP:
-        return await ctx.log_user_error('Sorry, but zaprit.fish is down')
+        return await log_user_error(ctx,'Sorry, but zaprit.fish is down')
     slotid_from_drydb = kwargs.pop('slotid_from_drydb')
     gameid = kwargs.pop('gameid')
     async with TemporaryDirectory() as tp:
@@ -2378,7 +2382,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             if level_backup_folder.is_dir():
                 break
         else: # no break
-            await ctx.log_user_error(ctx,'the zip the zaprit fish gave had no level backup')
+            return await log_user_error(ctx,'the zip the zaprit fish gave had no level backup')
         
         savedata0_folder = tp / 'savedata0_folder' / 'savedata0'
         savedata0_folder.mkdir(parents=True)
