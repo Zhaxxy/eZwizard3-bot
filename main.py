@@ -31,7 +31,7 @@ import aiohttp
 import aioftp
 from ps4debug import PS4Debug
 from PIL import Image
-from lbptoolspy import far4_tools as f4 # put modules you need at the bottom of list for custom cheats, in correct block
+from lbptoolspy import far4_tools,install_mods_to_bigfart # put modules you need at the bottom of list for custom cheats, in correct block
 
 from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
@@ -1902,6 +1902,102 @@ DUMMY_CHEAT_FUNC = CheatFunc(do_nothing,{})
 async def do_resign(ctx: interactions.SlashContext,save_files: str,account_id: str):
     await base_do_cheats(ctx,save_files,account_id,DUMMY_CHEAT_FUNC)
 
+async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,ignore_plans = False, **mod_files: Path):
+    await ftp.change_directory(mount_dir)
+    files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
+    try:
+        ftp_save, = files
+    except ValueError:
+        raise ValueError('Too many files in the save, likley not a lbp3 big save or level backup') from None
+    
+    if ftp_save[0].name.startswith('bigfart'):
+        is_l0 = False
+    elif ftp_save[0].name == ('L0'):
+        is_l0 = True
+    else:
+        raise ValueError(f'Invalid bigfart or level backup file {ftp_save[0].name}')
+        
+    async with TemporaryDirectory() as tp:
+        sa = Path(tp,'bigfart_or_l0_level_backup')
+        await ftp.download(ftp_save[0],sa,write_into=True)
+        
+        def _do_the_install_lbp3_ps4_mods_lcoal(): install_mods_to_bigfart(sa,mod_files.values(),install_plans = not ignore_plans, is_ps4_level_backup = is_l0)
+        await asyncio.get_running_loop().run_in_executor(None, _do_the_install_lbp3_ps4_mods_lcoal)
+        await ftp.upload(sa,ftp_save[0],write_into=True)
+
+
+littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", description="Cheats for LittleBigPlanet 3")
+@littlebigplanet_3.subcommand(sub_cmd_name="install_mods", sub_cmd_description="Install .mod files to a level backup or LBPxSAVE (bigfart)")
+@interactions.slash_option('save_files','The level backup or profile backup to install the mods too',interactions.OptionType.STRING,True)
+@account_id_opt
+@interactions.slash_option(
+    name = 'ignore_plans',
+    description='Do you want to ignore .plan files in the mods? default is False',
+    required=False,
+    opt_type=interactions.OptionType.BOOLEAN
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file1',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file2',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file3',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file4',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file5',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file6',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file7',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file8',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file9',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name = 'dl_link_mod_file10',
+    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,account_id,CheatFunc(install_mods_for_lbp3_ps4,kwargs))
 
 async def strider_change_difficulty(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,difficulty: str):
     """
@@ -2631,7 +2727,7 @@ async def import_bigfart(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,
         raise ValueError(f'Invalid bigfart {ftp_save[0].name}, not a lbp3 big save, did you upload the 500mb+ one?')
 
     with open(dl_link_single,'rb+') as f:
-        savkey = f4.SaveKey(f)
+        savkey = far4_tools.SaveKey(f)
         savkey.is_ps4_endian = True
         savkey.write_to_far4(f)
     
