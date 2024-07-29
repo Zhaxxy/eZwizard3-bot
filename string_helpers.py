@@ -49,18 +49,16 @@ def pretty_bytes(num: int, fmt: str = "%f") -> str:
     if 'Byte' in binary_n:
         return binary_n
     number,unit = binary_n.split(' ')
-    if float(number).is_integer():
-        pretty_number = int(float(number))
-    else:
-        pretty_number = float(number)
+    pretty_number: float | int = float(number)
+    if pretty_number.is_integer():
+        pretty_number = int(pretty_number)
     binary_n = f'{pretty_number} {unit}'
     
     power_of_10_n = naturalsize(num, format=fmt, binary=False)
     number,unit = power_of_10_n.split(' ')
-    if float(number).is_integer():
-        pretty_number = int(float(number))
-    else:
-        pretty_number = float(number)
+    pretty_number = float(number)
+    if pretty_number.is_integer():
+        pretty_number = int(pretty_number)
     power_of_10_n = f'{pretty_number} {unit}'
     
     return power_of_10_n if len(binary_n) > len(power_of_10_n) else binary_n
