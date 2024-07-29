@@ -249,7 +249,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         error_msg = ctx.omljustusethe0optionsaccountid + error_msg
     except AttributeError:
         pass
-    full_msg = f'<@{ctx.author_id}> The command finished with error: {error_msg} ❌'
+    full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
     first_time = True
     
     for msg_chunk in chunker(full_msg,1999):
@@ -272,7 +272,7 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
         success_msg = ctx.omljustusethe0optionsaccountid + success_msg
     except AttributeError:
         pass
-    full_msg = f'<@{ctx.author_id}> The command finished sucesfully: {success_msg} ✅'
+    full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
     first_time = True
     
     for msg_chunk in chunker(full_msg,1999):
