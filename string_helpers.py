@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 import yaml
 from frozendict import frozendict
-import humanize
+from humanize import naturalsize
 
 with TemporaryDirectory() as _tp_to_get_parent_temp_dir:
     PARENT_TEMP_DIR: Path = Path(_tp_to_get_parent_temp_dir).parent
@@ -45,8 +45,25 @@ class BuiltInSave(NamedTuple):
 
 
 def pretty_bytes(num: int, fmt: str = "%f") -> str:
-    n = humanize.naturalsize(num, format=fmt, binary=True) # https://stackoverflow.com/questions/77616090/python-humanize-naturalsize-remove-trailing-0s-in-the-fraction
-    return re.sub(r"\.0+(?=\D)", "", n)
+    binary_n = naturalsize(num, format=fmt, binary=True)
+    if 'Byte' in binary_n:
+        return binary_n
+    number,unit = binary_n.split(' ')
+    if float(number).is_integer():
+        pretty_number = int(float(number))
+    else:
+        pretty_number = float(number)
+    binary_n = f'{pretty_number} {unit}'
+    
+    power_of_10_n = naturalsize(num, format=fmt, binary=False)
+    number,unit = power_of_10_n.split(' ')
+    if float(number).is_integer():
+        pretty_number = int(float(number))
+    else:
+        pretty_number = float(number)
+    power_of_10_n = f'{pretty_number} {unit}'
+    
+    return power_of_10_n if len(binary_n) > len(power_of_10_n) else binary_n
 
 
 def is_ps4_title_id(input_str: str,/) -> bool: 
