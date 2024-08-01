@@ -1903,6 +1903,9 @@ async def do_resign(ctx: interactions.SlashContext,save_files: str,account_id: s
     await base_do_cheats(ctx,save_files,account_id,DUMMY_CHEAT_FUNC)
 
 async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,ignore_plans = False, **mod_files: Path):
+    """
+    LittleBigPlanet .mod files encrypted
+    """
     await ftp.change_directory(mount_dir)
     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
@@ -2092,6 +2095,9 @@ def make_xenoverse2_cheat_func(the_real_cheat, /, kwargs) -> CheatFunc:
     
     
 async def xenoverse2_change_tp_medals(dec_save: Path,/,*,tp_medals: int):
+    """
+    DRAGON BALL XENOVERSE 2 save with changed TP medals
+    """
     with open(dec_save,'rb+') as f:
         f.seek(0x158) # Lucky the offset is not a mutiple of 0x20
         f.write(struct.pack('<i',tp_medals))
