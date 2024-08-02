@@ -677,7 +677,13 @@ async def get_direct_dl_link_from_mediafire_link(url: str) -> str:
         return url
 
 
-async def download_direct_link(ctx: interactions.SlashContext,link: str, donwload_location: Path, validation: Callable[[str], str] = None, max_size: int = FILE_SIZE_TOTAL_LIMIT) -> Path | str:
+class ZapritFishKnownLinkError(str):
+    def __new__(cls, value: object):
+        obj = str.__new__(cls, value)
+        return obj
+
+
+async def download_direct_link(ctx: interactions.SlashContext,link: str, donwload_location: Path, validation: Callable[[str], str] = None, max_size: int = FILE_SIZE_TOTAL_LIMIT) -> Path | str | ZapritFishKnownLinkError:
     if not validation:
         validation = lambda x: ''
 
@@ -721,47 +727,57 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
     # timeout=session_timeout in the aiohttp.ClientSession()
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.get(link) as response:
-                if response.status == 200:
-                    try:
-                        filename = response.content_disposition.filename
-                    except AttributeError:
-                        filename = link.split('/')[-1].split('?')[0]
-                    if not filename:
-                        filename = link.split('/')[-1].split('?')[0]
-                    if validation_result := validation(filename):
-                        return f'{link} failed validation reason: {validation_result}'
-                    file_size = response.headers.get('Content-Length')
-                    if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/'):
-                        file_size = 3
-                    if file_size is None:
-                        return 'There was no Content-Length header'
-                    try:
-                        file_size = int(file_size)
-                    except ValueError:
-                        return f'Content-Length {file_size!r} was not a valid number'
-                    if file_size > max_size:
-                        return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
-                    if file_size < 2:
-                        return f'The file {link} is too small lmao'
-                    downloaded_size = 0
-                    chunks_done = 0
-                    direct_zip = Path(donwload_location,filename)
-                    with open(direct_zip, 'wb') as f:
-                        while True:
-                            if not(chunks_done % AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE):
-                                await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
-                            chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE)
-                            if not chunk:
-                                break
-                            f.write(chunk)
-                            downloaded_size += DOWNLOAD_CHUNK_SIZE
-                            chunks_done += 1
-                            if downloaded_size > max_size:
-                                return f'YOU LIED! {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
-                    await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
-                else:
-                    return f'Failed to download {link}. Status code: {response.status}'
+            for try_attempt in range(3):
+                async with session.get(link) as response:
+                    if response.status == 200:
+                        try:
+                            filename = response.content_disposition.filename
+                        except AttributeError:
+                            filename = link.split('/')[-1].split('?')[0]
+                        if not filename:
+                            filename = link.split('/')[-1].split('?')[0]
+                        if validation_result := validation(filename):
+                            return f'{link} failed validation reason: {validation_result}'
+                        file_size = response.headers.get('Content-Length')
+                        if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/'):
+                            file_size = 3
+                        if file_size is None:
+                            return 'There was no Content-Length header'
+                        try:
+                            file_size = int(file_size)
+                        except ValueError:
+                            return f'Content-Length {file_size!r} was not a valid number'
+                        if file_size > max_size:
+                            return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                        if file_size < 2:
+                            return f'The file {link} is too small lmao'
+                        downloaded_size = 0
+                        chunks_done = 0
+                        direct_zip = Path(donwload_location,filename)
+                        with open(direct_zip, 'wb') as f:
+                            while True:
+                                if not(chunks_done % AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE):
+                                    await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
+                                chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE)
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+                                downloaded_size += DOWNLOAD_CHUNK_SIZE
+                                chunks_done += 1
+                                if downloaded_size > max_size:
+                                    return f'YOU LIED! {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                        await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
+                        break
+                    elif (response.status == 524) and link.startswith('https://zaprit.fish/dl_archive/'):
+                        await log_message(ctx,f'Slot id {link} has never been downloaded before, so waiting 5 minutes to try downloading it again')
+                        await asyncio.sleep(5*60)
+                        continue
+                    else:
+                        if link.startswith('https://zaprit.fish/dl_archive/') and ((await response.content.read(len(b"level doesn't exist"))) == b"level doesn't exist"):
+                            return ZapritFishKnownLinkError(f'The slot id {link} doesn\'t exist')
+                        return f'Failed to download {link}. Status code: {response.status}'
+            else: # no break, or return in this case
+                return ZapritFishKnownLinkError(f'Took too many tries to download {link}, perhaps try command again')
         except Exception as e:
             return make_error_message_if_verbose_or_not(ctx.author_id,f'Invalid url {link}','maybe you copied the wrong link?')
     return direct_zip
@@ -2372,14 +2388,17 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         await log_message(ctx,f'Downloading slot `{slotid_from_drydb}`')
         result = await download_direct_link(ctx,f'https://zaprit.fish/dl_archive/{slotid_from_drydb}',tp)
         if isinstance(result,str):
-            await log_user_error(ctx,result + ' could be an invalid slotid? if you got 524 then try the command again')
+            if not isinstance(result,ZapritFishKnownLinkError):
+                await log_user_error(ctx,result + ' This could be because the level failed to load on official servers or a dynamic thermometer level (this is an issue with https://zaprit.fish itself)')
+                return 
+            await log_user_error(ctx,result)
             return 
         await extract_full_archive(result,tp,'x')
         for level_backup_folder in tp.iterdir():
             if level_backup_folder.is_dir():
                 break
         else: # no break
-            return await log_user_error(ctx,'the zip the zaprit fish gave had no level backup')
+            return await log_user_error(ctx,'the zip the zaprit fish gave had no level backup (this should never happen, defo report this)')
         
         savedata0_folder = tp / 'savedata0_folder' / 'savedata0'
         savedata0_folder.mkdir(parents=True)
@@ -2450,7 +2469,8 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             f.seek(0x9F8-8)
             f.write(struct.pack('<q',new_blocks_size))
         await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
-        
+
+
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
     re regioned save
