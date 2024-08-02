@@ -518,11 +518,23 @@ def is_user_verbose_mode(author_id: str) -> bool:
             db[author_id] = False
             return False
 
+
 def set_user_verbose_mode(author_id: str, verbose_mode: bool):
     author_id = str(author_id)
     with SqliteDict("user_stuff.sqlite", tablename="user_verbose_booleans") as db:
         db[author_id] = verbose_mode
         db.commit()
+
+
+def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, message_2: str) -> str:
+    if is_user_verbose_mode(ctx_author_id):
+        leader = ''
+        error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+    else:
+        leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
+        error_msg = f'```{sys.exc_info()[1]}```'
+        
+    return leader + f'{message_1} reasom:\n{error_msg}\n {message_2}'
 
 
 user_cheat_chains = {}
@@ -751,14 +763,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                 else:
                     return f'Failed to download {link}. Status code: {response.status}'
         except Exception as e:
-            if is_user_verbose_mode(ctx.author_id):
-                leader = ''
-                error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
-            else:
-                leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
-                error_msg = f'({e})'
-                
-            return leader + f'Invalid url {link} {error_msg}, maybe you copied the wrong link?'
+            return make_error_message_if_verbose_or_not(ctx.author_id,f'Invalid url {link}','maybe you copied the wrong link?')
     return direct_zip
 
 
@@ -1057,14 +1062,8 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                         # await log_message(ctx,f'Applying cheat {chet.pretty()} {index + 1}/{len(cheats)} for {pretty_save_dir}')
                         result = await chet.func(ftp,new_mount_dir,real_name,**chet.kwargs)
                     results.append(result) if result else None
-                except Exception as e:
-                    leader = ''
-                    if is_user_verbose_mode(ctx_author_id):
-                        error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
-                    else:
-                        error_msg = f'```{e}```'
-                        leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
-                    return f'{leader}Could not apply cheat {chet.pretty()}to {pretty_save_dir}.\n\nreason: {error_msg}'
+                except Exception:
+                    return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}','')
             # await log_message(ctx,'Connecting to PS4 ftp to do resign')
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                 await ftp.change_directory(new_mount_dir) 
@@ -1088,14 +1087,8 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                     await ftp.change_directory(new_mount_dir) 
                     try:
                         await change_save_icon(ftp,new_mount_dir,real_name,dl_link_image_overlay=img_path,option=extra_opt)
-                    except Exception as e:
-                        leader = ''
-                        if is_user_verbose_mode(ctx_author_id):
-                            error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
-                        else:
-                            error_msg = f'```{e}```'
-                            leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
-                        return f'{leader}Could not apply cheat {chet.pretty()}to {pretty_save_dir}.\n\nreason: {error_msg}'
+                    except Exception:
+                        return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply global watermark to {pretty_save_dir}','')
             return return_payload
     finally:
         if savedatax:
@@ -1262,14 +1255,8 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                     await ftp.change_directory(new_mount_dir)
                     try:
                         await decrypt_fun.func(ftp,new_mount_dir,white_file.name,decrypted_save_ouput,**decrypt_fun.kwargs)
-                    except Exception as e:
-                        leader = ''
-                        if is_user_verbose_mode(ctx_author_id):
-                            error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
-                        else:
-                            error_msg = f'```{e}```'
-                            leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
-                        return f'{leader}Could not custom decrypt your save {pretty_save_dir}.\n\nreason {error_msg}'
+                    except Exception:
+                        return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not custom decrypt your save {pretty_save_dir}.','')
             else:
                 # await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
