@@ -19,7 +19,7 @@ from ftplib import FTP,error_reply
 _boot_start = time.perf_counter()
 
 from async_lru import alru_cache
-import json as json
+import ujson as json
 import aioshutil as shutil
 from aiopath import AsyncPath
 from psnawp_api import PSNAWP
