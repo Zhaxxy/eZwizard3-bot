@@ -533,7 +533,10 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
     else:
         leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
         error_msg = f'```{sys.exc_info()[1]}```'
-        
+    
+    if error_msg == '```' + '```':
+        error_msg = f'```{sys.exc_info()[0].__name__}```'
+    
     return leader + f'{message_1} reasom:\n{error_msg}\n {message_2}'
 
 
@@ -727,7 +730,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
     # timeout=session_timeout in the aiohttp.ClientSession()
     async with aiohttp.ClientSession() as session:
         try:
-            for try_attempt in range(3):
+            for try_attempt in range(6):
                 async with session.get(link) as response:
                     if response.status == 200:
                         try:
@@ -769,8 +772,8 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
                         break
                     elif (response.status == 524) and link.startswith('https://zaprit.fish/dl_archive/'):
-                        await log_message(ctx,f'Slot id {link} has never been downloaded before, so waiting 5 minutes to try downloading it again')
-                        await asyncio.sleep(5*60)
+                        await log_message(ctx,f'Slot id {link} has never been downloaded before, so waiting 2 minutes to try downloading it again')
+                        await asyncio.sleep(2*60)
                         continue
                     else:
                         if link.startswith('https://zaprit.fish/dl_archive/') and ((await response.content.read(len(b"level doesn't exist"))) == b"level doesn't exist"):
@@ -2280,7 +2283,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     )
 @allow_mulit_enc_opt
 async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    if not kwargs.pop('allow_mulit_enc_opt',None):
+    if not kwargs.pop('allow_mulit_enc',None):
         ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
@@ -2313,7 +2316,7 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
     )
 @allow_mulit_enc_opt
 async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    if not kwargs.pop('allow_mulit_enc_opt',None):
+    if not kwargs.pop('allow_mulit_enc',None):
         ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
@@ -2801,7 +2804,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
 @filename_p_opt
 @allow_mulit_enc_opt
 async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
-    if not kwargs.pop('allow_mulit_enc_opt',None):
+    if not kwargs.pop('allow_mulit_enc',None):
         ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     import_func = game_enc_functions[kwargs.pop('game')]
