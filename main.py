@@ -703,10 +703,11 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
             link = await get_direct_dl_link_from_mediafire_link(link)
         except Exception as e:
             return f'Bad mediafire link {type(e).__name__}: {e}'
-    session_timeout = None
-    if link.startswith('https://zaprit.fish/dl_archive/'):
-        session_timeout = aiohttp.ClientTimeout(total=None,sock_connect=60*10,sock_read=60*10)
-    async with aiohttp.ClientSession(timeout=session_timeout) as session:
+    # session_timeout = None
+    # if link.startswith('https://zaprit.fish/dl_archive/'):
+        # session_timeout = aiohttp.ClientTimeout(total=None,sock_connect=60*10,sock_read=60*10)
+    # timeout=session_timeout in the aiohttp.ClientSession()
+    async with aiohttp.ClientSession() as session:
         try:
             async with session.get(link) as response:
                 if response.status == 200:
