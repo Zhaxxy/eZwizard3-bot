@@ -776,7 +776,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         await asyncio.sleep(2*60)
                         continue
                     else:
-                        if link.startswith('https://zaprit.fish/dl_archive/') and ((await response.content.read(len(b"level doesn't exist"))) == b"level doesn't exist"):
+                        if link.startswith('https://zaprit.fish/dl_archive/') and (b"Level not found" in (await response.content.read(10_000_000))):
                             return ZapritFishKnownLinkError(f'The slot id {link} doesn\'t exist')
                         return f'Failed to download {link}. Status code: {response.status}'
             else: # no break, or return in this case
