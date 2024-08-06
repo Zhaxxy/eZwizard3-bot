@@ -531,7 +531,7 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
         leader = ''
         error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
     else:
-        leader = '**Want more verbose or detailed error message? use the /set_verbose_mode command**\n'
+        leader = '**Want more verbose or detailed error messages? use the /set_verbose_mode command**\n'
         error_msg = f'```{sys.exc_info()[1]}```'
     
     if error_msg == '```' + '```':
