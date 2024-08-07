@@ -253,6 +253,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     
     first_time = True
     for msg_chunk in chunker(full_msg,2000-1-3):
+        
         if ctx.expired:
             await channel.send(msg_chunk,ephemeral=False)
         else:
@@ -262,7 +263,8 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
             if first_time:
                 await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
         first_time = False
-            
+        
+
     await update_status()
 
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
@@ -275,7 +277,6 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
     full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
     
     first_time = True
-    single_backtick_start = False
     triple_backtick_start = False
     for msg_chunk in chunker(full_msg,2000-1-3):
         if not first_time:
