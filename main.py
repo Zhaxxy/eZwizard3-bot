@@ -216,7 +216,7 @@ async def log_message(ctx: interactions.SlashContext, msg: str,*,_do_print: bool
         pass
     
     
-    for msg_chunk in chunker(msg,1999):
+    for msg_chunk in chunker(msg,2000-1-3):
         if ctx.expired:
             await channel.send(msg_chunk)
         else:
@@ -250,9 +250,9 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     except AttributeError:
         pass
     full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
-    first_time = True
     
-    for msg_chunk in chunker(full_msg,1999):
+    first_time = True
+    for msg_chunk in chunker(full_msg,2000-1-3):
         if ctx.expired:
             await channel.send(msg_chunk,ephemeral=False)
         else:
@@ -273,9 +273,13 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
     except AttributeError:
         pass
     full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
-    first_time = True
     
-    for msg_chunk in chunker(full_msg,1999):
+    first_time = True
+    single_backtick_start = False
+    triple_backtick_start = False
+    for msg_chunk in chunker(full_msg,2000-1-3):
+        if not first_time:
+            file = None
         if ctx.expired:
             await channel.send(msg_chunk,ephemeral=False, file=file)
         else:
@@ -801,9 +805,9 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         if not allow_any_folder:
             await log_message(ctx,f'Looking for a savedata0 folder in {link}')
             seen_savedata0_folders: set[GDriveFile] = {
-                raw_files[Path(*(p.file_name_as_path.parts[:p.file_name_as_path.parts.index('savedata0')+1]))]
+                p
                 for p in raw_files.values()
-                if (not p.is_file) and ('savedata0' in p.file_name_as_path.parts) and ('__MACOSX' not in p.file_name_as_path.parts) and (not p.file_name_as_path.name.startswith('._'))
+                if (not p.is_file) and (p.file_name_as_path.parts.count('savedata0') == 1) and ('__MACOSX' not in p.file_name_as_path.parts) and (not p.file_name_as_path.name.startswith('._'))
             }
 
             if not seen_savedata0_folders:
@@ -872,9 +876,9 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
     if not allow_any_folder:
         await log_message(ctx,f'Looking for decrypted saves in {link}')
         seen_savedata0_folders: set[SevenZipFile] = {
-            a.files[Path(*(p.path.parts[:p.path.parts.index('savedata0')+1]))]
+            p
             for p in a.files.values()
-            if (not p.is_file) and ('savedata0' in p.path.parts) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
+            if (not p.is_file) and (p.path.parts.count('savedata0') == 1) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
         }
         if not seen_savedata0_folders:
             return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that, or use the /raw_encrypt_folder_type_2 command'
@@ -3072,7 +3076,8 @@ async def do_delete_certain_gdrive_save(ctx: interactions.SlashContext, gdrive_u
     try:
         a = await get_file_info_from_id(gdrive_url_from_bot_id)
     except Exception as e:
-        return await log_user_error(ctx,f'Could not get file metadata from {gdrive_url_from_bot}, got error {type(e).__name__}: {e}')
+        msg = make_error_message_if_verbose_or_not(ctx.author_id,f'Could not get file metadata from {gdrive_url_from_bot}','')
+        return await log_user_error(ctx,msg)
 
     try:
         await delete_google_drive_file_or_file_permentaly(gdrive_url_from_bot_id)
