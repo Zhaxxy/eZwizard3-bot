@@ -647,7 +647,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
         else:
             if ctx.special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
-                    return f'The archive {link} has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes'
+                    return f'The archive {link} has more then one save, we can only do 1 save at once for encrypt and import commands, please delete the other saves in this. If you want to upload the same decrypted save to mutiple encrypted saves (which you probably dont) set allow_mulit_enc to Yes'
         
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
             return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
