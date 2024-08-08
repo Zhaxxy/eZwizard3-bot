@@ -117,10 +117,10 @@ def pretty_time(time_in_seconds: float) -> str:
 def pretty_seconds_words(time_in_seconds: int) -> str:
     if time_in_seconds < 1:
         return '0 seconds'
-    years, extra_seconds = divmod(int(time_in_seconds),60*60*24*30*12)
-    months, extra_seconds = divmod(int(extra_seconds),60*60*24*30)
-    days, extra_seconds = divmod(int(extra_seconds),60*60*24)
-    hours, extra_seconds = divmod(int(extra_seconds),60*60)
+    years, extra_seconds = divmod(time_in_seconds,60*60*24*30*12)
+    months, extra_seconds = divmod(extra_seconds,60*60*24*30)
+    days, extra_seconds = divmod(extra_seconds,60*60*24)
+    hours, extra_seconds = divmod(extra_seconds,60*60)
     minutes, seconds = divmod(extra_seconds,60)
     results = []
     if years:
