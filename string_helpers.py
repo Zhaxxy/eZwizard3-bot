@@ -115,7 +115,7 @@ def pretty_time(time_in_seconds: float) -> str:
 
 
 def pretty_seconds_words(time_in_seconds: int) -> str:
-    if not time_in_seconds:
+    if time_in_seconds < 1:
         return '0 seconds'
     years, extra_seconds = divmod(int(time_in_seconds),60*60*24*30*12)
     months, extra_seconds = divmod(int(extra_seconds),60*60*24*30)
@@ -139,7 +139,9 @@ def pretty_seconds_words(time_in_seconds: int) -> str:
     if len(results) == 1:
         return results[0]
     
-    return f'{", ".join(results[:-1])} and {results[-1]}'
+    last_thing = results.pop(-1)
+    
+    return f'{", ".join(results)} and {last_thing}'
 
 
 def _raise_bad_config(missing_key: str) -> NoReturn:
