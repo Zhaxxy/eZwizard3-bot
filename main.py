@@ -33,7 +33,7 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools,install_mods_to_bigfart # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes
+from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
@@ -449,8 +449,22 @@ def initialise_database():
         except KeyError:
             db["total_amnt_used_value"] = 0
         db.commit()
-        
-        
+    with SqliteDict("user_stuff.sqlite", tablename="total_runtime") as db:
+        try:
+            db["total_runtime"]
+        except KeyError:
+            db["total_runtime"] = 0
+        db.commit()
+
+def get_total_runtime() -> int:
+    with SqliteDict("user_stuff.sqlite", tablename="total_runtime") as db:
+        return db["total_runtime"]
+
+def set_total_runtime(new_runtime_value: int ):
+    with SqliteDict("user_stuff.sqlite", tablename="total_runtime") as db:
+        db["total_runtime"] = new_runtime_value
+        db.commit()
+
 def get_user_account_id(author_id: str):
     with SqliteDict("user_stuff.sqlite", tablename="user_account_ids") as db:
         return db[author_id]
@@ -467,7 +481,7 @@ def add_1_total_amnt_used():
         db["total_amnt_used_value"] += 1
         db.commit()
 
-def get_total_amnt_used():
+def get_total_amnt_used() -> int:
     with SqliteDict("user_stuff.sqlite", tablename="total_amnt_used") as db:
         return db["total_amnt_used_value"]
 
@@ -2819,6 +2833,8 @@ _did_first_boot = True
 @interactions.listen()
 async def ready():
     global _did_first_boot
+    global total_runtime
+    total_runtime = get_total_runtime()
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     await update_status()
     _update_status.start()
@@ -2831,29 +2847,36 @@ async def ready():
 update_status_start = time.perf_counter()
 amnt_used_this_session = 0
 old_amnt_of_free = 0
-@interactions.Task.create(interactions.IntervalTrigger(seconds=30))
+@interactions.Task.create(interactions.IntervalTrigger(seconds=30)) # TODO do not hardcode the 30
 async def _update_status():
     await update_status()
 async def update_status():
     global old_amnt_of_free
     global update_status_start
+    global total_runtime
+    global _did_first_boot
     amnt_of_free = await get_amnt_free_save_strs()
     
     leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
     
+    
+    if (not is_in_test_mode()) and (not _did_first_boot):
+        total_runtime += 30 # TODO do not hardcode the 30
+        set_total_runtime(total_runtime)
+        
     if amnt_of_free != old_amnt_of_free:
         update_status_start = time.perf_counter()
     new_time = pretty_time(time.perf_counter() - update_status_start)
 
     if not amnt_of_free:
         status = interactions.Status.DO_NOT_DISTURB
-        msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
+        msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {pretty_seconds_words(total_runtime)}'
     elif amnt_of_free == len(SAVE_DIRS):
         status = interactions.Status.IDLE
-        msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
+        msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {pretty_seconds_words(total_runtime)}'
     else:
         status = interactions.Status.ONLINE
-        msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total'
+        msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {pretty_seconds_words(total_runtime)}'
     await bot.change_presence(activity=interactions.Activity.create(
                                 name=leader+msg),
                                 status=status)

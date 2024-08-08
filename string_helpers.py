@@ -114,6 +114,34 @@ def pretty_time(time_in_seconds: float) -> str:
     return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
 
 
+def pretty_seconds_words(time_in_seconds: int) -> str:
+    if not time_in_seconds:
+        return '0 seconds'
+    years, extra_seconds = divmod(int(time_in_seconds),60*60*24*30*12)
+    months, extra_seconds = divmod(int(extra_seconds),60*60*24*30)
+    days, extra_seconds = divmod(int(extra_seconds),60*60*24)
+    hours, extra_seconds = divmod(int(extra_seconds),60*60)
+    minutes, seconds = divmod(extra_seconds,60)
+    results = []
+    if years:
+        results.append(f'{years} year{"s" if years > 1 else ""}')
+    if months:
+        results.append(f'{months} month{"s" if months > 1 else ""}')
+    if days:
+        results.append(f'{days} day{"s" if days > 1 else ""}')
+    if hours:
+        results.append(f'{hours} hour{"s" if hours > 1 else ""}')
+    if minutes:
+        results.append(f'{minutes} minute{"s" if minutes > 1 else ""}')
+    if seconds:
+        results.append(f'{seconds} second{"s" if seconds > 1 else ""}')
+    
+    if len(results) == 1:
+        return results[0]
+    
+    return f'{", ".join(results[:-1])} and {results[-1]}'
+
+
 def _raise_bad_config(missing_key: str) -> NoReturn:
     raise Exception(f'Unconfigured config, unconfigured value {missing_key} or bad config or missing {missing_key}')
 
