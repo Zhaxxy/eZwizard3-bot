@@ -2849,6 +2849,10 @@ amnt_used_this_session = 0
 old_amnt_of_free = 0
 @interactions.Task.create(interactions.IntervalTrigger(seconds=30)) # TODO do not hardcode the 30
 async def _update_status():
+    global total_runtime
+    if (not is_in_test_mode()) and (not _did_first_boot):
+        total_runtime += 30 # TODO do not hardcode the 30
+        set_total_runtime(total_runtime)
     await update_status()
 async def update_status():
     global old_amnt_of_free
@@ -2859,11 +2863,7 @@ async def update_status():
     
     leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
     
-    
-    if (not is_in_test_mode()) and (not _did_first_boot):
-        total_runtime += 30 # TODO do not hardcode the 30
-        set_total_runtime(total_runtime)
-        
+       
     if amnt_of_free != old_amnt_of_free:
         update_status_start = time.perf_counter()
     new_time = pretty_time(time.perf_counter() - update_status_start)
