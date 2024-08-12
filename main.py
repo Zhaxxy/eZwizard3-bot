@@ -3021,9 +3021,9 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
         await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
         return
 
-    a = get_all_saved_urls(ctx.author_id)
+    saved_urls_dict = get_all_saved_urls(ctx.author_id)
     pretty = ''
-    for key,value in a.items():
+    for key,value in saved_urls_dict.items():
         pretty += f'{key} -> {value}\n'
     await log_user_success(ctx,f'Your saved urls are... \n{pretty.strip()}')
 
