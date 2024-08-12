@@ -276,44 +276,12 @@ built_in_saves:
 
 
 SILLY_RANDOM_STRINGS_NOT_UNIQUE = """
-You can add any more strings here you want, just put in your strings in theese triple quotes for each string choice new line
-ben
-BENNY ben BENNY
-benny, oh benny!
-I HATE NI
-hush little piggy
-feel free do donate me anything to paypal eboot.bin@protonmail.com
-SHAT AP
-C plas plas
-Donald_trump_talks_about_trucks.mp4
-rip littlebigplanet 2024 april
-Samoji & Hotane's Daily Life
-**this text is bold.** *this text is in italics.* `this text has a dark grey box behind it.` __this text is underlined.__ ~~this text is crossed out.~~
-90.237.164.177, this your ip lil bro?
-I don't know what the cat says
-Mu wants something.
-モドキやんの要求は？(^^♪
-どうした？ お腹は空いてなさそうし･･･｡何が欲しいの？何をして欲しいの？
-My jaw is itchy and itchy. (^^♪
-Die Katze bellt die Fliege an
-what ever happened to eZwizard1, was there ever a eZwizard1?
-thesoundsofchildrenbeingtoturedinhell.png
-$Afx/ProcessorID
-ben you are getting too close to me
-Суперкот
-LittleBigPlanet 7ny% - Full Series Speedrun! (8:46:26)
-BD0CB701D6079614D54DF907A08CDB10
-PR]-<Q9*WxHsV8rcW!JuH7k_ug:T5ApX and the iv is _Y7]mD1ziyH#Ar=0
-Tammy!
-ITZTHATPLAYER was here.
-I am a retarded horse
-Like a somebodyyyyyyy
-one two buckel my shoe
-three four buckle some more
-five six YOU STU{IID NI
-Рита и Барсик
-slipin_jimmy.mp4
-ご飯を待ちすぎてアクビが出る猫(^^♪ 
+:arrow_right: https://dsc.gg/itzghosty420 :arrow_left:
+:arrow_right: https://www.youtube.com/@ItzGhosty420 :arrow_left:
+:arrow_right: https://dsc.gg/itzghosty420 :arrow_left:
+If you can make her giggle you can make that ||ass clap and jiggle||
+:regional_indicator_v::regional_indicator_m::regional_indicator_s: https://cdn.discordapp.com/emojis/1253039272492142622.gif?size=128&quality=lossless
+:arrow_right: https://dsc.gg/itzghosty420 :arrow_left:
 """.strip().split('\n')
 
 
