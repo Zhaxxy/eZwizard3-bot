@@ -55,8 +55,8 @@ except:
 else:
     __file__ = str(Path(__file__) / 'huh.huh')
 
-CANT_USE_BOT_IN_DMS = 'GTFO of my DMs, Use ITZGHOSTY420s or OFFICIAL SAVEBOT SERVERS.'
-CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
+CANT_USE_BOT_IN_DMS = '*You are not special, get the F of my DMs right now*\n*If you would like to use me, go to* **ITZGHOSTY420s or OFFICIAL SAVEBOT SERVERS**.'
+CANT_USE_BOT_IN_TEST_MODE = '*Unlucky for some! But ItzGhosty420\'s Savebot is in* **TEST MODE**\n*Only staff has permission*'
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
@@ -200,7 +200,7 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
     ctx.ezwizard_mode = mode
-    await log_message(ctx,f'Pleast wait, if over a minute is spent here do the command again! {nth_time}th time here',_do_print = False)
+    await log_message(ctx,f'*Pleast wait, if over a minute is spent here do the command again!* {nth_time}th time here',_do_print = False)
     ctx.ezwizard_setup_done = 1
     return ctx
 
@@ -231,10 +231,10 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     tick = 0
     while True:
         if ctx.expired:
-            await log_message(ctx, f'{msg}, over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)', _do_print=False)
+            await log_message(ctx, f'{msg}, *over 15 minutes spent here, likely bot is stuck and needs reboot* (including the PS4)', _do_print=False)
             while True:
                 await asyncio.sleep(10)
-        await log_message(ctx, f'{msg} {tick} seconds spent here', _do_print=False)
+        await log_message(ctx, f'{msg} {tick} *seconds spent here*', _do_print=False)
         await asyncio.sleep(10)
         tick += 10
     
@@ -268,7 +268,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     await update_status()
 
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
-    print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
+    print(f'{ctx.user} id: {ctx.author_id} *Has started a new command* {success_msg}')
     channel = ctx.channel or ctx.author
     try:
         success_msg = ctx.omljustusethe0optionsaccountid + success_msg
@@ -550,13 +550,13 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
         leader = ''
         error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
     else:
-        leader = '**Want more verbose or detailed error messages? use the /set_verbose_mode command**\n'
+        leader = '*Your save is basically fucked...*\n*If you would like more details about the error, use* ``/set_verbose_mode`` command*\n'
         error_msg = f'```{sys.exc_info()[1]}```'
     
     if error_msg == '```' + '```':
         error_msg = f'```{sys.exc_info()[0].__name__}```'
     
-    return leader + f'{message_1} reasom:\n{error_msg}\n {message_2}'
+    return leader + f'{message_1} reason:\n{error_msg}\n {message_2}'
 
 
 user_cheat_chains = {}
@@ -588,7 +588,7 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
         try:
             return PS4AccountID(get_user_account_id(author_id))
         except KeyError:
-            return 'You dont have any account id saved to the database!, try running the `/my_account_id` again'
+            return '*You dont have any account id saved to the database!, try running the* `/my_account_id` again*'
     elif account_id == '1':
         return PS4AccountID('0000000000000000')
 
@@ -599,10 +599,10 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
         except KeyError: pass
         else:
             if my_account_id_for_my_acc == my_account_id:
-                ctx.omljustusethe0optionsaccountid = '**Remember, you dont have to manually type in your account id, just put 0 in the field!**\n\n'
+                ctx.omljustusethe0optionsaccountid = '*You dont have to manually type in your account id, Put 0 in the Account ID option!*\n'
         return my_account_id
     except ValueError:
-        return f'{account_id} is not a valid account id, it should be the one in your SAVEDATA folder! Or get it from the `/my_account_id` command'
+        return f'*Are you sure you spelled your PSN Username Correctly boss?*\n**{psn_name}** *is not a valid PSN username*<:whatthe:1272145776344305757>'
 
 
 def list_ps4_saves(folder_containing_saves: Path,/) -> Generator[tuple[Path,Path],None,None]:
@@ -627,14 +627,14 @@ async def ps4_life_check(ctx: interactions.SlashContext | None = None):
 
 
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
-        await log_message(ctx,f'Checking {link} if valid archive')
+        await log_message(ctx,f'*Checking* {link} *if valid archive*')
         try:
             zip_info = await get_archive_info(archive_name)
         except Exception as e:
-            return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+            return f'*Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
 
         if zip_info.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'The decompressed {link} is too big, the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+            return f'*The decompressed* {link} *is too big*\n*Please note the limit is* **{pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}**'
         
         await log_message(ctx,f'*Having a quick look for saves in* {link}')
         ps4_saves: list[tuple[Path,Path]] = []
@@ -648,7 +648,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             white_file = zip_file.path.with_suffix('')
             if not zip_info.files.get(white_file): continue
             if zip_file.size != 96:
-                return f'Invalid bin file {zip_file.path} found in {link}'
+                return f'*Invalid bin file* {zip_file.path} *found in* {link}'
 
             ps4_saves.append((zip_file.path,white_file))
         if not ps4_saves:
@@ -661,21 +661,21 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
         else:
             if ctx.special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
-                    return f'The archive {link} has more then one save, we can only do 1 save at once for encrypt and import commands, please delete the other saves in this. If you want to upload the same decrypted save to mutiple encrypted saves (which you probably dont) set allow_mulit_enc to Yes'
+                    return f'*The archive* {link} *has more then one save, we can only do 1 save at once for encrypt and import commands, please delete the other saves in this. If you want to upload the same decrypted save to mutiple encrypted saves (which you probably dont) set allow_mulit_enc to Yes*'
         
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
-            return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
+            return f'*The archive* {link} *has too many saves* {len(ps4_saves)}, *the max is* {MAX_RESIGNS_PER_ONCE} *remove* {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} *saves and try again*'
         
         for bin_file,white_file in ps4_saves:
             pretty_dir_name = make_folder_name_safe(bin_file.parent)
             new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_file.parent.name))
             new_path.mkdir(exist_ok=True,parents=True) # TODO look into parents=True
-            await log_message(ctx,f'Extracting {white_file} from {link}')
+            await log_message(ctx,f'*Mc Booooming!!* {white_file} {link}')
             try:
                 await extract_single_file(archive_name,white_file,new_path)
                 await extract_single_file(archive_name,bin_file,new_path)
             except Exception as e:
-                return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+                return f'*Oops.. Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
         return ''
 
 
@@ -759,20 +759,20 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         if not filename:
                             filename = link.split('/')[-1].split('?')[0]
                         if validation_result := validation(filename):
-                            return f'{link} failed validation reason: {validation_result}'
-                        file_size = response.headers.get('Content-Length')
+                            return f'{link} *failed validation reason:* {validation_result}'
+                        file_size = response.headers.get('*Content-Length*')
                         if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/'):
                             file_size = 3
                         if file_size is None:
-                            return 'There was no Content-Length header'
+                            return '*There was no Content-Length header*'
                         try:
                             file_size = int(file_size)
                         except ValueError:
-                            return f'Content-Length {file_size!r} was not a valid number'
+                            return f'*Content-Length* {file_size!r} *was not a valid number*'
                         if file_size > max_size:
-                            return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                            return f'*The file* {link} *is too big, I only accept* {pretty_bytes(max_size)}'
                         if file_size < 2:
-                            return f'The file {link} is too small lmao'
+                            return f'*The file {link} is too small man whats the fuck even is this lol*'
                         downloaded_size = 0
                         chunks_done = 0
                         direct_zip = Path(donwload_location,filename)
@@ -787,21 +787,21 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                                 downloaded_size += DOWNLOAD_CHUNK_SIZE
                                 chunks_done += 1
                                 if downloaded_size > max_size:
-                                    return f'YOU LIED! {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                                    return f'*Oops* {link} *is too big,* *I only accept* {pretty_bytes(max_size)}'
                         await log_message(ctx,f'*Ive downloaded* {link} {pretty_bytes(downloaded_size)}')
                         break
                     elif (response.status == 524) and link.startswith('https://zaprit.fish/dl_archive/'):
-                        await log_message(ctx,f'Slot id {link} has never been downloaded before, so waiting 2 minutes to try downloading it again')
+                        await log_message(ctx,f'*Slot ID* {link} *has never been downloaded before, so waiting 2 minutes to try downloading it again*')
                         await asyncio.sleep(2*60)
                         continue
                     else:
                         if link.startswith('https://zaprit.fish/dl_archive/') and (b"Level not found" in (await response.content.read(10_000_000))):
                             return ZapritFishKnownLinkError(f'The slot id {link} doesn\'t exist')
-                        return f'Failed to download {link}. Status code: {response.status}'
+                        return f'*Oops, Failed to download* {link}. **Status code:** {response.status}'
             else: # no break, or return in this case
-                return ZapritFishKnownLinkError(f'Took too many tries to download {link}, perhaps try command again')
+                return ZapritFishKnownLinkError(f'*Took too many tries to download* {link},\n*Retry the command*')
         except Exception as e:
-            return make_error_message_if_verbose_or_not(ctx.author_id,f'Invalid url {link}','maybe you copied the wrong link?')
+            return make_error_message_if_verbose_or_not(ctx.author_id,f'*Invalid url* {link}','*maybe you copied the wrong link?*')
     return direct_zip
 
 
@@ -812,11 +812,11 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
-        await log_message(ctx,f'Getting files metadata from folder {link}')
+        await log_message(ctx,f'*Grabbing files metadata from folder* {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
         except Exception as e:
-            return f'Could not get files metadata from folder {link}, got error {type(e).__name__}: {e}, maybe its not public?'
+            return f'**THIS LINK IS NOT PUBLIC**<a:pespepenotfunnyt:1272150300114944062>\n {link}\n*Please click share on your link* & **Give access to anybody with this link**<:Nice:1272144601033211924>'
         if not allow_any_folder:
             await log_message(ctx,f'*Looking for your savedata0 folder in* {link}')
             seen_savedata0_folders: set[GDriveFile] = {
@@ -826,10 +826,10 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
             }
 
             if not seen_savedata0_folders:
-                return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and upload that, or use the /raw_encrypt_folder_type_2 command'
+                return f'*Could not find any decrypted saves in* {link}, *make sure to put the decrypted save contents in a savedata0 folder and upload that, or use the /raw_encrypt_folder_type_2 command*'
 
             if len(seen_savedata0_folders) > 1:
-                return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
+                return f'*Too many decrypted saves in* {link},\n*Please note: I only support encrypting one save per command boss*'
             for savedata0_folder in seen_savedata0_folders:
                 pass
         else:
@@ -840,9 +840,9 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         except Exception:
             return 'blud thinks hes funny'
         if test[0] > FILE_SIZE_TOTAL_LIMIT:
-            return f'The decrypted save {link} is too big, maybe you uploaded a wrong file to it? max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+            return f'*The decrypted save* {link} *is too big*\n*Maybe you uploaded a wrong file? max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
-            return f'The decrypted save {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+            return f'*The decrypted save* {link} *has too many loose files* ({test[1]}), *max is* {ZIP_LOOSE_FILES_MAX_AMT} *loose files*'
 
         await log_message(ctx,f'*I am downloading* {link} *savedata0 folder*')
         Path(output_folder,'savedata0').mkdir(parents=True,exist_ok=True)# TODO maybe i dont gotta do this, but i am
@@ -852,7 +852,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         except Exception:
             return 'blud thinks hes funny'
         if unpack_first_root_folder:
-            await log_message(ctx,f'Doing magic with the file management in your save* {link}')
+            await log_message(ctx,f'*Doing magic with the file management in your save* {link}')
             checker = AsyncPath(new_savedata0_folder_made)
             thing_count = 0
             async for thing in checker.iterdir():
@@ -881,13 +881,13 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
     try:
         a = await get_archive_info(archive_name)
     except Exception as e:
-        return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+        return f'*Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
 
     if a.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-        return f'The decompressed {link} is too big, the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+        return f'*The decompressed* {link} *is too big, the max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
-        return f'The decompressed {link} has too many loose files ({len(a.files)}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+        return f'*The decompressed* {link} *has too many loose files* ({len(a.files)}),\n **max is** {ZIP_LOOSE_FILES_MAX_AMT} **loose files**'
     if not allow_any_folder:
         await log_message(ctx,f'*Scanning for decrypted saves in* {link}')
         seen_savedata0_folders: set[SevenZipFile] = {
@@ -896,10 +896,10 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
             if (not p.is_file) and (p.path.parts.count('savedata0') == 1) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
         }
         if not seen_savedata0_folders:
-            return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that, or use the /raw_encrypt_folder_type_2 command'
+            return f'*Could not find any decrypted saves in* {link}, *make sure to put the decrypted save contents in a savedata0 folder and archive that, or use the /raw_encrypt_folder_type_2 command*'
 
         if len(seen_savedata0_folders) > 1:
-            return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
+            return f'*Too many decrypted saves in* {link}, *we only support encrypting one save per command*'
 
         for savedata0_folder in seen_savedata0_folders:
             pass
@@ -908,7 +908,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         try:
             await extract_single_file(archive_name,savedata0_folder.path,output_folder,'x')
         except Exception as e:
-            return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+            return f'*Invalid archive after downloading* {link}, **error** {type(e).__name__}: {e}'
         if not savedata0_folder.path == Path('savedata0'):
             await log_message(ctx,f'*Doing some file management with* {link}')
             await shutil.move(Path(output_folder, savedata0_folder.path),output_folder)
@@ -943,16 +943,16 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
-        await log_message(ctx,f'Getting files metadata from folder {link}')
+        await log_message(ctx,f'*Getting files metadata from folder*\n {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link))
         except Exception as e:
-            return f'Could not get files metadata from folder {link}, got error {type(e).__name__}: {e}, maybe its not public?'
+            return f'**THIS LINK IS NOT PUBLIC**<a:pespepenotfunnyt:1272150300114944062>\n {link}\n*Please click share on your link* & **Give access to anybody with this link**<:Nice:1272144601033211924>'
         await log_message(ctx,f'*Looking for saves in the folder* {link}')
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAXXXXX folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
+            return f'*Oops, I couldnt find anything in your link*<:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAXXXX** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
@@ -962,22 +962,22 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         else:
             if ctx.special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
-                    return f'The folder {link} has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes'
+                    return f'*The folder* {link} *has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes*'
 
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
-            return f'The folder {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
+            return f'*The folder* {link} *has too many saves* {len(ps4_saves)}, *the max is* {MAX_RESIGNS_PER_ONCE} *remove* {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} *saves and try again*'
 
         if total_ps4_saves_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'The total number of saves in {link} is too big, the max size of saves is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}, {pretty_bytes(total_ps4_saves_size)} is too big'
+            return f'*The total number of saves in* {link} *is too big, the max size of saves is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}, {pretty_bytes(total_ps4_saves_size)} *is too big*'
 
         for bin_file,white_file in ps4_saves:
             if bin_file.size != 96:
-                return f'Invalid bin file {bin_file.file_name_as_path} found in {link}'
+                return f'*Invalid bin file* {bin_file.file_name_as_path} *found in* {link}'
             
             new_white_path = Path(output_folder, make_folder_name_safe(white_file.file_name_as_path.parent), make_ps4_path(account_id,white_file.file_name_as_path.parent.name),white_file.file_name_as_path.name)
             new_bin_path = Path(output_folder, make_folder_name_safe(bin_file.file_name_as_path.parent), make_ps4_path(account_id,bin_file.file_name_as_path.parent.name),bin_file.file_name_as_path.name)
 
-            await log_message(ctx,f'Downloading {white_file.file_name_as_path} from {link}')
+            await log_message(ctx,f'*Downloading* {white_file.file_name_as_path} *from* {link}')
             try:
                 await download_file(white_file.file_id,new_white_path)
                 await download_file(bin_file.file_id,new_bin_path)
@@ -990,7 +990,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         direct_zip = await download_direct_link(ctx,link,tp,filename_valid_extension)
         if isinstance(direct_zip,str):
             if 'failed validation reason:' in direct_zip: # TODO this method means if i change the error msg in download_direct_link and not this, then this if statement never happens
-                return f'{direct_zip} **(do not put decrypted saves into the save_files option)**'
+                return f'{direct_zip} \n**(do not put decrypted saves into the save_files option)**'
             return direct_zip
         return await extract_ps4_encrypted_saves_archive(ctx,link,output_folder,account_id,direct_zip)
 
@@ -1008,7 +1008,7 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     # await log_message(ctx,'Ensuring base save exists on PS4 before uploading')
     # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,save_dir_ftp) as mp:
         # pass
-    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrypted save (this may take a while if mutiple slots are in use)'))
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'*Please Wait*'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
         await log_message(ctx,f'*Uploading* {pretty_save_dir} *to console*')
@@ -1027,7 +1027,7 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file_out.relative_to(parent_dir)
-    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to download encrypted save (this may take a while if mutiple slots are in use)'))
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'*Please Wait*'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
         await log_message(ctx,f'*Downloading* {pretty_save_dir} *from PS4(')
@@ -1075,7 +1075,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
             savedatax = mp.savedatax
             new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
             if not mp:
-                return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")}) (base save {mount_save_title_id}/{save_dir_ftp}), if you get SCE_SAVE_DATA_ERROR_BROKEN please try the command again, this is a known issue to sometimes happen, if happens consistently, then the save may really is broken'
+                return f'*Nope.. I couldn\'t mount your save*\n {pretty_save_dir} \n Because: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")}) (base save {mount_save_title_id}/{save_dir_ftp}),\n*I see* ``SCE_SAVE_DATA_ERROR_BROKEN`` *Maybe, retry the command, if I give this you issue again, the save is fucked, Please find a new save!*'
             # input(f'{mp}\n {new_mount_dir}')
             # We need to get real filename as the white_file.name can be differnt (such as a ` (1)` subfixed to it)
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1164,7 +1164,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
     if special_thing == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
         for chet in cheats:
             if chet.kwargs.get('decrypted_save_folder'):
-                await log_message(ctx,f'*doing magic with your file management on your mc world*')
+                await log_message(ctx,f'*doing magic with file management on your mc world*')
                 savedata0hehe = chet.kwargs.get('decrypted_save_folder') / 'savedata0'
 
                 if not (savedata0hehe / 'level.dat').is_file():
@@ -1273,7 +1273,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 await fix_packs('world_resource_packs.json','resource_packs','resource')
                 cheats.append(CheatFunc(re_region,{'gameid':chet.kwargs.pop('gameid')}))
 
-    await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
+    await log_message(ctx,f'*Working Magic with your* {"".join(chet.pretty() for chet in cheats)} *to* {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id,special_thing))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
@@ -1294,7 +1294,7 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                     try:
                         await decrypt_fun.func(ftp,new_mount_dir,white_file.name,decrypted_save_ouput,**decrypt_fun.kwargs)
                     except Exception:
-                        return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not custom decrypt your save {pretty_save_dir}.','')
+                        return make_error_message_if_verbose_or_not(ctx_author_id,f'*I couldn\'t custom decrypt your save* {pretty_save_dir}.','')
             else:
                 # await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1332,9 +1332,9 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
 
     # await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
     if decrypt_fun:
-        await log_message(ctx,f'Attemping custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
+        await log_message(ctx,f'*Adding custom decryption* {decrypt_fun.pretty()} *for* {pretty_save_dir}')
     else:
-        await log_message(ctx,f'Attemping to download savedata0 folder from decrypted {pretty_save_dir}')
+        await log_message(ctx,f'*Attemping to download savedata0 folder from decrypted* {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_decrypt_saves_on_ps4(bin_file, white_file, parent_dir, decrypted_save_ouput, save_dir_ftp, decrypt_fun, pretty_save_dir,ctx.author_id))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
@@ -1345,7 +1345,7 @@ def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: P
             zp.write(file,file.relative_to(parent_dir))
 
 
-async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str = 'paypal me some money eboot.bin@protonmail.com and i might fix this message'):
+async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str = 'ItzGhosty420'):
     global amnt_used_this_session
     await log_message(ctx,f'*Big mf files that takes extra steps lol, Nearly done, Please wait* **(2 more steps left)**\n {link_for_pretty}')
     await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
@@ -1371,7 +1371,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                         raise
             else:
                 raise
-        await log_user_success(ctx,f'<:j_:1272151363530522655>*Hope you have Fun!!*<:Nice:1272144601033211924> {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\n<:labs_down:1272152021398454366>**Here is your resigned save!**<:labs_down:1272152021398454366> ({pretty_bytes(real_file_size)} file)')
+        await log_user_success(ctx,f'<:j_:1272151363530522655>*Hope you have Fun!!*<:Nice:1272144601033211924>\n<:labs_down:1272152021398454366>**Here is your resigned save!**<:labs_down:1272152021398454366>\n{google_drive_uploaded_user_zip_download_link}\n*Big ass savefile was* **({pretty_bytes(real_file_size)})**<:j_:1272151363530522655>')
     else:
         # await shutil.move(new_zip_name,new_zip_name.name)
         await log_message(ctx,f'*Finally uploading to Discord, Please wait!* **(last step!)**\n*This mf savefile is.. lol* ({pretty_bytes(real_file_size)} file)')
@@ -1425,14 +1425,14 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     except KeyError:
                         await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
                         return False
-                await log_message(ctx,f'Downloading {link} {arg_name}')
+                await log_message(ctx,f'*Downloading* {link} {arg_name}')
                 result = await download_direct_link(ctx,link,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT,validation=filename_is_not_an_archive)
                 if isinstance(result,str):
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = result
             if isinstance(link,interactions.Attachment):
-                await log_message(ctx,f'Downloading attachment {arg_name}')
+                await log_message(ctx,f'*Downloading attachment* {arg_name}')
                 result = await download_direct_link(ctx,link.url,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT)
                 if isinstance(result,str):
                     await log_user_error(ctx,result)
@@ -1445,16 +1445,16 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     try:
                         link = get_saved_url(ctx.author_id,int(link))
                     except KeyError:
-                        await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
+                        await log_user_error(ctx,f'*You dont have any url saved for* {link}, *try running the file2url command again!*')
                         return False
-                await log_message(ctx,f'Downloading {link} savedata0 folder or zip')
+                await log_message(ctx,f'*Downloading* {link} *savedata0 folder*')
                 result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder,arg_name=='decrypted_save_folder',cheat.kwargs['unpack_first_root_folder'])
                 if result:
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = savedata0_folder
             if arg_name == 'gameid' and (not is_ps4_title_id(link)):
-                await log_user_error(ctx,f'Invalid gameid {link}')
+                await log_user_error(ctx,f'*Invalid gameid* {link}')
                 return False
             if arg_name.startswith('psstring'):
                 link = link.encode('utf-8')
@@ -1485,13 +1485,13 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         try:
             save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
-            await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
+            await log_user_error(ctx,f'*You dont have any url saved for* {save_files}, *try running the file2url command again!*')
             return
     
     try:
         save_dir_ftp = await get_save_str()
     except SaveMountPointResourceError:
-        await log_user_error(ctx,'Theres too many people using the bot at the moment, please wait for a spot to free up')
+        await log_user_error(ctx,'*Ghosty\'s Bot is Coooooking!!!*, \n**please wait for a spot to free up**')
         return
     try:
         my_token = await get_time_as_string_token()
@@ -1518,7 +1518,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                 pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
                 new_dec = (dec_tp / pretty_folder_thing)
                 new_dec.mkdir()
-                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
+                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to mount* {pretty_folder_thing} /n'))
                 async with mounted_saves_at_once:
                     tick_tock_task.cancel()
                     a = await decrypt_saves_on_ps4(ctx,bin_file,white_file,enc_tp,new_dec,save_dir_ftp,decrypt_fun)
@@ -1527,9 +1527,9 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                     if a == WARNING_COULD_NOT_UNMOUNT_MSG:
                         breakpoint()
                     return
-            your_saves_msg = 'savedata0 decrypted save (Please use /advanced_mode_export command instead)'
+            your_saves_msg = '*savedata0 decrypted save*\n**(Please use /advanced_mode_export command instead)**'
             if decrypt_fun:
-               your_saves_msg = (decrypt_fun.__doc__ or 'paypal me some money eboot.bin@protonmail.com and i might fix this message').strip()
+               your_saves_msg = (decrypt_fun.__doc__ or 'ItzGhosty420').strip()
             await send_result_as_zip(ctx,save_files,dec_tp,dec_tp,Path(tp,my_token + '.zip'),your_saves_msg)
             return
     finally:
@@ -1551,7 +1551,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
         try:
             save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
-            await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
+            await log_user_error(ctx,f'*You dont have any url saved for* {save_files}, *try running the file2url command again!*')
             return
 
     account_id: str | PS4AccountID = account_id_from_str(account_id,ctx.author_id,ctx)
@@ -1561,13 +1561,13 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
 
     if save_files == '0':
         add_cheat_chain(ctx.author_id,cheat)
-        await log_user_success(ctx,f'Added the cheat {cheat.pretty()} to your chain!')
+        await log_user_success(ctx,f'*Added the cheat* {cheat.pretty()} *to your chain!*')
         return
         
     try:
         save_dir_ftp = await get_save_str()
     except SaveMountPointResourceError:
-        await log_user_error(ctx,'Theres too many people using the bot at the moment, please wait for a spot to free up')
+        await log_user_error(ctx,'*Ghosty\'s Bot is Cooooking*, **please wait for a spot to free up**')
         return
     try:
         my_token = await get_time_as_string_token()
@@ -1575,10 +1575,10 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             mc_filename = f'BedrockWorld{my_token.replace("_","")}@P547'
             mc_base_title_id = 'CUSA00265'
             real_save_dir_ftp = mc_filename
-            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to make base mc world {real_save_dir_ftp} (this may take a while if mutiple slots are in use)'))
+            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to make base mc world* {real_save_dir_ftp}'))
             async with mounted_saves_at_once:
                 tick_tock_task.cancel()
-                await log_message(ctx,f'Making base mc world {real_save_dir_ftp}')
+                await log_message(ctx,f'**Making base mc world** {real_save_dir_ftp}')
                 owner_of_blocks_blocks = cheat.kwargs.get('mc_encrypted_save_size',None)
                 assert isinstance(owner_of_blocks_blocks,int)
                 custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=owner_of_blocks_blocks))
@@ -1587,13 +1587,13 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             mc_filename = save_files.start_of_file_name + my_token.replace("_","")
             mc_base_title_id = save_files.title_id
             real_save_dir_ftp = mc_filename
-            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to make base lbp3 level backup {real_save_dir_ftp} (this may take a while if mutiple slots are in use)'))
+            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to make base lbp3 level backup* {real_save_dir_ftp} '))
             async with mounted_saves_at_once:
                 tick_tock_task.cancel()
-                await log_message(ctx,f'Making base lbp3 level backup {real_save_dir_ftp}')
+                await log_message(ctx,f'*Making base lbp3 level backup* {real_save_dir_ftp}')
                 custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=save_files.new_blocks_size))
                 await asyncio.get_running_loop().run_in_executor(None,custon_decss1)
-            await log_message(ctx,f'Setting level filename to {mc_filename}')
+            await log_message(ctx,f'*Setting level filename to* {mc_filename}')
             temp_savedata0 = cheat.kwargs['decrypted_save_file']
             with open(temp_savedata0 / 'savedata0/sce_sys/param.sfo','rb+') as f:
                 desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -1644,7 +1644,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     else:
                         await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
                     pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
-                    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
+                    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to mount* {pretty_folder_thing}'))
                     async with mounted_saves_at_once:
                         tick_tock_task.cancel()
                         a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,real_save_dir_ftp,save_files)
@@ -1658,11 +1658,11 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     real_names.append(real_name)
                     results_big.append(results_small)
             
-            await log_message(ctx,f'Making sure file names in {save_files} are all correct')
+            await log_message(ctx,f'*Making sure file names in* {save_files} *are all correct*')
             found_fakes = False
             for real_name, (bin_file, white_file) in zip(real_names, done_ps4_saves, strict=True):
                 if white_file.name != real_name:
-                    await log_message(ctx,f'Renaming {white_file.name} to {real_name}')
+                    await log_message(ctx,f'*Renaming* **{white_file.name}**\n *To* **{real_name}**')
                     try:
                         white_file.rename(white_file.parent / real_name)
                     except FileExistsError:
@@ -1699,7 +1699,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 await log_message(ctx,f'Refreshing {save_files} internal list 1/2')
                 done_ps4_saves = list(list_ps4_saves(enc_tp))
                 
-            await log_message(ctx,f'looking through results to do some renaming for {save_files}')
+            await log_message(ctx,f'*looking through results to do some renaming for* {save_files}')
             for results, (bin_file, white_file) in zip(results_big, done_ps4_saves, strict=True):
                 for savename, gameid in results:
                     if savename:
@@ -1743,7 +1743,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             
             if not account_id:
                 have_not_done_at_least_1_account_id_change = False
-                await log_message(ctx,f'Refreshing {save_files} internal list 2/2')
+                await log_message(ctx,f'*Refreshing* {save_files} internal list 2/2')
                 done_ps4_saves = list(list_ps4_saves(enc_tp))
                 for bin_file, white_file in done_ps4_saves:
                     try:
@@ -1753,8 +1753,8 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                             raise
                     have_not_done_at_least_1_account_id_change = True
             if False:
-                await log_message(ctx,'cleaning up the things you did')
-                await log_user_error(ctx,'unimplemented')
+                await log_message(ctx,'*cleaning up the things you did*')
+                await log_user_error(ctx,'*unimplemented*')
                 return
             
             await log_message(ctx,f'Deleting empty folders in {save_files}')
@@ -1764,7 +1764,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 except Exception:
                     pass
 
-            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or 'paypal me some money eboot.bin@protonmail.com and i might fix this message').strip())
+            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or 'ItzGhosty420').strip())
             return
     finally:
         await free_save_str(save_dir_ftp)
@@ -1904,7 +1904,7 @@ game_dec_functions = { # Relying on the dict ordering here, "Game not here (migh
 }
 
 
-@interactions.slash_command(name='advanced_mode_export',description="Export/decrypt your saves!")
+@interactions.slash_command(name='advanced_mode_export',description="This is Save Wizard Advanced Mode! Easily Export/decrypt your save!")
 @dec_enc_save_files
 @interactions.slash_option(name='game',
     description='The game you want to export/decrypt saves of',
@@ -1922,7 +1922,7 @@ cheats_base_command = interactions.SlashCommand(name="cheats", description="Comm
 
 async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
 DUMMY_CHEAT_FUNC = CheatFunc(do_nothing,{})
-@interactions.slash_command(name="resign", description=f"Resign any PS4 savefile to your account! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
+@interactions.slash_command(name="resign", description=f"Resign any PS4 save to your account!")
 @interactions.slash_option('save_files','The save files to resign too',interactions.OptionType.STRING,True)
 @account_id_opt
 async def do_resign(ctx: interactions.SlashContext,save_files: str,account_id: str):
@@ -2407,7 +2407,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
     gameid = kwargs.pop('gameid')
     async with TemporaryDirectory() as tp:
         tp = Path(tp)
-        await log_message(ctx,f'Downloading slot `{slotid_from_drydb}`')
+        await log_message(ctx,f'*Downloading slot* `{slotid_from_drydb}`')
         result = await download_direct_link(ctx,f'https://zaprit.fish/dl_archive/{slotid_from_drydb}',tp)
         if isinstance(result,str):
             if not isinstance(result,ZapritFishKnownLinkError):
@@ -2528,7 +2528,7 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
         savename = save_name.replace(save_name[x:x+9],gameid)
         save_name = savename
     return CheatFuncResult(savename,gameid)
-@interactions.slash_command(name="re_region", description=f"Re region your save files! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
+@interactions.slash_command(name="re_region", description=f"Re region your save files!")
 @interactions.slash_option('save_files','The save files to be re regioned',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('gameid','The gameid of the region you want, in format CUSAXXXXX',interactions.OptionType.STRING,True,max_length=9,min_length=9)
@@ -2559,7 +2559,7 @@ async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
                 im.paste(icon_overlay,(0,0),icon_overlay)
                 im.save(og_icon0_path)
         await ftp.upload(og_icon0_path,'icon0.png',write_into=True)
-@interactions.slash_command(name="change_icon",description=f"Add an icon overlay to your saves!")
+@interactions.slash_command(name="change_icon",description=f"Add a picture to customise your modded save!")
 @interactions.slash_option('save_files','The save files to change the icon of',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('dl_link_image_overlay','The link to an image overlay you want, check out file2url!',interactions.OptionType.STRING,True)
@@ -2598,7 +2598,7 @@ async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
-@interactions.slash_command(name="change_save_name", description=f"Customise your Save Name")
+@interactions.slash_command(name="change_save_name", description=f"Customise the title of your modded save")
 @interactions.slash_option('save_files','The save files to change the name of',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('psstring_new_name','the name you want, put hex code for symbols (eg this is a checkmark -> EFA1BE)',interactions.OptionType.STRING,True,min_length=1,max_length=0x80*3)
@@ -2626,7 +2626,7 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
-@interactions.slash_command(name="change_save_desc", description=f"Change the description of the save displayed on PS4 menu")
+@interactions.slash_command(name="change_save_desc", description=f"Customise the description of your modded save")
 @interactions.slash_option('save_files','The save files to change the description of',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('psstring_new_desc','the description you want, put hex code for symbols (eg this is a TV -> EFA1B1)',interactions.OptionType.STRING,True,min_length=1,max_length=0x79*6)
@@ -2809,7 +2809,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
 }
 
 
-@interactions.slash_command(name="advanced_mode_import",description=f"Import/encrypt your exported/decrypted saves!")
+@interactions.slash_command(name="advanced_mode_import",description=f"This is Save Wizard Advanced Mode! Easily Import/encrypt your exported/decrypted save!")
 @interactions.slash_option('save_files','The save file to import the decrypted save to',interactions.OptionType.STRING,True)
 @account_id_opt
 @interactions.slash_option('dl_link_single','The file link you wanna import YOU SHOULD GET THIS FROM SAVEWIZARD OR advanced_mode_export',interactions.OptionType.STRING,True)
@@ -2838,8 +2838,8 @@ async def ready():
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     await update_status()
     _update_status.start()
-    await ps4.notify('eZwizard3-bot connected!')
-    print('eZwizard3-bot connected!')
+    await ps4.notify('eZwizard3-bot connected motherfucka!')
+    print('Ohh Shit.. Here we go again with eZwizard3-bot!')
     if _did_first_boot:
         print(f'took {time.perf_counter() - _boot_start:.1f} seconds to boot')
     _did_first_boot = False
@@ -2904,10 +2904,10 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
         return
     
     if not is_psn_name(psn_name):
-        await log_user_error(ctx,f'Not a valid psn name {psn_name}, check it again!')
+        await log_user_error(ctx,f'*Not a valid* **{psn_name}** *check it again!*')
         return
         
-    await log_message(ctx,f'Looking for psn name {psn_name}')
+    await log_message(ctx,f'*Looking for* **{psn_name}**')
     try:
         user = psnawp.user(online_id=psn_name)
     except PSNAWPNotFound:
@@ -2915,7 +2915,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
         return
     account_id_hex = PS4AccountID.from_account_id_number(user.account_id).account_id
     
-    start_msg = '*Your account id for* **{0}** *is* **{1},** *saved to database*<:j_:1272151363530522655>\n*Put **0** in the account_id option to use this account id!*<:Plant:1272144642753953844>'
+    start_msg = '*Your account id for* **{0}** *is* **{1},**<:j_:1272151363530522655>\n*Put **0** in the account_id option to use this account id!*<:Plant:1272144642753953844>'
     my_database_account_id: str = ''
     try:
         my_database_account_id = get_user_account_id(ctx.author_id)
@@ -3080,7 +3080,7 @@ async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
     return await log_user_success(ctx,'All saves deleted successfully')
 
 
-@interactions.slash_command(name='delete_certain_gdrive_save',description="Only run this command if the gdrive is full, will delete a certain google drive file sent by bot")
+@interactions.slash_command(name='delete_certain_gdrive_save',description="Run this command to delete all the bleeding saves from Google  drive")
 @interactions.slash_option(
     name="gdrive_url_from_bot",
     description="A google drive link the bot has given",
@@ -3090,28 +3090,28 @@ async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
 async def do_delete_certain_gdrive_save(ctx: interactions.SlashContext, gdrive_url_from_bot: str):
     ctx = await set_up_ctx(ctx)
     if not is_user_bot_admin(ctx.author_id):
-        return await log_user_error(ctx,'Only bot instance admins may use this command, please ask one to run this command if google drive is full')
+        return await log_user_error(ctx,'*Only **ItzGhosty420** *can use this command*')
 
     gdrive_url_from_bot_id = extract_drive_file_id(gdrive_url_from_bot)
     
     if not gdrive_url_from_bot_id:
-        return await log_user_error(ctx,f'{gdrive_url_from_bot} is not a valid google drive link, please copy the exact link the bot sent')
+        return await log_user_error(ctx,f'{gdrive_url_from_bot} *is not a valid google drive link, please copy the exact link the bot sent*')
     
     try:
         a = await get_file_info_from_id(gdrive_url_from_bot_id)
     except Exception as e:
-        msg = make_error_message_if_verbose_or_not(ctx.author_id,f'Could not get file metadata from {gdrive_url_from_bot}','')
+        msg = make_error_message_if_verbose_or_not(ctx.author_id,f'*Could not get file metadata from* {gdrive_url_from_bot}','')
         return await log_user_error(ctx,msg)
 
     try:
         await delete_google_drive_file_or_file_permentaly(gdrive_url_from_bot_id)
     except Exception:
-        return await log_user_error(ctx,f'Could not delete {gdrive_url_from_bot}, are you sure its from the same bot as you running this command?')
+        return await log_user_error(ctx,f'*Could not delete* {gdrive_url_from_bot}, *are you sure its from the same bot as you running this command?*')
     
     await log_user_success(ctx,f'Deleted {gdrive_url_from_bot} successfully')
     
 setting_global_image_lock = asyncio.Lock()
-@interactions.slash_command(name='set_global_watermark',description="Allows a bot instance admin to set a global watermark to all saves icons")
+@interactions.slash_command(name='set_global_watermark',description="ItzGhosty420\'s secert troll command lmao")
 @interactions.slash_option(
     name="global_image_link",
     description="A direct download to your image, will be saved to current dir",
@@ -3120,7 +3120,7 @@ setting_global_image_lock = asyncio.Lock()
     )
 @interactions.slash_option(
     name="option",
-    description="Some options you might want",
+    description="Extra features you can apply",
     required=True,
     opt_type=interactions.OptionType.INTEGER,
     choices=[
@@ -3133,16 +3133,16 @@ setting_global_image_lock = asyncio.Lock()
 async def do_global_image_link(ctx: interactions.SlashContext, global_image_link: str, option: int):
     ctx = await set_up_ctx(ctx)
     if not is_user_bot_admin(ctx.author_id):
-        return await log_user_error(ctx,'Only bot instance admins may use this command')
+        return await log_user_error(ctx,'ItzGhosty420\'s secert troll command lmao')
     async with setting_global_image_lock:
         if is_str_int(global_image_link) and int(global_image_link) > 1:
             try:
                 global_image_link = get_saved_url(ctx.author_id,int(global_image_link))
             except KeyError:
-                await log_user_error(ctx,f'You dont have any url saved for {global_image_link}, try running the file2url command again!')
+                await log_user_error(ctx,f'*You dont have any url saved for* {global_image_link}, *try running the file2url command again!*')
                 return False
         print(f'{global_image_link = }')
-        await log_message(ctx,f'Downloading {global_image_link}')
+        await log_message(ctx,f'*Downloading* {global_image_link}')
         async with TemporaryDirectory() as tp:
             result = await download_direct_link(ctx,global_image_link,tp,max_size=DL_FILE_TOTAL_LIMIT)
             if isinstance(result,str):
@@ -3152,7 +3152,7 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
                 with Image.open(result) as img:
                     pass
             except Exception:
-                return await log_user_error(ctx,f'{global_image_link} is not a valid image, please give a image link')
+                return await log_user_error(ctx,f'{global_image_link} *is not a valid image, please give a image link*')
             
             with Image.open(result).convert("RGBA") as img:
                 img.save(Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png')
