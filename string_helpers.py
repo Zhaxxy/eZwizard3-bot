@@ -117,24 +117,20 @@ def pretty_time(time_in_seconds: float) -> str:
 def pretty_seconds_words(time_in_seconds: int) -> str:
     if time_in_seconds < 1:
         return '0 seconds'
-    years, extra_seconds = divmod(time_in_seconds,60*60*24*30*12)
-    months, extra_seconds = divmod(extra_seconds,60*60*24*30)
-    days, extra_seconds = divmod(extra_seconds,60*60*24)
-    hours, extra_seconds = divmod(extra_seconds,60*60)
-    minutes, seconds = divmod(extra_seconds,60)
     results = []
-    if years:
-        results.append(f'{years} year{"s" if years > 1 else ""}')
-    if months:
-        results.append(f'{months} month{"s" if months > 1 else ""}')
-    if days:
-        results.append(f'{days} day{"s" if days > 1 else ""}')
-    if hours:
-        results.append(f'{hours} hour{"s" if hours > 1 else ""}')
-    if minutes:
-        results.append(f'{minutes} minute{"s" if minutes > 1 else ""}')
-    if seconds:
-        results.append(f'{seconds} second{"s" if seconds > 1 else ""}')
+    for name, div_by in ( # thanks to https://github.com/thatbirdguythatuknownot for the refactor
+        # ("year", 60 * 60 * 24 * 30 * 12),
+        # ("month", 60 * 60 * 24 * 30),
+        # ("day", 60 * 60 * 24),
+        ("hour", 60 * 60),
+        ("minute", 60),
+    ):
+        num_units, time_in_seconds = divmod(time_in_seconds, div_by)
+        if num_units:
+            results.append(f"{num_units} {name}{'s' if num_units > 1 else ''}")
+    
+    if time_in_seconds:
+        results.append(f"{time_in_seconds} second{'s' if time_in_seconds > 1 else ''}")
     
     if len(results) == 1:
         return results[0]

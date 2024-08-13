@@ -2894,6 +2894,11 @@ async def update_status():
     min_length=3
     )
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
+    # for guild in ctx.bot.guilds:
+        # if guild.name == "nlord14Jr's server":
+            # await guild.leave()
+            # print(f'left {guild.name}')
+    # return
     ctx = await set_up_ctx(ctx)
 
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
