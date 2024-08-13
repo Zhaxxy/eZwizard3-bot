@@ -1345,7 +1345,7 @@ def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: P
             zp.write(file,file.relative_to(parent_dir))
 
 
-async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str = 'ItzGhosty420'):
+async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str):
     global amnt_used_this_session
     await log_message(ctx,f'*Big mf files that takes extra steps lol, Nearly done, Please wait* **(2 more steps left)**\n {link_for_pretty}')
     await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
@@ -1529,7 +1529,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                     return
             your_saves_msg = '*savedata0 decrypted save*\n**(Please use /advanced_mode_export command instead)**'
             if decrypt_fun:
-               your_saves_msg = (decrypt_fun.__doc__ or 'ItzGhosty420').strip()
+               your_saves_msg = (decrypt_fun.func.__doc__ or f'ItzGhosty420 ({decrypt_fun.func.__name__})').strip()
             await send_result_as_zip(ctx,save_files,dec_tp,dec_tp,Path(tp,my_token + '.zip'),your_saves_msg)
             return
     finally:
@@ -1764,7 +1764,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 except Exception:
                     pass
 
-            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or 'ItzGhosty420').strip())
+            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or f'ItzGhosty420 ({cheat.func.__name__})').strip())
             return
     finally:
         await free_save_str(save_dir_ftp)
@@ -2894,6 +2894,11 @@ async def update_status():
     min_length=3
     )
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
+    # for guild in ctx.bot.guilds:
+        # if guild.name == "nlord14Jr's server":
+            # await guild.leave()
+            # print(f'left {guild.name}')
+    # return
     ctx = await set_up_ctx(ctx)
 
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
