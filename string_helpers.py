@@ -96,7 +96,10 @@ def extract_drive_file_id(link: str,/) -> str:
         return link.split('https://drive.google.com/file/d/')[-1].split('?')[0].split('/')[0]
     if link.startswith('https://drive.google.com/uc?id='):
         return link.split('https://drive.google.com/uc?id=')[-1].split('&')[0]
-    
+    if link.startswith('https://drive.google.com/file/u/0/d/'):
+        if not '/view' in link:
+            return ''
+        return link.split('https://drive.google.com/file/u/0/d/')[-1].split('/view')[0]
     return ''
 
 MAKE_FOLDER_NAME_SAFE_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_'
