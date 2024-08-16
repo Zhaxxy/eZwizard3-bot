@@ -742,7 +742,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
         try:
             link = await get_direct_dl_link_from_mediafire_link(link)
         except Exception as e:
-            return f'Bad mediafire link {type(e).__name__}: {e}'
+            return f'Bad mediafire link {type(e).__name__}: {e} (we dont accept folders, if you passed in a folder)'
     # session_timeout = None
     # if link.startswith('https://zaprit.fish/dl_archive/'):
         # session_timeout = aiohttp.ClientTimeout(total=None,sock_connect=60*10,sock_read=60*10)
@@ -3300,6 +3300,7 @@ async def main() -> int:
                         raise ValueError(f'broken base save {eeeee}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
         print('done checking!')
         bot = interactions.Client(token=CONFIG['discord_token'])
+        bot.load_extension("title_id_lookup_commands")
         await bot.astart()
     return 0 
 
