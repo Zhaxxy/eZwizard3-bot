@@ -200,7 +200,7 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
     ctx.ezwizard_mode = mode
-    await log_message(ctx,f'*Pleast wait, if over a minute is spent here do the command again!* {nth_time}th time here',_do_print = False)
+    await log_message(ctx,f'*Pleast wait, ItzGhosty420\'s Bot is currently in use!\nPlease retry the command in a few moments*\n*Your* **{nth_time}st** *time trying a command, Please do not try multiple times!*',_do_print = False)
     ctx.ezwizard_setup_done = 1
     return ctx
 
@@ -550,7 +550,7 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
         leader = ''
         error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
     else:
-        leader = '*Your save is basically fucked...*\n*If you would like more details about the error, use* ``/set_verbose_mode`` command*\n'
+        leader = '*Your save is basically fucked...\n'
         error_msg = f'```{sys.exc_info()[1]}```'
     
     if error_msg == '```' + '```':
@@ -715,7 +715,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
         try:
             zip_file = await get_file_info_from_id(new_link)
         except Exception as e:
-            return f'**THIS LINK IS NOT PUBLIC**<a:pespepenotfunnyt:1272150300114944062>\n {link}\n*Please click share on your link* & **Give access to anybody with this link**<:Nice:1272144601033211924>'
+            return f'**THIS LINK IS NOT PUBLIC** <a:pespepenotfunnyt:1272150300114944062>\n {link}\n*Please click share on your link* & **Give access to anybody with this link** <:Nice:1272144601033211924>'
         if validation_result := validation(zip_file.file_name_as_path):
             return f'{link} failed validation reason: {validation_result}'
         
@@ -829,7 +829,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
                 return f'*Could not find any decrypted saves in* {link}, *make sure to put the decrypted save contents in a savedata0 folder and upload that, or use the /raw_encrypt_folder_type_2 command*'
 
             if len(seen_savedata0_folders) > 1:
-                return f'*Too many decrypted saves in* {link},\n*Please note: I only support encrypting one save per command boss*'
+                return f'*Too many decrypted saves in* {link},\n**Please note:**\n*Please make sure you have a* **Zipped CUSAXXXX & SaveData Folder** *If encrypting multiple files!\nOtherwise I only support encrypting* **1 ** *Save per command boss!*'
             for savedata0_folder in seen_savedata0_folders:
                 pass
         else:
