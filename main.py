@@ -307,7 +307,7 @@ class CleanEncryptedSaveOption(Enum):
     DELETE_ALL_INCLUDING_SCE_SYS = 2
 
 class SpecialSaveFiles(Enum):
-    MINECRAFT_1GB_MCWORLD = 0
+    MINECRAFT_CUSTOM_SIZE_MCWORLD = 0
     ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT = 1
     LBP3_LEVEL_BACKUP = 2
     LBP3_ADV_BACKUP = 3
@@ -742,7 +742,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
         try:
             link = await get_direct_dl_link_from_mediafire_link(link)
         except Exception as e:
-            return f'Bad mediafire link {type(e).__name__}: {e}'
+            return f'Bad mediafire link {type(e).__name__}: {e} (we dont accept folders, if you passed in a folder)'
     # session_timeout = None
     # if link.startswith('https://zaprit.fish/dl_archive/'):
         # session_timeout = aiohttp.ClientTimeout(total=None,sock_connect=60*10,sock_read=60*10)
@@ -1161,7 +1161,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
     pretty_save_dir = white_file.relative_to(parent_dir)
     mount_save_title_id = BASE_TITLE_ID if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
     
-    if special_thing == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+    if special_thing == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
         for chet in cheats:
             if chet.kwargs.get('decrypted_save_folder'):
                 await log_message(ctx,f'*doing magic with file management on your mc world*')
@@ -1571,7 +1571,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
         return
     try:
         my_token = await get_time_as_string_token()
-        if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+        if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
             mc_filename = f'BedrockWorld{my_token.replace("_","")}@P547'
             mc_base_title_id = 'CUSA00265'
             real_save_dir_ftp = mc_filename
@@ -1621,7 +1621,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 await log_user_error(ctx,'unimplemented')
                 return
             else:
-                if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD or isinstance(save_files,Lbp3BackupThing):
+                if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD or isinstance(save_files,Lbp3BackupThing):
                     mc_new_white_path = Path(enc_tp, make_ps4_path(account_id,mc_base_title_id),mc_filename)
                     mc_new_bin_path = Path(enc_tp , make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
                     
@@ -1637,7 +1637,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 real_names = []
                 results_big = []
                 for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
-                    if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD:
+                    if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
                         pass
                     elif isinstance(save_files,Lbp3BackupThing):
                         pass
@@ -1769,7 +1769,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
     finally:
         await free_save_str(save_dir_ftp)
         delete_chain(ctx.author_id)
-        if save_files == SpecialSaveFiles.MINECRAFT_1GB_MCWORLD or isinstance(save_files,Lbp3BackupThing):
+        if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD or isinstance(save_files,Lbp3BackupThing):
             custon_decss1 = lambda: asyncio.run(delete_base_save_just_ftp(BASE_TITLE_ID,real_save_dir_ftp))
             await asyncio.get_running_loop().run_in_executor(None,custon_decss1)  # TODO could be dangerous we are not using the mounted_saves_at_once sempahore
 
@@ -2378,7 +2378,7 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS
     kwargs['unpack_first_root_folder'] = True
     kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
-    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_1GB_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 
 @interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
@@ -3300,6 +3300,7 @@ async def main() -> int:
                         raise ValueError(f'broken base save {eeeee}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
         print('done checking!')
         bot = interactions.Client(token=CONFIG['discord_token'])
+        bot.load_extension("title_id_lookup_commands")
         await bot.astart()
     return 0 
 

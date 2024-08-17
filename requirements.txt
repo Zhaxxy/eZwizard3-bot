@@ -19,3 +19,4 @@ aioshutil
 async-lru
 ujson
 humanize
+rapidfuzz
