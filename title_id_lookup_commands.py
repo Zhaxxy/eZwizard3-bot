@@ -81,7 +81,6 @@ class TitleIdLookupCommands(Extension):
         found_things = set()
         for title_id,game_name_and_region in KNOWN_TITLE_IDS.items():
             if len(found_things) > 10:
-                print(found_things)
                 return await ctx.send(embed=TOO_MANY_GAMES_EMBED)
             if fuzz.QRatio(game_name_and_region[0], game_name, processor=utils.default_process) >= fuzz_score_to_match:
                 if (not region or region in game_name_and_region[1]):
