@@ -550,7 +550,7 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
         leader = ''
         error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
     else:
-        leader = '*Your save is basically fucked...\n'
+        leader = '*Your save is basically fucked...*\n'
         error_msg = f'```{sys.exc_info()[1]}```'
     
     if error_msg == '```' + '```':
