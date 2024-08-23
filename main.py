@@ -820,7 +820,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
-        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
+        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_savedata0 = '**Since eZwizard3, you no longer have to upload decrypted saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
         await log_message(ctx,f'Getting files metadata from folder {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
