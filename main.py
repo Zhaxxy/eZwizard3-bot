@@ -210,10 +210,12 @@ async def log_message(ctx: interactions.SlashContext, msg: str,*,_do_print: bool
         print(msg)
 
     channel = ctx.channel or ctx.author
-    try:
-        msg = ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid + msg
-    except AttributeError:
-        pass
+
+    noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
+    for attr_name in noitce_msgs:
+        new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
+        msg = getattr(ctx,attr_name) + new_line_chars + msg
+
     
     
     for msg_chunk in chunker(msg,2000-1-3):
@@ -245,10 +247,13 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         # return
     print(f'user bad ##################\n{error_msg}')
     channel = ctx.channel or ctx.author
-    try:
-        error_msg = ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid + error_msg
-    except AttributeError:
-        pass
+    
+    noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
+    for attr_name in noitce_msgs:
+        new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
+        error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
+    
+    
     full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
     
     first_time = True
@@ -270,10 +275,13 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
     print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
     channel = ctx.channel or ctx.author
-    try:
-        success_msg = ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid + success_msg
-    except AttributeError:
-        pass
+    
+    noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
+    for attr_name in noitce_msgs:
+        new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
+        success_msg = getattr(ctx,attr_name) + new_line_chars + success_msg
+
+    
     full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
     
     first_time = True
@@ -599,7 +607,7 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
         except KeyError: pass
         else:
             if my_account_id_for_my_acc == my_account_id:
-                ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid = '**Remember, you dont have to manually type in your account id, just put 0 in the field!**\n\n'
+                ctx.ezwizard3_special_ctx_attr_noticemsg_omljustusethe0optionsaccountid = '**Remember, you dont have to manually type in your account id, just put 0 in the field!**'
         return my_account_id
     except ValueError:
         return f'{account_id} is not a valid account id, it should be the one in your SAVEDATA folder! Or get it from the `/my_account_id` command'
@@ -652,7 +660,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
 
             ps4_saves.append((zip_file.path,white_file))
         if not ps4_saves:
-            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAXXXXX folder? we also do not support nested archives so make sure there are no archives in this. your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
+            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAxxxxx folder? we also do not support nested archives so make sure there are no archives in this. your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         
         try:
             ctx.ezwizard3_special_ctx_attr_special_save_files_thing
@@ -812,6 +820,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
+        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
         await log_message(ctx,f'Getting files metadata from folder {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
@@ -943,6 +952,8 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
+        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the CUSAxxxxx folder from any download link, (like discord file links) or use /file2url command**'
+        
         await log_message(ctx,f'Getting files metadata from folder {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link))
@@ -952,7 +963,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAXXXXX folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
+            return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAxxxxx folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
@@ -2531,7 +2542,7 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
 @interactions.slash_command(name="re_region", description=f"Re region your save files! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files to be re regioned',interactions.OptionType.STRING,True)
 @account_id_opt
-@interactions.slash_option('gameid','The gameid of the region you want, in format CUSAXXXXX',interactions.OptionType.STRING,True,max_length=9,min_length=9)
+@interactions.slash_option('gameid','The gameid of the region you want, in format CUSAxxxxx',interactions.OptionType.STRING,True,max_length=9,min_length=9)
 async def do_re_region(ctx: interactions.SlashContext,save_files: str,account_id: str, gameid: str):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(re_region,{'gameid':gameid.upper()}))
 
