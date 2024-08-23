@@ -193,15 +193,15 @@ async def get_time_as_string_token() -> str:
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
     nth_time = 1
     try:
-        ctx.ezwizard_setup_done += 1
-        nth_time = ctx.ezwizard_setup_done
+        ctx.ezwizard3_special_ctx_attr_setup_done += 1
+        nth_time = ctx.ezwizard3_special_ctx_attr_setup_done
     except AttributeError:
         await ctx.defer()
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
-    ctx.ezwizard_mode = mode
+    ctx.ezwizard3_special_ctx_attr_mode = mode
     await log_message(ctx,f'Pleast wait, if over a minute is spent here do the command again! {nth_time}th time here',_do_print = False)
-    ctx.ezwizard_setup_done = 1
+    ctx.ezwizard3_special_ctx_attr_setup_done = 1
     return ctx
 
 
@@ -211,7 +211,7 @@ async def log_message(ctx: interactions.SlashContext, msg: str,*,_do_print: bool
 
     channel = ctx.channel or ctx.author
     try:
-        msg = ctx.ezwizard_omljustusethe0optionsaccountid + msg
+        msg = ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid + msg
     except AttributeError:
         pass
     
@@ -246,7 +246,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     print(f'user bad ##################\n{error_msg}')
     channel = ctx.channel or ctx.author
     try:
-        error_msg = ctx.ezwizard_omljustusethe0optionsaccountid + error_msg
+        error_msg = ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid + error_msg
     except AttributeError:
         pass
     full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
@@ -271,7 +271,7 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
     print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
     channel = ctx.channel or ctx.author
     try:
-        success_msg = ctx.ezwizard_omljustusethe0optionsaccountid + success_msg
+        success_msg = ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid + success_msg
     except AttributeError:
         pass
     full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
@@ -599,7 +599,7 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
         except KeyError: pass
         else:
             if my_account_id_for_my_acc == my_account_id:
-                ctx.ezwizard_omljustusethe0optionsaccountid = '**Remember, you dont have to manually type in your account id, just put 0 in the field!**\n\n'
+                ctx.ezwizard3_special_ctx_attr_omljustusethe0optionsaccountid = '**Remember, you dont have to manually type in your account id, just put 0 in the field!**\n\n'
         return my_account_id
     except ValueError:
         return f'{account_id} is not a valid account id, it should be the one in your SAVEDATA folder! Or get it from the `/my_account_id` command'
@@ -655,11 +655,11 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAXXXXX folder? we also do not support nested archives so make sure there are no archives in this. your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         
         try:
-            ctx.ezwizard_special_save_files_thing
+            ctx.ezwizard3_special_ctx_attr_special_save_files_thing
         except AttributeError:
             pass
         else:
-            if ctx.ezwizard_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
+            if ctx.ezwizard3_special_ctx_attr_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
                     return f'The archive {link} has more then one save, we can only do 1 save at once for encrypt and import commands, please delete the other saves in this. If you want to upload the same decrypted save to mutiple encrypted saves (which you probably dont) set allow_mulit_enc to Yes'
         
@@ -956,11 +956,11 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
-            ctx.ezwizard_special_save_files_thing
+            ctx.ezwizard3_special_ctx_attr_special_save_files_thing
         except AttributeError:
             pass
         else:
-            if ctx.ezwizard_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
+            if ctx.ezwizard3_special_ctx_attr_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
                     return f'The folder {link} has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes'
 
@@ -1783,7 +1783,7 @@ async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
 # @dec_enc_save_files
 # async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
     # await base_do_dec(ctx,save_files)
-# ctx.ezwizard_special_save_files_thing
+# ctx.ezwizard3_special_ctx_attr_special_save_files_thing
 
 async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
     """
@@ -2303,7 +2303,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
 @allow_mulit_enc_opt
 async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
-        ctx.ezwizard_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+        ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = False
@@ -2336,7 +2336,7 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
 @allow_mulit_enc_opt
 async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
-        ctx.ezwizard_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+        ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
@@ -2824,7 +2824,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
 @allow_mulit_enc_opt
 async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
     if not kwargs.pop('allow_mulit_enc',None):
-        ctx.ezwizard_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+        ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     import_func = game_enc_functions[kwargs.pop('game')]
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(import_func,kwargs))
