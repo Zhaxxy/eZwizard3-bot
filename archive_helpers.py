@@ -55,7 +55,7 @@ async def get_archive_info(path_to_archive: Path | str) -> SevenZipInfo:
     try:
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
-        stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
+        raise Exception(f'bad zip file? error code {proc.returncode} error: could not deocde stdout') # We dont put the stdout var here, as it can be huge in some cases
     if proc.returncode:
         raise Exception(f'bad zip file? error code {proc.returncode} error: {stderr}{stdout}')
     
@@ -93,7 +93,7 @@ async def extract_full_archive(path_to_archive: Path | str, output_loc: Path | s
     try:
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
-        stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
+        raise Exception(f'bad zip file? error code {proc.returncode} error: could not deocde stdout') # We dont put the stdout var here, as it can be huge in some cases
     if proc.returncode:
         raise Exception(f'bad zip file? error code {proc.returncode} error: {stderr}{stdout}')
 
@@ -110,7 +110,7 @@ async def extract_single_file(path_to_archive: Path | str, name_of_file: Path | 
     try:
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
-        stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
+        raise Exception(f'bad zip file? error code {proc.returncode} error: could not deocde stdout') # We dont put the stdout var here, as it can be huge in some cases
     if proc.returncode:
         raise Exception(f'bad zip file? error code {proc.returncode} error: {stderr}{stdout}')
     

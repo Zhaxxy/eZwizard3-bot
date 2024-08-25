@@ -20,7 +20,7 @@ async def check_if_git_exists() -> str:
     try:
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
-        stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
+        raise Exception(f'git no exist, got error code {proc.returncode} error: could not decode stdout') # We dont put the stdout var here, as it can be huge in some cases
     if stderr or proc.returncode:
         raise Exception(f'git no exist, got error code {proc.returncode} error: {stderr}{stdout}')
     return stdout.strip()
@@ -38,7 +38,7 @@ async def run_git_command(cmd: tuple[str], git_repo_dir: str | Path = getcwd()) 
     try:
         stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
     except UnicodeDecodeError:
-        stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
+        raise Exception(f'Error when running git command, code {proc.returncode} error: could not decode stdout') # We dont put the stdout var here, as it can be huge in some cases
     if proc.returncode:
         raise Exception(f'Error when running git command, code {proc.returncode} error: {stderr}{stdout}')
     return stdout.strip() + stderr.strip(),proc.returncode
@@ -87,7 +87,7 @@ async def get_remote_count() -> int:
         try:
             stdout, stderr = stdout.decode('utf-8').replace('\r\n','\n'), stderr.decode('utf-8').replace('\r\n','\n')
         except UnicodeDecodeError:
-            stdout, stderr = repr(stdout.replace(b'\r\n',b'\n')), repr(stderr.replace(b'\r\n',b'\n'))
+            raise Exception(f'Error when running git command, code {proc.returncode} error: could not decode stdout') # We dont put the stdout var here, as it can be huge in some cases
         if proc.returncode:
             raise Exception(f'Error when running git command, code {proc.returncode} error: {stderr}{stdout}')
         
