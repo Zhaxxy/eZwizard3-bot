@@ -47,7 +47,7 @@ test_7z()
 async def get_archive_info(path_to_archive: Path | str) -> SevenZipInfo:
     proc = await asyncio.create_subprocess_exec(
        *SEVEN_ZIP_ARGS,
-        'l','-ba','-slt',path_to_archive,
+        'l','-ba','-slt',path_to_archive,'-sccUTF-8',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -85,7 +85,7 @@ async def extract_full_archive(path_to_archive: Path | str, output_loc: Path | s
     output_loc = output_loc or getcwd()
     proc = await asyncio.create_subprocess_exec(
        *SEVEN_ZIP_ARGS,
-        command,path_to_archive,f'-o{output_loc}',
+        command,path_to_archive,f'-o{output_loc}','-sccUTF-8',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -102,7 +102,7 @@ async def extract_single_file(path_to_archive: Path | str, name_of_file: Path | 
     output_loc = output_loc or getcwd()
     proc = await asyncio.create_subprocess_exec(
        *SEVEN_ZIP_ARGS,
-        command,path_to_archive,name_of_file,f'-o{output_loc}',
+        command,path_to_archive,name_of_file,f'-o{output_loc}','-sccUTF-8',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
