@@ -62,6 +62,7 @@ WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSI
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
+DISCORD_BOT_STATUS_MAX_LENGTH = 128 - len('...')
 ZIP_LOOSE_FILES_MAX_AMT = 14567+1
 MAX_RESIGNS_PER_ONCE = 99
 DOWNLOAD_CHUNK_SIZE = 1024
@@ -2858,6 +2859,45 @@ async def ready():
 update_status_start = time.perf_counter()
 amnt_used_this_session = 0
 old_amnt_of_free = 0
+BOT_STATUS_GETTING = asyncio.Lock()
+
+async def get_bot_status(*,trunacte_status_text: bool = True) -> tuple[str,interactions.Status]:
+    global old_amnt_of_free
+    global update_status_start
+    global total_runtime
+    global _did_first_boot
+    async with BOT_STATUS_GETTING:
+        amnt_of_free = await get_amnt_free_save_strs()
+        
+        leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
+        
+           
+        if amnt_of_free != old_amnt_of_free:
+            update_status_start = time.perf_counter()
+        new_time = pretty_time(time.perf_counter() - update_status_start)
+        
+        cumulative_up_time = pretty_seconds_words(total_runtime,shorter_text=trunacte_status_text)
+        
+        if not amnt_of_free:
+            status = interactions.Status.DO_NOT_DISTURB
+            msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+        elif amnt_of_free == len(SAVE_DIRS):
+            status = interactions.Status.IDLE
+            msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+        else:
+            status = interactions.Status.ONLINE
+            msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+        
+        bot_status_text = leader+msg
+        
+        if trunacte_status_text and len(bot_status_text) > DISCORD_BOT_STATUS_MAX_LENGTH:
+            bot_status_text = bot_status_text[:DISCORD_BOT_STATUS_MAX_LENGTH] + '...'
+        
+        old_amnt_of_free = amnt_of_free
+    
+        return bot_status_text,status
+
+
 @interactions.Task.create(interactions.IntervalTrigger(seconds=30)) # TODO do not hardcode the 30
 async def _update_status():
     global total_runtime
@@ -2866,35 +2906,19 @@ async def _update_status():
         set_total_runtime(total_runtime)
     await update_status()
 async def update_status():
-    global old_amnt_of_free
-    global update_status_start
-    global total_runtime
-    global _did_first_boot
-    amnt_of_free = await get_amnt_free_save_strs()
-    
-    leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
-    
-       
-    if amnt_of_free != old_amnt_of_free:
-        update_status_start = time.perf_counter()
-    new_time = pretty_time(time.perf_counter() - update_status_start)
-
-    if not amnt_of_free:
-        status = interactions.Status.DO_NOT_DISTURB
-        msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {pretty_seconds_words(total_runtime)}'
-    elif amnt_of_free == len(SAVE_DIRS):
-        status = interactions.Status.IDLE
-        msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {pretty_seconds_words(total_runtime)}'
-    else:
-        status = interactions.Status.ONLINE
-        msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {pretty_seconds_words(total_runtime)}'
+    bot_status_text,status = await get_bot_status()
     await bot.change_presence(activity=interactions.Activity.create(
-                                name=leader+msg),
+                                name=bot_status_text),
                                 status=status)
 
-    old_amnt_of_free = amnt_of_free
-
-
+@interactions.slash_command(name="get_bot_status",description="Gets some info about the bot")
+async def do_get_bot_status(ctx: interactions.SlashContext):
+    await ctx.defer()
+    bot_status_text,_ = await get_bot_status(trunacte_status_text=False)
+    await ps4_life_check(ctx)
+    await ctx.send(f'bot latency is {ctx.bot.latency * 1000:.2f}ms\n' + bot_status_text)
+    await ctx.send(await ezwizard3_info())
+    
 @interactions.slash_command(name="my_account_id",description="Get your Account ID from your psn name")
 @interactions.slash_option(
     name="psn_name",
@@ -2984,7 +3008,8 @@ async def ping_test(ctx: interactions.SlashContext):
             cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
         
     await ctx.send(cool_ping_msg,ephemeral=False)
-    await ctx.send(await ezwizard3_info())
+    if CONFIG['should_ping_command_show_git_stuff']:
+        await ctx.send(await ezwizard3_info())
 
 @interactions.slash_command(name='file2url',description="Convenience command to get url from discord attachment")
 @interactions.slash_option(
