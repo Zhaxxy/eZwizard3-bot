@@ -116,18 +116,28 @@ def pretty_time(time_in_seconds: float) -> str:
     minutes, seconds = divmod(extra_seconds,60)
     return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
 
+ONLY_HOURS_AND_MINUTES_SECONDS = ( # thanks to https://github.com/thatbirdguythatuknownot for the refactor
+    # ("year", 60 * 60 * 24 * 30 * 12),
+    # ("month", 60 * 60 * 24 * 30),
+    # ("day", 60 * 60 * 24),
+    ("hour", 60 * 60),
+    ("minute", 60),
+)
 
-def pretty_seconds_words(time_in_seconds: int) -> str:
+TIMES_SECONDS = (
+    ("year", 60 * 60 * 24 * 30 * 12),
+    ("month", 60 * 60 * 24 * 30),
+    ("day", 60 * 60 * 24),
+    ("hour", 60 * 60),
+    ("minute", 60),
+)
+
+def pretty_seconds_words(time_in_seconds: int,/,*,shorter_text: bool = True) -> str:
     if time_in_seconds < 1:
         return '0 seconds'
     results = []
-    for name, div_by in ( # thanks to https://github.com/thatbirdguythatuknownot for the refactor
-        # ("year", 60 * 60 * 24 * 30 * 12),
-        # ("month", 60 * 60 * 24 * 30),
-        # ("day", 60 * 60 * 24),
-        ("hour", 60 * 60),
-        ("minute", 60),
-    ):
+    divy = ONLY_HOURS_AND_MINUTES_SECONDS if shorter_text else TIMES_SECONDS
+    for name, div_by in divy:
         num_units, time_in_seconds = divmod(time_in_seconds, div_by)
         if num_units:
             results.append(f"{num_units} {name}{'s' if num_units > 1 else ''}")
@@ -148,6 +158,7 @@ def _raise_bad_config(missing_key: str) -> NoReturn:
 
 
 def load_config() -> frozendict:
+    SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT = '\n# Simple boolean, if set to true then the ping command will show some extra info such as what version bot is on or if it needs updating\n# or if its false, it wont show that extra stuff\nshould_ping_command_show_git_stuff:\n    true\n'
     try:
         with open('config.yaml','r') as f:
             my_config: dict = yaml.load(f,yaml.Loader)
@@ -189,7 +200,17 @@ allow_bot_usage_in_dms:
 built_in_saves:
   - CUSA12345 LBPXSAVE bigfart some cool description here
 """)
+            f.write(SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT)
         raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yaml file') from None
+
+    key = 'should_ping_command_show_git_stuff'
+    if not (x := my_config.get(key)):
+        with open('config.yaml','a') as f:
+            f.write(SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT)
+        raise Exception(f'config.yaml updated with a new value `{key}` please check it out')
+
+    if not isinstance(x,bool):
+        raise Exception(f'{key} value should ethier be true or false, not {x}')
 
     key = 'discord_token'
     if not (x := my_config.get(key)) or x == 'MTIxMzAQk2APdMtqdXTtSfJcD2.GaxeZo.SLW6IWM7qdSxyQhCvClXINFJF4AIbF6oJVahrb':

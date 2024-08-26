@@ -62,6 +62,7 @@ WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSI
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
+DISCORD_BOT_STATUS_MAX_LENGTH = 128 - len('...')
 ZIP_LOOSE_FILES_MAX_AMT = 14567+1
 MAX_RESIGNS_PER_ONCE = 99
 DOWNLOAD_CHUNK_SIZE = 1024
@@ -193,15 +194,15 @@ async def get_time_as_string_token() -> str:
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
     nth_time = 1
     try:
-        ctx.ezwizard_setup_done += 1
-        nth_time = ctx.ezwizard_setup_done
+        ctx.ezwizard3_special_ctx_attr_setup_done += 1
+        nth_time = ctx.ezwizard3_special_ctx_attr_setup_done
     except AttributeError:
         await ctx.defer()
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
-    ctx.ezwizard_mode = mode
-    await log_message(ctx,f'*Pleast wait, ItzGhosty420\'s Bot is currently in use!\nPlease retry the command in a few moments*\n*Your* **{nth_time}st** *time trying a command, Please do not try multiple times!*',_do_print = False)
-    ctx.ezwizard_setup_done = 1
+ ctx.ezwizard3_special_ctx_attr_mode = mode
+    await log_message(ctx, f'*Pleast wait, ItzGhosty420\'s Bot is currently in use!\nPlease retry the command in a few moments*\n*Your* **{nth_time}st** *time trying a command, Please do not try multiple times!*', _do_print=False)
+    ctx.ezwizard3_special_ctx_attr_setup_done = 1
     return ctx
 
 
@@ -210,10 +211,12 @@ async def log_message(ctx: interactions.SlashContext, msg: str,*,_do_print: bool
         print(msg)
 
     channel = ctx.channel or ctx.author
-    try:
-        msg = ctx.omljustusethe0optionsaccountid + msg
-    except AttributeError:
-        pass
+
+    noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
+    for attr_name in noitce_msgs:
+        new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
+        msg = getattr(ctx,attr_name) + new_line_chars + msg
+
     
     
     for msg_chunk in chunker(msg,2000-1-3):
@@ -245,11 +248,13 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         # return
     print(f'user bad ##################\n{error_msg}')
     channel = ctx.channel or ctx.author
-    try:
-        error_msg = ctx.omljustusethe0optionsaccountid + error_msg
-    except AttributeError:
-        pass
-    full_msg = f'*Yo* <@{ctx.author_id}><a:pepesayshi:1272147595426271305>\n{error_msg}'
+    noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
+    for attr_name in noitce_msgs:
+        new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
+        error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
+
+
+    full_msg = f'*Yo* <@{ctx.author_id}>:pepesayshi:\n{error_msg}'
     
     first_time = True
     for msg_chunk in chunker(full_msg,2000-1-3):
@@ -270,11 +275,13 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
     print(f'{ctx.user} id: {ctx.author_id} *Has started a new command* {success_msg}')
     channel = ctx.channel or ctx.author
-    try:
-        success_msg = ctx.omljustusethe0optionsaccountid + success_msg
-    except AttributeError:
-        pass
-    full_msg = f'**Yo!** <@{ctx.author_id}> <a:pepesayshi:1272147595426271305>\n{success_msg}'
+    noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
+    for attr_name in noitce_msgs:
+        new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
+        success_msg = getattr(ctx,attr_name) + new_line_chars + success_msg
+
+    
+    full_msg = f'**Yo!** <@{ctx.author_id}> :pepesayshi:\n{success_msg}'
     
     first_time = True
     triple_backtick_start = False
@@ -599,7 +606,7 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
         except KeyError: pass
         else:
             if my_account_id_for_my_acc == my_account_id:
-                ctx.omljustusethe0optionsaccountid = '*You dont have to manually type in your account id, Put 0 in the Account ID option!*\n'
+                ctx.ezwizard3_special_ctx_attr_noticemsg_omljustusethe0optionsaccountid = '*You dont have to manually type in your account id, Put 0 in the Account ID option!*\n'
         return my_account_id
     except ValueError:
         return f'*Are you sure you spelled your Account-ID Correctly boss?*\n**{account_id}** *is not a valid*<:whatthe:1272145776344305757>'
@@ -652,14 +659,14 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
 
             ps4_saves.append((zip_file.path,white_file))
         if not ps4_saves:
-            return f'*Oops, I couldnt find anything in your link*<:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAXXXX** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
+            return f'*Oops, I couldnt find anything in your link*:Cry:\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
         
         try:
-            ctx.special_save_files_thing
+            ctx.ezwizard3_special_ctx_attr_special_save_files_thing
         except AttributeError:
             pass
         else:
-            if ctx.special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
+            if ctx.ezwizard3_special_ctx_attr_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
                     return f'*The archive* {link} *has more then one save, we can only do 1 save at once for encrypt and import commands, please delete the other saves in this. If you want to upload the same decrypted save to mutiple encrypted saves (which you probably dont) set allow_mulit_enc to Yes*'
         
@@ -812,6 +819,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
+        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_savedata0 = '**Since eZwizard3, you no longer have to upload decrypted saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
         await log_message(ctx,f'*Grabbing files metadata from folder* {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
@@ -943,6 +951,8 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
+        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the CUSAxxxxx folder from any download link, (like discord file links) or use /file2url command**'
+        
         await log_message(ctx,f'*Getting files metadata from folder*\n {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link))
@@ -952,15 +962,15 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'*I couldnt find anything in your link*<:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAXXXX** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
+            return f'*I couldnt find anything in your link*:Cry:\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
-            ctx.special_save_files_thing
+            ctx.ezwizard3_special_ctx_attr_special_save_files_thing
         except AttributeError:
             pass
         else:
-            if ctx.special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
+            if ctx.ezwizard3_special_ctx_attr_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
                     return f'*The folder* {link} *has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes*'
 
@@ -1783,7 +1793,7 @@ async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
 # @dec_enc_save_files
 # async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
     # await base_do_dec(ctx,save_files)
-# ctx.special_save_files_thing
+# ctx.ezwizard3_special_ctx_attr_special_save_files_thing
 
 async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
     """
@@ -2303,7 +2313,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
 @allow_mulit_enc_opt
 async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
-        ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+        ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = False
@@ -2336,7 +2346,7 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
 @allow_mulit_enc_opt
 async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
-        ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+        ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
@@ -2531,7 +2541,7 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
 @interactions.slash_command(name="re_region", description=f"Re region your save files!")
 @interactions.slash_option('save_files','The save files to be re regioned',interactions.OptionType.STRING,True)
 @account_id_opt
-@interactions.slash_option('gameid','The gameid of the region you want, in format CUSAXXXXX',interactions.OptionType.STRING,True,max_length=9,min_length=9)
+@interactions.slash_option('gameid','The gameid of the region you want, in format CUSAxxxxx',interactions.OptionType.STRING,True,max_length=9,min_length=9)
 async def do_re_region(ctx: interactions.SlashContext,save_files: str,account_id: str, gameid: str):
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(re_region,{'gameid':gameid.upper()}))
 
@@ -2824,7 +2834,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
 @allow_mulit_enc_opt
 async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
     if not kwargs.pop('allow_mulit_enc',None):
-        ctx.special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+        ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     import_func = game_enc_functions[kwargs.pop('game')]
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(import_func,kwargs))
@@ -2847,6 +2857,45 @@ async def ready():
 update_status_start = time.perf_counter()
 amnt_used_this_session = 0
 old_amnt_of_free = 0
+BOT_STATUS_GETTING = asyncio.Lock()
+
+async def get_bot_status(*,trunacte_status_text: bool = True) -> tuple[str,interactions.Status]:
+    global old_amnt_of_free
+    global update_status_start
+    global total_runtime
+    global _did_first_boot
+    async with BOT_STATUS_GETTING:
+        amnt_of_free = await get_amnt_free_save_strs()
+        
+        leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
+        
+           
+        if amnt_of_free != old_amnt_of_free:
+            update_status_start = time.perf_counter()
+        new_time = pretty_time(time.perf_counter() - update_status_start)
+        
+        cumulative_up_time = pretty_seconds_words(total_runtime,shorter_text=trunacte_status_text)
+        
+        if not amnt_of_free:
+            status = interactions.Status.DO_NOT_DISTURB
+            msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+        elif amnt_of_free == len(SAVE_DIRS):
+            status = interactions.Status.IDLE
+            msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+        else:
+            status = interactions.Status.ONLINE
+            msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+        
+        bot_status_text = leader+msg
+        
+        if trunacte_status_text and len(bot_status_text) > DISCORD_BOT_STATUS_MAX_LENGTH:
+            bot_status_text = bot_status_text[:DISCORD_BOT_STATUS_MAX_LENGTH] + '...'
+        
+        old_amnt_of_free = amnt_of_free
+    
+        return bot_status_text,status
+
+
 @interactions.Task.create(interactions.IntervalTrigger(seconds=30)) # TODO do not hardcode the 30
 async def _update_status():
     global total_runtime
@@ -2855,35 +2904,19 @@ async def _update_status():
         set_total_runtime(total_runtime)
     await update_status()
 async def update_status():
-    global old_amnt_of_free
-    global update_status_start
-    global total_runtime
-    global _did_first_boot
-    amnt_of_free = await get_amnt_free_save_strs()
-    
-    leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
-    
-       
-    if amnt_of_free != old_amnt_of_free:
-        update_status_start = time.perf_counter()
-    new_time = pretty_time(time.perf_counter() - update_status_start)
-
-    if not amnt_of_free:
-        status = interactions.Status.DO_NOT_DISTURB
-        msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
-    elif amnt_of_free == len(SAVE_DIRS):
-        status = interactions.Status.IDLE
-        msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
-    else:
-        status = interactions.Status.ONLINE
-        msg = f'{pretty_seconds_words(total_runtime)}'
+    bot_status_text,status = await get_bot_status()
     await bot.change_presence(activity=interactions.Activity.create(
-                                name=leader+msg),
+                                name=bot_status_text),
                                 status=status)
 
-    old_amnt_of_free = amnt_of_free
-
-
+@interactions.slash_command(name="get_bot_status",description="Gets some info about the bot")
+async def do_get_bot_status(ctx: interactions.SlashContext):
+    await ctx.defer()
+    bot_status_text,_ = await get_bot_status(trunacte_status_text=False)
+    await ps4_life_check(ctx)
+    await ctx.send(f'bot latency is {ctx.bot.latency * 1000:.2f}ms\n' + bot_status_text)
+    await ctx.send(await ezwizard3_info())
+    
 @interactions.slash_command(name="my_account_id",description="Enter your PSN Username to recieve your HEX Save ID")
 @interactions.slash_option(
     name="psn_name",
@@ -2973,7 +3006,8 @@ async def ping_test(ctx: interactions.SlashContext):
             cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_TEST_MODE}'
         
     await ctx.send(cool_ping_msg,ephemeral=False)
-    #await ctx.send(await ezwizard3_info())
+    if CONFIG['should_ping_command_show_git_stuff']:
+        await ctx.send(await ezwizard3_info())
 
 @interactions.slash_command(name='file2url',description="Convenience command to get url from discord attachment")
 @interactions.slash_option(
