@@ -602,7 +602,7 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
                 ctx.omljustusethe0optionsaccountid = '*You dont have to manually type in your account id, Put 0 in the Account ID option!*\n'
         return my_account_id
     except ValueError:
-        return f'*Are you sure you spelled your PSN Username Correctly boss?*\n**{psn_name}** *is not a valid PSN username*<:whatthe:1272145776344305757>'
+        return f'*Are you sure you spelled your Account-ID Correctly boss?*\n**{account_id}** *is not a valid*<:whatthe:1272145776344305757>'
 
 
 def list_ps4_saves(folder_containing_saves: Path,/) -> Generator[tuple[Path,Path],None,None]:
@@ -844,7 +844,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
             return f'*The decrypted save* {link} *has too many loose files* ({test[1]}), *max is* {ZIP_LOOSE_FILES_MAX_AMT} *loose files*'
 
-        await log_message(ctx,f'*I am downloading* {link} *savedata0 folder*')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!*\n{link}')
         Path(output_folder,'savedata0').mkdir(parents=True,exist_ok=True)# TODO maybe i dont gotta do this, but i am
         new_savedata0_folder_made = Path(output_folder,'savedata0')
         try:
@@ -952,7 +952,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'*Oops, I couldnt find anything in your link*<:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAXXXX** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
+            return f'*I couldnt find anything in your link*<:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAXXXX** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
@@ -977,7 +977,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
             new_white_path = Path(output_folder, make_folder_name_safe(white_file.file_name_as_path.parent), make_ps4_path(account_id,white_file.file_name_as_path.parent.name),white_file.file_name_as_path.name)
             new_bin_path = Path(output_folder, make_folder_name_safe(bin_file.file_name_as_path.parent), make_ps4_path(account_id,bin_file.file_name_as_path.parent.name),bin_file.file_name_as_path.name)
 
-            await log_message(ctx,f'*Downloading* {white_file.file_name_as_path} *from* {link}')
+            await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {white_file.file_name_as_path} *from* {link}')
             try:
                 await download_file(white_file.file_id,new_white_path)
                 await download_file(bin_file.file_id,new_bin_path)
@@ -1030,7 +1030,7 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'*Please Wait*'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
-        await log_message(ctx,f'*Downloading* {pretty_save_dir} *from PS4(')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {pretty_save_dir}')
         custon_decss = lambda: asyncio.run(_download_encrypted_from_ps4(bin_file_out, white_file_out, ftp_bin, ftp_white))
         await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
@@ -1164,7 +1164,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
     if special_thing == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
         for chet in cheats:
             if chet.kwargs.get('decrypted_save_folder'):
-                await log_message(ctx,f'*doing magic with file management on your mc world*')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!*')
                 savedata0hehe = chet.kwargs.get('decrypted_save_folder') / 'savedata0'
 
                 if not (savedata0hehe / 'level.dat').is_file():
@@ -1273,7 +1273,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 await fix_packs('world_resource_packs.json','resource_packs','resource')
                 cheats.append(CheatFunc(re_region,{'gameid':chet.kwargs.pop('gameid')}))
 
-    await log_message(ctx,f'*Working Magic with your* {"".join(chet.pretty() for chet in cheats)} *to* {pretty_save_dir}')
+    await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!*\n{"".join(chet.pretty() for chet in cheats)} *to* {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id,special_thing))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
@@ -1334,7 +1334,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
     if decrypt_fun:
         await log_message(ctx,f'*Adding custom decryption* {decrypt_fun.pretty()} *for* {pretty_save_dir}')
     else:
-        await log_message(ctx,f'*Attemping to download savedata0 folder from decrypted* {pretty_save_dir}')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_decrypt_saves_on_ps4(bin_file, white_file, parent_dir, decrypted_save_ouput, save_dir_ftp, decrypt_fun, pretty_save_dir,ctx.author_id))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
@@ -1352,7 +1352,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
     
     real_file_size = new_zip_name.stat().st_size
     if real_file_size > ATTACHMENT_MAX_FILE_SIZE:
-        await log_message(ctx,f'*Finally on the* **(last step!)**\n*This mf savefile is.. lol* ({pretty_bytes(real_file_size)} file)')
+        await log_message(ctx,f'*Finally on the* **(last step!)**\n*This mf savefile is..* ({pretty_bytes(real_file_size)} file)')
         try:
             google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
         except Exception as e:
@@ -1425,14 +1425,14 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     except KeyError:
                         await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
                         return False
-                await log_message(ctx,f'*Downloading* {link} {arg_name}')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {link} {arg_name}')
                 result = await download_direct_link(ctx,link,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT,validation=filename_is_not_an_archive)
                 if isinstance(result,str):
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = result
             if isinstance(link,interactions.Attachment):
-                await log_message(ctx,f'*Downloading attachment* {arg_name}')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {arg_name}')
                 result = await download_direct_link(ctx,link.url,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT)
                 if isinstance(result,str):
                     await log_user_error(ctx,result)
@@ -1447,7 +1447,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     except KeyError:
                         await log_user_error(ctx,f'*You dont have any url saved for* {link}, *try running the file2url command again!*')
                         return False
-                await log_message(ctx,f'*Downloading* {link} *savedata0 folder*')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {link} *savedata0 folder*')
                 result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder,arg_name=='decrypted_save_folder',cheat.kwargs['unpack_first_root_folder'])
                 if result:
                     await log_user_error(ctx,result)
@@ -2407,7 +2407,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
     gameid = kwargs.pop('gameid')
     async with TemporaryDirectory() as tp:
         tp = Path(tp)
-        await log_message(ctx,f'*Downloading slot* `{slotid_from_drydb}`')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* `{slotid_from_drydb}`')
         result = await download_direct_link(ctx,f'https://zaprit.fish/dl_archive/{slotid_from_drydb}',tp)
         if isinstance(result,str):
             if not isinstance(result,ZapritFishKnownLinkError):
@@ -2962,7 +2962,7 @@ async def see_cheat_chain(ctx: interactions.SlashContext):
 async def ping_test(ctx: interactions.SlashContext):
     await ctx.defer()
     await ps4_life_check(ctx)
-    cool_ping_msg = f'<@{ctx.author_id}> <a:pepesayshi:1272147595426271305>\n<:j_:1272151363530522655>*Online & Activee!*<:j_:1272151363530522655>\n📢 *Bot latency is* **{ctx.bot.latency * 1000:.2f}ms**'
+    cool_ping_msg =  f'<@{ctx.author_id}> <a:pepesayshi:1272147595426271305>\n<:j_:1272151363530522655>*Online & Activee!*<:j_:1272151363530522655>\n📢 *Bot latency is* **{ctx.bot.latency * 1000:.2f}ms** <:Plant:1272144642753953844>\n'
     
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'
@@ -3009,6 +3009,140 @@ async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachm
     save_url(ctx.author_id,my_file.url,my_file_id)
     await log_user_success(ctx,f'the url is {my_file.url}, or use {my_file_id} in a field that needs a url, like save_files or dl_link')
 
+
+import sqlite3
+import atexit
+import interactions  # Ensure you're using the correct library for your bot (like discord.py, interactions.py, etc.)
+
+# Connect to SQLite database (or create it if it doesn't exist)
+conn = sqlite3.connect('bot_usage.db')
+c = conn.cursor()
+
+# Create a table for tracking command usage
+c.execute('''
+    CREATE TABLE IF NOT EXISTS command_usage (
+        user_id TEXT PRIMARY KEY,
+        usage_count INTEGER DEFAULT 0
+    )
+''')
+conn.commit()
+
+# Ensure the database connection is closed when the bot shuts down
+@atexit.register
+def close_connection():
+    conn.close()
+
+# Function to track command usage
+async def track_command_usage(user_id: str):
+    # Check if the user exists in the database
+    c.execute('SELECT usage_count FROM command_usage WHERE user_id = ?', (user_id,))
+    result = c.fetchone()
+    
+    if result:
+        # If the user exists, increment their usage count
+        c.execute('UPDATE command_usage SET usage_count = usage_count + 1 WHERE user_id = ?', (user_id,))
+    else:
+        # If the user doesn't exist, add them with an initial count of 1
+        c.execute('INSERT INTO command_usage (user_id, usage_count) VALUES (?, 1)', (user_id,))
+    
+    conn.commit()
+
+# Modify your existing function to track usage
+async def set_up_ctx(ctx: interactions.SlashContext, *, mode=0) -> interactions.SlashContext:
+    # Track command usage
+    await track_command_usage(str(ctx.author.id))
+    
+    # Your existing code...
+    nth_time = 1
+    try:
+        ctx.ezwizard_setup_done += 1
+        nth_time = ctx.ezwizard_setup_done
+    except AttributeError:
+        await ctx.defer()
+    ctx.ezwizard_mode = mode
+    await log_message(ctx, f'*Pleast wait, ItzGhosty420\'s Bot is currently in use!\nPlease retry the command in a few moments*\n*Your* **{nth_time}st** *time trying a command, Please do not try multiple times!*', _do_print=False)
+    ctx.ezwizard_setup_done = 1
+    
+    return ctx
+
+# Slash command to display the leaderboard
+@interactions.slash_command(
+    name="leaderboard",
+    description="Shows the top users who have used the bot the most.",
+)
+async def leaderboard(ctx: interactions.SlashContext):
+    # Retrieve and sort the data by usage_count in descending order
+    c.execute('SELECT user_id, usage_count FROM command_usage ORDER BY usage_count DESC LIMIT 10')
+    top_users = c.fetchall()
+    
+    if not top_users:
+        await ctx.send("No command usage data available.")
+        return
+    
+    # Build the leaderboard message
+    leaderboard_msg = "**Top Users by Command Usage:**\n\n"
+    for idx, (user_id, usage_count) in enumerate(top_users, start=1):
+        user = await ctx.guild.fetch_member(int(user_id))
+        leaderboard_msg += f"{idx}. {user} - {usage_count} commands\n"
+    
+    await ctx.send(leaderboard_msg)
+
+
+
+import interactions
+
+@interactions.slash_command(name='savebot_information', description="Displays information about the bot!")
+async def bot_info(ctx: interactions.SlashContext):
+    global usage_count
+
+        # Fetch guild information
+    guilds = ctx.bot.guilds
+    guild_names = [f"• {guild.name}" for guild in guilds]
+    guild_count = len(guilds)
+
+    # Collect system information (e.g., memory, CPU usage - optional, placeholder)
+    memory_usage = "XX MB"  # Replace with actual memory usage calculation if needed
+    cpu_usage = "YY%"       # Replace with actual CPU usage calculation if needed
+
+    # Generate the info message
+    info_message = (
+        f"**📡 Server Information**\n"
+        f"• **Server List:**\n" + "\n".join(guild_names) + "\n"
+        f"• **Number of Servers:** `{guild_count}`\n"
+        f"\n"
+        f"**🔍 Bot Overview**\n"
+        f"• **Bot Latency:** `{ctx.bot.latency * 1000:.2f}ms`\n"
+        f"• **Current Version:** `{await get_commit_count()}`\n"
+        f"• **Latest Version Available:** `{await get_remote_count()}`\n"
+        f"• **Uptime:** `{pretty_seconds_words(total_runtime)}`\n"
+        f"\n"
+        f"**⚙️ System Information**\n"
+        f"• **Available Slots:** `{old_amnt_of_free}`\n"
+        f"• **Memory Usage:** `{memory_usage}`\n"
+        f"• **CPU Usage:** `{cpu_usage}`\n"
+        f"\n"
+        f"**📊 Usage Statistics**\n"
+        f"• **Commands Used (Session):** `{amnt_used_this_session}`\n"
+        f"• **Commands Used (Total):** `{get_total_amnt_used()}`\n"
+    )
+
+    # Send the information message to the channel
+    await ctx.send(info_message)
+
+# Define your invite link here
+INVITE_LINK_1 = "https://discord.gg/itzghosty420"
+INVITE_LINK_2 = "https://www.youtube.com/@ItzGhosty420"
+
+@interactions.slash_command(name='discord_invite', description="ItzGhosty420's Discord Server")
+async def discord_invite(ctx: interactions.SlashContext):
+    # Send the invite link to the channel where the command was used
+    await ctx.send(f"*Jump over & Check out the Bot Hosters Discord Server!*\n{INVITE_LINK_1}")
+
+@interactions.slash_command(name='youtube_channel', description="ItzGhosty420's Youtube Channel")
+async def youtube_channel(ctx: interactions.SlashContext):
+    # Send the invite link to the channel where the command was used
+    await ctx.send(f"*Jump over & Check out the Bot Hosters Youtube Channel!*\n{INVITE_LINK_2}")
+
 @interactions.slash_command(name='delete_files2urls',description="Delete all your saved urls!")
 async def delete_files2urls(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
@@ -3032,7 +3166,6 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
         pretty += f'{key} -> {value}\n'
     await log_user_success(ctx,f'Your saved urls are... \n{pretty.strip()}')
 
-
 @interactions.slash_command(name='set_verbose_mode',description="Do you want error messages more verbose (detailed)?")
 @interactions.slash_option(
     name="verbose_mode",
@@ -3052,8 +3185,6 @@ async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
     else:
         await log_user_success(ctx,'Verbose mode (more detailed error messages) is *OFF*')
 
-
-
 async def ezwizard3_info() -> str:
     if not GIT_EXISTS:
         return 'bruh, This instance does not use git, please tell the instance owner to use git clone instead of download zip'
@@ -3071,7 +3202,6 @@ async def ezwizard3_info() -> str:
     
     return lah_message
 
-
 @interactions.slash_command(name='delete_all_google_drive_saves',description="Only run this command if the gdrive is full, will delete all gdrive files bot has given to users")
 async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
     global UPLOAD_SAVES_FOLDER_ID
@@ -3083,7 +3213,6 @@ async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
     await delete_google_drive_file_or_file_permentaly(UPLOAD_SAVES_FOLDER_ID)
     UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
     return await log_user_success(ctx,'All saves deleted successfully')
-
 
 @interactions.slash_command(name='delete_certain_gdrive_save',description="Run this command to delete all the bleeding saves from Google  drive")
 @interactions.slash_option(
@@ -3147,7 +3276,7 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
                 await log_user_error(ctx,f'*You dont have any url saved for* {global_image_link}, *try running the file2url command again!*')
                 return False
         print(f'{global_image_link = }')
-        await log_message(ctx,f'*Downloading* {global_image_link}')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {global_image_link}')
         async with TemporaryDirectory() as tp:
             result = await download_direct_link(ctx,global_image_link,tp,max_size=DL_FILE_TOTAL_LIMIT)
             if isinstance(result,str):
@@ -3176,7 +3305,6 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
         (Path(__file__).parent / f'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').unlink(missing_ok=True)
         (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
     return await log_user_success(ctx,f'Global watermark image removed successfully')
-
 
 async def main() -> int:
     check_base_saves = True # Do not edit unless you know what youre doing
