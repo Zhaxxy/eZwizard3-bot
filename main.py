@@ -177,10 +177,11 @@ HUH = "Connection terminated. I'm sorry to interrupt you Elizabeth, if you still
 
 
 def is_in_test_mode() -> bool:
-    try:
-        return sys.argv[1].casefold() == '-t'
-    except IndexError:
-        return False
+    return '-t' in (x.casefold() for x in sys.argv[1:])
+
+
+def is_in_fast_boot_mode() -> bool:
+    return '-r' in (x.casefold() for x in sys.argv[1:])
 
 
 def is_user_bot_admin(ctx_author_id: str,/) -> bool:
@@ -3314,7 +3315,8 @@ async def {getsource(global_var_value.callback).split('async def ')[1]}
 """.replace(global_var_name,new_func_name)
         if 1:#global_var_name == 'do_change_save_icon':
             if __name__ == '__main__':
-                print(f'Made quick version of {global_var_value.to_dict()["name"]}')
+                pass
+                # print(f'Made quick version of {global_var_value.to_dict()["name"]}')
             exec(payload_func)
     interactions.OptionType.__repr__ = old_repr # See, im not that insane
     
@@ -3327,7 +3329,7 @@ if __name__ == '__main__':
 
 
 async def main() -> int:
-    check_base_saves = True # Do not edit unless you know what youre doing
+    check_base_saves = not is_in_fast_boot_mode()
     global GIT_EXISTS
     global ZAPRIT_FISH_IS_UP
     GIT_EXISTS = False
@@ -3430,7 +3432,7 @@ async def main() -> int:
         os.remove('savedata.db')
         print('done cleaning base saves')
     if not check_base_saves:
-        print('WARNING!: check_base_saves is turned off, please do not commit and push changes with this off, and make sure you are not testing mounting and unmounting with this off')
+        print('WARNING!: fast boot (-r flag) is set, make sure you are not testing mounting and unmounting with this off')
     
     print('initialising database')
     initialise_database()
