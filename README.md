@@ -13,5 +13,5 @@ bot can sometimes get stuck at some part which involves the mounted_saves_at_onc
 
 I seem to have fixed bot of the above using mutiple messures, but it could still happen i just havent seen it happen after my fixes, even with external ftp clients attached
 
-# SCE_SAVE_DATA_ERROR_BROKEN sometimes on saves
+## SCE_SAVE_DATA_ERROR_BROKEN sometimes on saves
 this is likley because of a new gold hen version, please use known working version `v2.4b17.3`
