@@ -3313,7 +3313,8 @@ umm = {base_name}
 async def {getsource(global_var_value.callback).split('async def ')[1]}
 """.replace(global_var_name,new_func_name)
         if 1:#global_var_name == 'do_change_save_icon':
-            print(f'Made quick version of {global_var_value.to_dict()["name"]}')
+            if __name__ == '__main__':
+                print(f'Made quick version of {global_var_value.to_dict()["name"]}')
             exec(payload_func)
     interactions.OptionType.__repr__ = old_repr # See, im not that insane
     
