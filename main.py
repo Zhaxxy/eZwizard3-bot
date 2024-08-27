@@ -59,8 +59,10 @@ CANT_USE_BOT_IN_DMS = '*You are not special, get the F of my DMs right now*\n*If
 CANT_USE_BOT_IN_TEST_MODE = '*Unlucky for some! But ItzGhosty420\'s Savebot is in* **TEST MODE**\n*Only staff has permission*'
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
+
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
+DISCORD_CHOICE_LIMIT = 25
 ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
 DISCORD_BOT_STATUS_MAX_LENGTH = 128 - len('...')
 ZIP_LOOSE_FILES_MAX_AMT = 14567+1
@@ -175,10 +177,11 @@ HUH = "Connection terminated. I'm sorry to interrupt you Elizabeth, if you still
 
 
 def is_in_test_mode() -> bool:
-    try:
-        return sys.argv[1].casefold() == '-t'
-    except IndexError:
-        return False
+    return '-t' in (x.casefold() for x in sys.argv[1:])
+
+
+def is_in_fast_boot_mode() -> bool:
+    return '-r' in (x.casefold() for x in sys.argv[1:])
 
 
 def is_user_bot_admin(ctx_author_id: str,/) -> bool:
@@ -1424,6 +1427,19 @@ def allow_mulit_enc_opt(func):
     ]
     )(func)
 
+
+def get_enc_save_if_desc(save_files: str,/) -> str:
+    for url,desc in CONFIG['built_in_save_links']:
+        if save_files == desc:
+            return url
+    return save_files
+
+def get_dl_link_if_desc(dl_link_thing: str,/) -> str:
+    for url,desc in CONFIG['built_in_dl_links']:
+        if dl_link_thing == desc:
+            return url
+    return dl_link_thing
+
 async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Sequence[CheatFunc | DecFunc],chet_files_custom: Path, savedata0_folder:Path) -> bool:
     await log_message(ctx,f'Looking for any `dl_link`s or `savedata0`s to download')
     for cheat in cheat_chain:
@@ -1435,6 +1451,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     except KeyError:
                         await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
                         return False
+                link = get_dl_link_if_desc(link)
                 await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {link} {arg_name}')
                 result = await download_direct_link(ctx,link,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT,validation=filename_is_not_an_archive)
                 if isinstance(result,str):
@@ -1457,6 +1474,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     except KeyError:
                         await log_user_error(ctx,f'*You dont have any url saved for* {link}, *try running the file2url command again!*')
                         return False
+                link = get_dl_link_if_desc(link)
                 await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {link} *savedata0 folder*')
                 result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder,arg_name=='decrypted_save_folder',cheat.kwargs['unpack_first_root_folder'])
                 if result:
@@ -1484,6 +1502,8 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
+    save_files = get_enc_save_if_desc(save_files)
+        
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
@@ -1549,6 +1569,8 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
 async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account_id: str, cheat: CheatFunc):
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
+    
+    save_files = get_enc_save_if_desc(save_files)
 
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
@@ -3195,6 +3217,31 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
         pretty += f'{key} -> {value}\n'
     await log_user_success(ctx,f'Your saved urls are... \n{pretty.strip()}')
 
+@interactions.slash_command(name='see_built_in_sabes',description="See all of the built in saves/dl_link files of this instance")
+@interactions.slash_option(
+    name="show",
+    description='Do you want to see built in encrypted saves or dl_link',
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.SlashCommandChoice(name="Built in encrypted saves", value='built_in_save_links'),
+        interactions.SlashCommandChoice(name="Built in dl_links (NOT encrypted saves)", value='built_in_dl_links'),
+    ]
+    )
+async def see_built_in_sabes(ctx: interactions.SlashContext, show: str):
+    ctx = await set_up_ctx(ctx)
+
+    if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
+        await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
+        return
+    if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
+        await log_user_error(ctx,CANT_USE_BOT_IN_DMS)
+        return
+
+    await log_user_success(ctx,'\n'.join(f'{i}: {x[1]}' for i,x in enumerate(CONFIG[show])))
+
+
+#ben
 @interactions.slash_command(name='set_verbose_mode',description="Do you want error messages more verbose (detailed)?")
 @interactions.slash_option(
     name="verbose_mode",
@@ -3304,6 +3351,7 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
             except KeyError:
                 await log_user_error(ctx,f'*You dont have any url saved for* {global_image_link}, *try running the file2url command again!*')
                 return False
+        global_image_link = get_dl_link_if_desc(global_image_link)
         print(f'{global_image_link = }')
         await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {global_image_link}')
         async with TemporaryDirectory() as tp:
@@ -3335,8 +3383,139 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
         (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
     return await log_user_success(ctx,f'Global watermark image removed successfully')
 
+#ben
+
+
+
+async def base_saved_ting_autocomplete(ctx: interactions.AutocompleteContext,thing: tuple[tuple[str,str]],/):
+    string_option_input = ctx.input_text
+    if not string_option_input:
+        return await ctx.send(choices=[{'name':'Please start typing a built in save from /see_built_in_sabes','value':'Please start typing a built in save from /see_built_in_sabes'}])
+    string_option_input = string_option_input.casefold()
+    
+    print(string_option_input)
+    
+    return await ctx.send(choices=[dict(name=x[1], value=x[0]) for x in thing if string_option_input in x[1].casefold()][:25])
+
+
+BASE_ENC_SAVES_AUTO_STR = 'async def replacewithrealfuncname_base_saved_enc_saves_autocomplete(ctx: interactions.AutocompleteContext): return await base_saved_ting_autocomplete(ctx,BUILT_IN_SAVE_LINKS)\n'
+BASE_ENC_SAVES_AUTO_STR_NAME = 'replacewithrealfuncname_base_saved_enc_saves_autocomplete'
+
+BASE_DL_LINKS_AUTO_STR = 'async def replacewithrealfuncname_base_saved_dl_tings_autocomplete(ctx: interactions.AutocompleteContext): return await base_saved_ting_autocomplete(ctx,BUILT_IN_DL_LINKS)\n'
+BASE_DL_LINKS_AUTO_STR_NAME = 'replacewithrealfuncname_base_saved_dl_tings_autocomplete'
+
+
+quick_commands_base = interactions.SlashCommand(name="quick", description="Versions of commands with choices for save_files and dl_links chosen by bot owner")
+quick_cheats_commands_base = interactions.SlashCommand(name="quick_cheats", description="Versions of commands with choices for save_files and dl_links chosen by bot owner")
+
+BUILT_IN_DL_LINKS = tuple((desc[1],desc[1]) for i,desc in enumerate(CONFIG['built_in_dl_links'])) # TODO, dont rely on this lol
+BUILT_IN_SAVE_LINKS = tuple((desc[1],desc[1]) for i,desc in enumerate(CONFIG['built_in_save_links'])) # TODO, dont rely on this lol
+
+if __name__ == '__main__':
+    print('making the /quick commands')
+
+def _make_quick_functions():
+    from inspect import getsource
+    from copy import copy
+    from interactions import SlashCommand
+    global quick_commands_base
+    old_repr = interactions.OptionType.__repr__
+    interactions.OptionType.__repr__ = lambda self: f'interactions.OptionType({self.value})' # weve gotta do this as the current repr of enums is not valid python code
+    
+
+    globals_thing = copy(globals()).items()
+    for global_var_name,global_var_value in globals_thing:
+        if not isinstance(global_var_value,interactions.models.internal.application_commands.SlashCommand):
+            continue
+        # as far as im aware, a command will only have options, as well as the function body, which ill use exec for
+        thing_dict = global_var_value.to_dict()
+        options = thing_dict.get('options')
+        if not options:
+            continue
+        decor_options: str | list = []
+        auto_complete_things_dl_links: str | list = []
+        auto_complete_things_enc_saves: str | list = []
+        
+        is_viable = False
+        for option in options:
+            option.pop('description_localizations') # theese seems to be some internal thing, slash_option doesnt accept them
+            option.pop('name_localizations') # ^
+            option['opt_type'] = option.pop('type')
+            
+            if option['name'].startswith('dl_link') or option['name'] in ('decrypted_save_file','decrypted_save_folder','global_image_link'):
+                is_viable = True
+                if len(BUILT_IN_DL_LINKS) > DISCORD_CHOICE_LIMIT:
+                    auto_complete_things_dl_links.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
+                else:
+                    option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_DL_LINKS]
+            if option['name'] == 'save_files':
+                is_viable = True
+                if len(BUILT_IN_SAVE_LINKS) > DISCORD_CHOICE_LIMIT:
+                    auto_complete_things_enc_saves.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
+                else:
+                    option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_SAVE_LINKS]
+            
+            
+            
+            decor_options.append(f'@interactions.slash_option(**{option!r})\n')
+        if not is_viable:
+            continue
+        decor_options = ''.join(decor_options)
+        
+        new_func_name = f'do_quick_auto_gened_code_{0}'
+        for i in range(0,0xFFFFFFFF):
+            try:
+                globals()[new_func_name]
+                new_func_name = f'do_quick_auto_gened_code_{i}'
+            except KeyError:
+                break
+        else: # nobreak
+            raise AssertionError('nah wtf')
+        base_name = 'quick_cheats_commands_base' if str(global_var_value.name) == 'cheats' else 'quick_commands_base' # TODO, implement checks if another possible base comamnd besides `cheats` exists
+        base_two = f'umm = {base_name}.group(name={str(global_var_value.group_name)!r}, description={str(global_var_value.group_description)!r})' if global_var_value.group_name else 'umm = umm'
+        
+        payload_func = f"""
+global {new_func_name}
+umm = {base_name}
+{base_two}
+@umm.subcommand(sub_cmd_name={str(global_var_value.to_dict()["name"])!r}, sub_cmd_description={str(global_var_value.to_dict()["description"])!r})
+{decor_options}
+async def {getsource(global_var_value.callback).split('async def ')[1]}
+""".replace(global_var_name,new_func_name)
+        payload_func_2 = ''
+        payload_func_3 = ''
+        if auto_complete_things_dl_links:
+            payload_func_2 = f"""
+{''.join('global ' + x[1]+BASE_DL_LINKS_AUTO_STR_NAME+chr(0x0A) for x in auto_complete_things_dl_links)}
+{''.join(x[0] + BASE_DL_LINKS_AUTO_STR for x in auto_complete_things_dl_links)}
+""".replace('replacewithrealfuncname',new_func_name)
+        if auto_complete_things_enc_saves:
+            payload_func_3 = f"""
+{''.join('global ' + x[1]+BASE_ENC_SAVES_AUTO_STR_NAME+chr(0x0A) for x in auto_complete_things_enc_saves)}
+{''.join(x[0] + BASE_ENC_SAVES_AUTO_STR for x in auto_complete_things_enc_saves)}
+""".replace('replacewithrealfuncname',new_func_name)
+        if 1:#global_var_name == 'do_change_save_icon':
+            exec(payload_func)
+            # print(payload_func_3) if global_var_name == 'do_raw_decrypt_folder' else None
+            exec(payload_func_2)
+            exec(payload_func_3)
+            if __name__ == '__main__':
+                pass
+                # print(f'Made quick version of {global_var_value.to_dict()["name"]}')
+
+    interactions.OptionType.__repr__ = old_repr # See, im not that insane
+    
+    
+_make_quick_functions()
+del _make_quick_functions # we use a function in order to not polute the globals
+ 
+if __name__ == '__main__':
+    print('done making the /quick commands')
+
+
+#ben
 async def main() -> int:
-    check_base_saves = True # Do not edit unless you know what youre doing
+    check_base_saves = not is_in_fast_boot_mode()
     global GIT_EXISTS
     global ZAPRIT_FISH_IS_UP
     GIT_EXISTS = False
@@ -3439,7 +3618,7 @@ async def main() -> int:
         os.remove('savedata.db')
         print('done cleaning base saves')
     if not check_base_saves:
-        print('WARNING!: check_base_saves is turned off, please do not commit and push changes with this off, and make sure you are not testing mounting and unmounting with this off')
+        print('WARNING!: fast boot (-r flag) is set, make sure you are not testing mounting and unmounting with this off')
     
     print('initialising database')
     initialise_database()

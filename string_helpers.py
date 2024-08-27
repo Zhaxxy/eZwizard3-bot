@@ -156,9 +156,13 @@ def pretty_seconds_words(time_in_seconds: int,/,*,shorter_text: bool = True) -> 
 def _raise_bad_config(missing_key: str) -> NoReturn:
     raise Exception(f'Unconfigured config, unconfigured value {missing_key} or bad config or missing {missing_key}')
 
+def _raise_bad_url_format(key: str, entry: str) -> NoReturn:
+    raise Exception(f'Bad entry `{raw_entry}` of key {key}, it should be in the format\n  - the_link_here a description of the link that can have spaces')
 
 def load_config() -> frozendict:
     SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT = '\n# Simple boolean, if set to true then the ping command will show some extra info such as what version bot is on or if it needs updating\n# or if its false, it wont show that extra stuff\nshould_ping_command_show_git_stuff:\n    true\n'
+    BUILT_IN_SAVE_LINKS_YAML_DEAFULT_TEXT = '\n# links to saves that already exists (DO NOT USE DISCORD FILE LINKS AS THEY EXPIRE AND WONT WORK), and you can have them as a choice in save_files option on /quick commands\n# follow the format (without the hashtag of course)\n#  - the_link_here a description of the link that can have spaces\nbuilt_in_save_links:\n  - https://drive.google.com/drive/folders/1wCBA0sZumgBRr3cDJm5BADRA9mfq4NpR?usp=sharing LBP EU Level Backup\n'
+    BUILT_IN_DL_LINKS_YAML_DEAFULT_TEXT = '\n# links to dl_link that already exists (DO NOT USE DISCORD FILE LINKS AS THEY EXPIRE AND WONT WORK), and you can have them as a choice in dl_link options option on /quick commands\n# such as decrypted saves or images\n# follow the format (without the hashtag of course)\n#  - the_link_here a description of the link that can have spaces\nbuilt_in_dl_links:\n  - https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Cat_August_2010-4.jpg/2880px-Cat_August_2010-4.jpg Cute cat image\n'
     try:
         with open('config.yaml','r') as f:
             my_config: dict = yaml.load(f,yaml.Loader)
@@ -201,24 +205,49 @@ built_in_saves:
   - CUSA12345 LBPXSAVE bigfart some cool description here
 """)
             f.write(SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT)
+            f.write(BUILT_IN_SAVE_LINKS_YAML_DEAFULT_TEXT[1:])
+            f.write(BUILT_IN_DL_LINKS_YAML_DEAFULT_TEXT[1:])
+            
         raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yaml file') from None
-
+    
     key = 'should_ping_command_show_git_stuff'
-    if not (x := my_config.get(key)):
+    if (x := my_config.get(key)) is None:
         with open('config.yaml','a') as f:
             f.write(SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT)
         raise Exception(f'config.yaml updated with a new value `{key}` please check it out')
-
     if not isinstance(x,bool):
         raise Exception(f'{key} value should ethier be true or false, not {x}')
 
+
+    links_types_keys = ('built_in_save_links',BUILT_IN_SAVE_LINKS_YAML_DEAFULT_TEXT),('built_in_dl_links',BUILT_IN_DL_LINKS_YAML_DEAFULT_TEXT)
+    for key,yaml_default_text in links_types_keys:
+        if not (x := my_config.get(key)):
+            with open('config.yaml','a') as f:
+                f.write(yaml_default_text)
+            raise Exception(f'config.yaml updated with a new value `{key}` please check it out')
+        if not isinstance(x,list):
+            raise Exception(f'Bad key {key}, it should be of a list not {x}: {type(x)}, please follow the comment or yaml syntax to make it a list')
+       
+        temp_list = []
+        for raw_entry in x:
+            built_in_save_links_entry = tuple(raw_entry.split(' ',1))
+            if len(built_in_save_links_entry) != 2:
+                _raise_bad_url_format(key,raw_entry)
+            if not(built_in_save_links_entry[0] and built_in_save_links_entry[1]):
+                _raise_bad_url_format(key,raw_entry)
+            temp_list.append(built_in_save_links_entry)
+        
+        my_config[key] = tuple(temp_list)
+    
     key = 'discord_token'
     if not (x := my_config.get(key)) or x == 'MTIxMzAQk2APdMtqdXTtSfJcD2.GaxeZo.SLW6IWM7qdSxyQhCvClXINFJF4AIbF6oJVahrb':
         _raise_bad_config(key)
 
+
     key = 'ssocookie'
     if not (x := my_config.get(key)) or x == 'glgagbgcSDh3t50ABpfwINS9kfugLPqDY8Lzfz3UabgE2w3OAhss6tWEJCOH54Sm':
         _raise_bad_config(key)
+
 
     key = 'google_credentials_file'
     if not (x := my_config.get(key)):
@@ -229,21 +258,26 @@ built_in_saves:
     except Exception as e:
         raise Exception(f'Could not open {key}: {x} or not valid google_credentials_file, got error {type(e).__name__}: {e}') from None
 
+
     key = 'ps4_ip'
     if not (x := my_config.get(key)) or x == '192.168.1.256':
         _raise_bad_config(key)
+
 
     key = 'save_dirs'
     if (x := my_config.get(key)):
         raise Exception(f'{key} in your config is no longer needed, please delete it as well as its values')
 
+
     key = 'title_id'
     if (x := my_config.get(key)):
         raise Exception(f'{key} in your config is no longer needed, please delete it as well as its value')
 
+
     key = 'user_id'
     if not (x := my_config.get(key)) or x == '1ej71bbd':
         _raise_bad_config(key)
+
 
     key = 'bot_admins'
     if not (x := my_config.get(key)):
@@ -253,6 +287,7 @@ built_in_saves:
         _raise_bad_config(key)
 
     my_config[key] = tuple(x)
+
     
     key = 'allow_bot_usage_in_dms'
     if (x := my_config.get(key)) is None:
@@ -260,6 +295,7 @@ built_in_saves:
     
     if not isinstance(x,bool):
         raise Exception(f'{key} value should ethier be true or false, not {x}')
+
 
     key = 'built_in_saves'
     if (x := my_config.get(key)) is None:
