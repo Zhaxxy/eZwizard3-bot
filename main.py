@@ -58,6 +58,8 @@ else:
 CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled commands in dms'
 CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
+URL_STARTER = '/zhaxxysu ckslol'
+
 
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
@@ -1437,6 +1439,12 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     except KeyError:
                         await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
                         return False
+                if link.startswith(URL_STARTER):
+                    try:
+                        link = CONFIG['built_in_dl_links'][int(link.split(URL_STARTER)[1])][0]
+                    except Exception:
+                        await log_user_error(ctx,f'stop trying what youre trying, i wont allow a red screen! (or your thing happned to start with `{URL_STARTER}`)')
+                        return False
                 await log_message(ctx,f'Downloading {link} {arg_name}')
                 result = await download_direct_link(ctx,link,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT,validation=filename_is_not_an_archive)
                 if isinstance(result,str):
@@ -1458,6 +1466,12 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                         link = get_saved_url(ctx.author_id,int(link))
                     except KeyError:
                         await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
+                        return False
+                if link.startswith(URL_STARTER):
+                    try:
+                        link = CONFIG['built_in_dl_links'][int(link.split(URL_STARTER)[1])][0]
+                    except Exception:
+                        await log_user_error(ctx,f'stop trying what youre trying, i wont allow a red screen! (or your thing happned to start with `{URL_STARTER}`)')
                         return False
                 await log_message(ctx,f'Downloading {link} savedata0 folder or zip')
                 result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder,arg_name=='decrypted_save_folder',cheat.kwargs['unpack_first_root_folder'])
@@ -1486,6 +1500,12 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
+    if save_files.startswith(URL_STARTER):
+        try:
+            save_files = CONFIG['built_in_save_links'][int(save_files.split(URL_STARTER)[1])][0]
+        except Exception:
+            return await log_user_error(ctx,f'stop trying what youre trying, i wont allow a red screen! (or your thing happned to start with `{URL_STARTER}`)')
+        
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
         return
@@ -1551,6 +1571,12 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
 async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account_id: str, cheat: CheatFunc):
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
+
+    if save_files.startswith(URL_STARTER):
+        try:
+            save_files = CONFIG['built_in_save_links'][int(save_files.split(URL_STARTER)[1])][0]
+        except Exception:
+            return await log_user_error(ctx,f'stop trying what youre trying, i wont allow a red screen! (or your thing happned to start with `{URL_STARTER}`)')
 
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
         await log_user_error(ctx,CANT_USE_BOT_IN_TEST_MODE)
@@ -3182,6 +3208,12 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
             except KeyError:
                 await log_user_error(ctx,f'You dont have any url saved for {global_image_link}, try running the file2url command again!')
                 return False
+        if global_image_link.startswith(URL_STARTER):
+            try:
+                global_image_link = CONFIG['built_in_dl_links'][int(global_image_link.split(URL_STARTER)[1])][0]
+            except Exception:
+                await log_user_error(ctx,f'stop trying what youre trying, i wont allow a red screen! (or your thing happned to start with `{URL_STARTER}`)')
+                return False
         print(f'{global_image_link = }')
         await log_message(ctx,f'Downloading {global_image_link}')
         async with TemporaryDirectory() as tp:
@@ -3212,6 +3244,85 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
         (Path(__file__).parent / f'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').unlink(missing_ok=True)
         (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
     return await log_user_success(ctx,f'Global watermark image removed successfully')
+
+
+quick_commands_base = interactions.SlashCommand(name="quick", description="Versions of commands with choices for save_files and dl_links chosen by bot owner")
+quick_cheats_commands_base = interactions.SlashCommand(name="quick_cheats", description="Versions of commands with choices for save_files and dl_links chosen by bot owner")
+
+if __name__ == '__main__':
+    print('making the /quick commands')
+
+def _make_quick_functions():
+    from inspect import getsource
+    from copy import copy
+    from interactions import SlashCommand
+    global quick_commands_base
+    old_repr = interactions.OptionType.__repr__
+    interactions.OptionType.__repr__ = lambda self: f'interactions.OptionType({self.value})' # weve gotta do this as the current repr of enums is not valid python code
+    
+    BUILT_IN_DL_LINKS = [(f'{URL_STARTER}{i}',desc[1]) for i,desc in enumerate(CONFIG['built_in_dl_links'])]
+    BUILT_IN_SAVE_LINKS = [(f'{URL_STARTER}{i}',desc[1]) for i,desc in enumerate(CONFIG['built_in_save_links'])]
+    globals_thing = copy(globals()).items()
+    for global_var_name,global_var_value in globals_thing:
+        if not isinstance(global_var_value,interactions.models.internal.application_commands.SlashCommand):
+            continue
+        # as far as im aware, a command will only have options, as well as the function body, which ill use exec for
+        thing_dict = global_var_value.to_dict()
+        options = thing_dict.get('options')
+        if not options:
+            continue
+        decor_options: str | list = []
+        is_viable = False
+        for option in options:
+            option.pop('description_localizations') # theese seems to be some internal thing, slash_option doesnt accept them
+            option.pop('name_localizations') # ^
+            option['opt_type'] = option.pop('type')
+            
+            if option['name'].startswith('dl_link') or option['name'] in ('decrypted_save_file','decrypted_save_folder','global_image_link'):
+                is_viable = True
+                option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_DL_LINKS]
+            if option['name'] == 'save_files':
+                is_viable = True
+                option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_SAVE_LINKS]
+            
+            
+            
+            decor_options.append(f'@interactions.slash_option(**{option!r})\n')
+        if not is_viable:
+            continue
+        decor_options = ''.join(decor_options)
+        
+        new_func_name = f'do_quick_auto_gened_code_{0}'
+        for i in range(0,0xFFFFFFFF):
+            try:
+                globals()[new_func_name]
+                new_func_name = f'do_quick_auto_gened_code_{i}'
+            except KeyError:
+                break
+        else: # nobreak
+            raise AssertionError('nah wtf')
+        base_name = 'quick_cheats_commands_base' if str(global_var_value.name) == 'cheats' else 'quick_commands_base' # TODO, implement checks if another possible base comamnd besides `cheats` exists
+        base_two = f'umm = {base_name}.group(name={str(global_var_value.group_name)!r}, description={str(global_var_value.group_description)!r})' if global_var_value.group_name else 'umm = umm'
+        
+        payload_func = f"""
+global {new_func_name}
+umm = {base_name}
+{base_two}
+@umm.subcommand(sub_cmd_name={str(global_var_value.to_dict()["name"])!r}, sub_cmd_description={str(global_var_value.to_dict()["description"])!r})
+{decor_options}
+async def {getsource(global_var_value.callback).split('async def ')[1]}
+""".replace(global_var_name,new_func_name)
+        if 1:#global_var_name == 'do_change_save_icon':
+            print(f'Made quick version of {global_var_value.to_dict()["name"]}')
+            exec(payload_func)
+    interactions.OptionType.__repr__ = old_repr # See, im not that insane
+    
+    
+_make_quick_functions()
+del _make_quick_functions # we use a function in order to not polute the globals
+ 
+if __name__ == '__main__':
+    print('done making the /quick commands')
 
 
 async def main() -> int:
