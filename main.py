@@ -1,7 +1,7 @@
 import asyncio
 import sys
 import re
-from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, assert_never
+from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, NoReturn, assert_never
 from enum import Enum
 from pathlib import Path
 from traceback import format_exc
@@ -82,7 +82,8 @@ MOUNTED_POINT = Path('/mnt/sandbox/NPXS20001_000')
 PS4_SAVE_KEYSTONES = {
     'CUSA05350':b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb5\xaa\xa6\xdd\x19*\xfd\xdd\x8dy\x93\x8eJ\xce\x13\x7f\xd4H\x1d\xf1\x11\xbd\x18\x8a\xf3\x02\xc5l6j\x91\x12K\xcbZe\x06tj\x9d\x08\xd53;\xc1\x9cD\x96h\xff\xef\xe2\x18$W\x96\x8fQ\xa1\xc8<\x0b\x18\x96',
     'CUSA05088':b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00&\xedp\x94\xb2\x94\xa3\x9bc\xbd\x94\x11;\x06l\x93x\x9d\xc2K\xe2\xed\xfc\xd78\xff\xdd\x8dU\x86\xab\xd8N\x1dx8q\xcf\xd3\x0b\xfc\x8cr<il\xbbd\xbd\x17\xbe(?\x85Xn\xa5\xf4T\xe8s\xdcu\xaa',
-    'CUSA08767':b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0fmj\x91\x05\x0e\xa7"\x9e3I\x94\x12].2\xe1\xbd\xff\x86\xac9\x0b{\xf0\x13\\\xa8\x83\x04o\xf0\x9c\xda\x9e64\x07H\x90o\xeb\xed\x86\xdc\x9aA$x\xe3\xbfZe\xb0\x9d\t\x92\xfa\xa4\xe8x\xb6\x1d\x8a'
+    'CUSA08767':b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0fmj\x91\x05\x0e\xa7"\x9e3I\x94\x12].2\xe1\xbd\xff\x86\xac9\x0b{\xf0\x13\\\xa8\x83\x04o\xf0\x9c\xda\x9e64\x07H\x90o\xeb\xed\x86\xdc\x9aA$x\xe3\xbfZe\xb0\x9d\t\x92\xfa\xa4\xe8x\xb6\x1d\x8a',
+    'CUSA12555': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c\xc3\xc4\xea\x6a\x09\x09\x5f\x03\x6c\x2b\xcc\x61\x3b\x3f\x99\x6a\x35\xff\xbd\xb8\xf3\x59\x35\xbf\x86\x27\x92\x18\x53\x9b\xbe\x73\x52\xda\x5f\x95\x13\x53\x73\x16\xf2\x2c\x9b\xe5\xeb\x02\x58\x75\x4e\x5e\x02\x30\x9c\x38\xad\x58\x57\xc1\x25\xc9\xf9\xa1\x49',
 }
 
 XENOVERSE_TITLE_IDS = frozenset(('CUSA12394', 'CUSA05088', 'CUSA12330', 'CUSA04904', 'CUSA10051', 'CUSA12358', 'CUSA06202', 'CUSA05774', 'CUSA05350', 'CUSA12390', 'CUSA06208', 'CUSA05085'))
@@ -165,6 +166,17 @@ PARAM_SFO_SPECIAL_STRINGS = (
 )
 
 HUH = "Connection terminated. I'm sorry to interrupt you Elizabeth, if you still even remember that name. But I'm afraid you've been misinformed. You are not here to receive a gift, nor have you been called here by the individual you assume. Although you have indeed been called. You have all been called here. Into a labyrinth of sounds and smells, misdirection and misfortune. A labyrinth with no exit, a maze with no prize. You don't even realize that you are trapped. Your lust for blood has driven you in endless circles, chasing the cries of children in some unseen chamber, always seeming so near, yet somehow out of reach. But you will never find them, none of you will. This is where your story ends. And to you, my brave volunter, who somehow found this job listing not intended for you. Although there was a way out planned for you, I have a feeling that's not what you want. I have a feeling that you are right where you want to be. I am remaining as well, I am nearby. This place will not be remembered, and the memory of everything that started this can finally begin to fade away. As the agony of every tragedy should. And to you monsters trapped in the corridors: Be still and give up your spirits, they don't belong to you. For most of you, I believe there is peace and perhaps more waiting for you after the smoke clears. Although, for one of you, the darkest pit of Hell has opened to swallow you whole, so don't keep the devil waiting, old friend. My daughter, if you can hear me, I knew you would return as well. It's in your nature to protect the innocent. I'm sorry that on that day, the day you were shut out and left to die, no one was there to lift you up into their arms the way you lifted others into yours. And then, what became of you. I should have known you wouldn't be content to disappear, not my daughter. I couldn't save you then, so let me save you now. It's time to rest. For you, and for those you have carried in your arms. This ends for all of us. End communication."
+
+
+class ExpectedError(Exception):
+    """
+    Raise this error if you just wanna print some information about a save as a cheat
+    """
+
+class HasExpectedError(NamedTuple):
+    error_text: str
+    pretty_dir: Path
+
 # class TemporaryDirectory():
 #     def __enter__(self):
 #         self.new_path = Path(str(time.perf_counter()).replace('.','_'))
@@ -1083,7 +1095,7 @@ async def delete_base_save_just_ftp(title_id: str, dir_name: str):
         await ftp.remove(f'sdimg_{dir_name}')
         await ftp.remove(f'{dir_name}.bin')
         
-async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str, special_thing: SpecialSaveFiles | None) -> str | tuple[list | PS4AccountID | str]:
+async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str, special_thing: SpecialSaveFiles | None) -> str | tuple[list | PS4AccountID | str] | tuple[ExpectedError,str]:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
@@ -1115,7 +1127,9 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                         # await log_message(ctx,f'Applying cheat {chet.pretty()} {index + 1}/{len(cheats)} for {pretty_save_dir}')
                         result = await chet.func(ftp,new_mount_dir,real_name,**chet.kwargs)
                     results.append(result) if result else None
-                except Exception:
+                except Exception as e:
+                    if isinstance(e,ExpectedError):
+                        return HasExpectedError(f'{type(e).__name__}: {e}',pretty_save_dir)
                     return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}','')
             # await log_message(ctx,'Connecting to PS4 ftp to do resign')
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1170,7 +1184,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                             # breakpoint()
                             return WARNING_COULD_NOT_UNMOUNT_MSG
                     return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided. If you did mcworld2ps4 try setting mc_encrypted_save_size higher'
-async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], special_thing: SpecialSaveFiles | str | None) -> str | tuple[list | PS4AccountID]:
+async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], special_thing: SpecialSaveFiles | str | None) -> str | tuple[list | PS4AccountID] | ExpectedError:
     if isinstance(special_thing,str):
         special_thing = None
     pretty_save_dir = white_file.relative_to(parent_dir)
@@ -1650,48 +1664,56 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             if not await pre_process_cheat_args(ctx,my_cheats_chain,chet_files_custom,savedata0_folder):
                 return
             
-            if False:
-                await log_message(ctx,'doing special built in save thing')
-                await log_user_error(ctx,'unimplemented')
-                return
-            else:
-                if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD or isinstance(save_files,Lbp3BackupThing):
-                    mc_new_white_path = Path(enc_tp, make_ps4_path(account_id,mc_base_title_id),mc_filename)
-                    mc_new_bin_path = Path(enc_tp , make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
-                    
-                    mc_new_white_path.parent.mkdir(parents=True)
 
-                    mc_new_white_path.write_bytes(b'\xFF')
-                    mc_new_bin_path.write_bytes(b'\xFF')
+            if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD or isinstance(save_files,Lbp3BackupThing):
+                mc_new_white_path = Path(enc_tp, make_ps4_path(account_id,mc_base_title_id),mc_filename)
+                mc_new_bin_path = Path(enc_tp , make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
+                
+                mc_new_white_path.parent.mkdir(parents=True)
+
+                mc_new_white_path.write_bytes(b'\xFF')
+                mc_new_bin_path.write_bytes(b'\xFF')
+            else:
+                download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
+                if download_ps4_saves_result:
+                    await log_user_error(ctx,download_ps4_saves_result)
+                    return
+            real_names = []
+            results_big = []
+            got_expected_errors = False
+            for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
+                if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
+                    pass
+                elif isinstance(save_files,Lbp3BackupThing):
+                    pass
                 else:
-                    download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
-                    if download_ps4_saves_result:
-                        await log_user_error(ctx,download_ps4_saves_result)
-                        return
-                real_names = []
-                results_big = []
-                for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
-                    if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
-                        pass
-                    elif isinstance(save_files,Lbp3BackupThing):
-                        pass
-                    else:
-                        await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
-                    pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
-                    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
-                    async with mounted_saves_at_once:
-                        tick_tock_task.cancel()
-                        a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,real_save_dir_ftp,save_files)
-                    if isinstance(a,str):
-                        await log_user_error(ctx,a)
-                        if a == WARNING_COULD_NOT_UNMOUNT_MSG:
-                            breakpoint()
-                        return
-                    results_small,old_account_id,real_name = a
-                    await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
-                    real_names.append(real_name)
-                    results_big.append(results_small)
+                    await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
+                pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
+                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
+                async with mounted_saves_at_once:
+                    tick_tock_task.cancel()
+                    a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,real_save_dir_ftp,save_files)
+                if a == WARNING_COULD_NOT_UNMOUNT_MSG:
+                    breakpoint()
+                
+                if isinstance(a,HasExpectedError):
+                    got_expected_errors = True
+                    results_big.append(a)
+                    continue
+                    
+                if isinstance(a,str):
+                    await log_user_error(ctx,a)
+                    return
+                results_small,old_account_id,real_name = a
+                await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
+                real_names.append(real_name)
+                results_big.append(results_small)
             
+            if got_expected_errors:
+                save_msgs = ''.join(f'{x[1]}:\n```{x[0]}```\n' for x in results_big)
+                await log_user_success(ctx,f'Got your messages\n\n{save_msgs}')
+                return
+                
             await log_message(ctx,f'Making sure file names in {save_files} are all correct')
             found_fakes = False
             for real_name, (bin_file, white_file) in zip(real_names, done_ps4_saves, strict=True):
@@ -2526,6 +2548,35 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             f.write(struct.pack('<q',new_blocks_size))
         await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
 
+async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -> NoReturn:
+    await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
+    async with TemporaryDirectory() as tp:
+        tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
+        tp_keystone = Path(tp,'a')
+        
+        await ftp.download('param.sfo',tp_param_sfo,write_into=True)
+        found_game_ids = []
+        with open(tp_param_sfo,'rb+') as f:
+            for seek in (0x61C,0x62C,0xA9C):
+                f.seek(seek)
+                found_game_ids.append(f.read(9).decode('ascii'))
+        if found_game_ids.count(found_game_ids[0]) != len(found_game_ids):
+            raise ValueError('Missmatching title ids in save')
+        
+        await ftp.download('keystone',tp_keystone,write_into=True)
+        if tp_keystone.stat().st_size != 96:
+            raise ValueError('Invalid keystone found in save')
+
+
+        keystone_payload = (r"b'\x" + tp_keystone.read_bytes().hex(' ').replace(' ',r'\x') + "'").replace(r'\x6b\x65\x79\x73\x74\x6f\x6e\x65','keystone')
+
+        
+        raise ExpectedError(f'{found_game_ids[0]!r}: {keystone_payload}')
+@interactions.slash_command(name="get_keystones", description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
+@interactions.slash_option('save_files','The save files you want the keystones of',interactions.OptionType.STRING,True)
+@account_id_opt
+async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str,account_id: str):
+    await base_do_cheats(ctx,save_files,account_id,CheatFunc(get_keystone_key_from_save,{}))
 
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
