@@ -211,7 +211,7 @@ built_in_saves:
         raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yaml file') from None
     
     key = 'should_ping_command_show_git_stuff'
-    if not (x := my_config.get(key)):
+    if (x := my_config.get(key)) is None:
         with open('config.yaml','a') as f:
             f.write(SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT)
         raise Exception(f'config.yaml updated with a new value `{key}` please check it out')
