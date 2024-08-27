@@ -200,7 +200,7 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
         await ctx.defer()
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
- ctx.ezwizard3_special_ctx_attr_mode = mode
+    ctx.ezwizard3_special_ctx_attr_mode = mode
     await log_message(ctx, f'*Pleast wait, ItzGhosty420\'s Bot is currently in use!\nPlease retry the command in a few moments*\n*Your* **{nth_time}st** *time trying a command, Please do not try multiple times!*', _do_print=False)
     ctx.ezwizard3_special_ctx_attr_setup_done = 1
     return ctx
@@ -819,7 +819,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
-        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_savedata0 = '**Since eZwizard3, you no longer have to upload decrypted saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
+        #ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_savedata0 = '**Since eZwizard3, you no longer have to upload decrypted saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
         await log_message(ctx,f'*Grabbing files metadata from folder* {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
@@ -951,7 +951,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
-        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the CUSAxxxxx folder from any download link, (like discord file links) or use /file2url command**'
+        #ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the CUSAxxxxx folder from any download link, (like discord file links) or use /file2url command**'
         
         await log_message(ctx,f'*Getting files metadata from folder*\n {link}')
         try:
@@ -2878,13 +2878,13 @@ async def get_bot_status(*,trunacte_status_text: bool = True) -> tuple[str,inter
         
         if not amnt_of_free:
             status = interactions.Status.DO_NOT_DISTURB
-            msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+            msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
         elif amnt_of_free == len(SAVE_DIRS):
             status = interactions.Status.IDLE
-            msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+            msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
         else:
             status = interactions.Status.ONLINE
-            msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+            msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
         
         bot_status_text = leader+msg
         
@@ -3009,7 +3009,7 @@ async def ping_test(ctx: interactions.SlashContext):
     if CONFIG['should_ping_command_show_git_stuff']:
         await ctx.send(await ezwizard3_info())
 
-@interactions.slash_command(name='file2url',description="Convenience command to get url from discord attachment")
+@interactions.slash_command(name='link_creator',description="Upload your files for quicker option than using Google Drive links")
 @interactions.slash_option(
     name="my_file",
     description='The file you want as a url',
@@ -3149,11 +3149,6 @@ async def bot_info(ctx: interactions.SlashContext):
         f"• **Current Version:** `{await get_commit_count()}`\n"
         f"• **Latest Version Available:** `{await get_remote_count()}`\n"
         f"• **Uptime:** `{pretty_seconds_words(total_runtime)}`\n"
-        f"\n"
-        f"**⚙️ System Information**\n"
-        f"• **Available Slots:** `{old_amnt_of_free}`\n"
-        f"• **Memory Usage:** `{memory_usage}`\n"
-        f"• **CPU Usage:** `{cpu_usage}`\n"
         f"\n"
         f"**📊 Usage Statistics**\n"
         f"• **Commands Used (Session):** `{amnt_used_this_session}`\n"
