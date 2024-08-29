@@ -3371,7 +3371,7 @@ def _make_quick_functions():
                     auto_complete_things_dl_links.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
                 else:
                     option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_DL_LINKS]
-            if option['name'] == 'save_files':
+            if option['name'] == 'save\x5ffiles':
                 is_viable = True
                 if len(BUILT_IN_SAVE_LINKS) > DISCORD_CHOICE_LIMIT:
                     auto_complete_things_enc_saves.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
