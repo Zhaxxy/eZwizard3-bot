@@ -7,6 +7,7 @@ from ps4debug import PS4Debug
 
 SUPPORTED_MEM_PATCH_FW_VERSIONS = (
     9,
+    # 11 # Unconfirmed 11.00, need to test, it did fail on the one test i didnt, likley a silly mistake
 )
 
 class Of_Offsets:
@@ -78,13 +79,22 @@ class MemoryIsPatched:
     GetSaveDirectoriesAddr_length: int
 
     patches_made: Tuple[ToRemovePatches]
+    sceunderscore_patch: ToRemovePatches
+    
     async def _remove_patches(self, ps4: PS4Debug):
         """
         Be careful to not call this more then once per instance! if i could delete the instance after calling this i would
         """
+        data = await ps4.read_memory(self.sceunderscore_patch.pid,self.sceunderscore_patch.address,length=len(self.sceunderscore_patch.data))
+        if data != b'\x00':
+            raise PS4MemoryNotPatched('PS4 memory is not patched, unless its partially unpatched, when in doubt, reboot ps4!')
+          
         for patch in self.patches_made:
             await ps4.write_memory(patch.pid,patch.address,patch.data)
         await ps4.free_memory(self.pid,self.GetSaveDirectoriesAddr,self.GetSaveDirectoriesAddr_length)
+        
+        await ps4.write_memory(self.sceunderscore_patch.pid,self.sceunderscore_patch.address,self.sceunderscore_patch.data)
+        print('PS4 Save patches removed from memory')
         await ps4.notify('PS4 Save patches removed from memory')
 
 
@@ -122,10 +132,10 @@ class SceSaveDataMountResult:
         if len(self.SceSaveDataMountPoint) != 32:
             raise ValueError(f"{type(self).__name__} should be a bytes object of length 32, not {len(self.SceSaveDataMountPoint)}")
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         return self.SceSaveDataMountPoint + struct.pack('<Q',self.requiredBlocks) + struct.pack('<I',self.mountStatus) 
     
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.error_code == 0
 
     @property
@@ -135,15 +145,35 @@ class SceSaveDataMountResult:
         """
         return self.SceSaveDataMountPoint.strip(b'\x00').decode('ascii').removeprefix('/').removeprefix('\\')
 
-class ProcessNotFound(Exception):
+
+class PS4MemoryPatchingError(Exception):
+    """
+    Raise if error for errors with patching and unpatching memory 
+    """
+
+class ProcessNotFound(PS4MemoryPatchingError):
     """
     Raise if a process is not found
     """
 
-    
+class PS4VersionNotSupported(PS4MemoryPatchingError):
+    """
+    Raise if firmware version not supported
+    """
+
+class PS4MemoryAlreadyPatched(PS4MemoryPatchingError):
+    """
+    Raise if already patched when trying to patch
+    """
+
+class PS4MemoryNotPatched(PS4MemoryPatchingError):
+    """
+    Raise if not patched, but trying to unpatch
+    """
+
 async def patch_memory_for_saves_900(ps4: PS4Debug, fw_version: int) -> MemoryIsPatched:
     if fw_version not in SUPPORTED_MEM_PATCH_FW_VERSIONS:
-        raise ValueError(f'fimrware {fw_version} is not supported, only {SUPPORTED_MEM_PATCH_FW_VERSIONS}')
+        raise PS4VersionNotSupported(f'fimrware {fw_version} is not supported, only {SUPPORTED_MEM_PATCH_FW_VERSIONS}')
     processes = await ps4.get_processes()
     
     su = next((p for p in processes if p.name == 'SceShellUI'), None)
@@ -189,7 +219,9 @@ async def patch_memory_for_saves_900(ps4: PS4Debug, fw_version: int) -> MemoryIs
     
     if fw_version == 9:
         data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00035DA8,length=1)
-        patches_made.append(ToRemovePatches(pid, libSceSaveDataBase + 0x00035DA8,data))
+        if data == b'\x00':
+            raise PS4MemoryAlreadyPatched('PS4 memory is already patched, or lingering patches exist, please turn off any bots, or unpatch in save mounter, if this issue occurs, restart ps4')
+        sceunderscore_patch = ToRemovePatches(pid, libSceSaveDataBase + 0x00035DA8,data)
         await ps4.write_memory(pid,libSceSaveDataBase + 0x00035DA8, b'\x00') # 'sce_' patch
 
         data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00034679,length=1)
@@ -199,7 +231,31 @@ async def patch_memory_for_saves_900(ps4: PS4Debug, fw_version: int) -> MemoryIs
         # data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00000E81,length=1)
         # patches_made.append(ToRemovePatches(pid,libSceSaveDataBase + 0x00000E81,data))
         # await ps4.write_memory(pid,libSceSaveDataBase + 0x00000E81, b'\x30') # '_' patch
-    
+        pass # pass here to make notepad++ close the if statment propley
+    elif fw_version == 11:
+        # 11.00 WIP patches by LM and SocraticBliss
+        data = await ps4.read_memory(pid,libSceSaveDataBase + 0x00355E8,length=1)
+        if data == b'\x00':
+            raise PS4MemoryAlreadyPatched('PS4 memory is already patched, or lingering patches exist, please turn off any bots, or unpatch in save mounter, if this issue occurs, restart ps4')
+        sceunderscore_patch = ToRemovePatches(pid, libSceSaveDataBase + 0x00355E8,data)
+        await ps4.write_memory(pid,libSceSaveDataBase + 0x00355E8, b'\x00') # 'sce_' patch
+
+        # data = await ps4.read_memory(pid,libSceSaveDataBase + 0x0034679,length=1)
+        # patches_made.append(ToRemovePatches(pid, libSceSaveDataBase + 0x0034679,data))
+        # await ps4.write_memory(pid,libSceSaveDataBase + 0x0034679, b'\x00') # patch commented out as idk WTF it does
+        
+        data = await ps4.read_memory(pid,libSceSaveDataBase + 0x0033E49,length=1)
+        patches_made.append(ToRemovePatches(pid, libSceSaveDataBase + 0x0033E49,data))
+        await ps4.write_memory(pid,libSceSaveDataBase + 0x0033E49, b'\x00') 
+
+        data = await ps4.read_memory(pid,libSceSaveDataBase + 0x0035AA6,length=1)
+        patches_made.append(ToRemovePatches(pid, libSceSaveDataBase + 0x0035AA6,data))
+        await ps4.write_memory(pid,libSceSaveDataBase + 0x0035AA6, b'\x00') 
+
+        data = await ps4.read_memory(pid,libSceSaveDataBase + 0x0000FB8,length=1)
+        patches_made.append(ToRemovePatches(pid, libSceSaveDataBase + 0x0000FB8,data))
+        await ps4.write_memory(pid,libSceSaveDataBase + 0x0000FB8, b'\x1F') # sb
+
     l = await ps4.get_processes()
     
     s = next((p for p in l if p.name == u'SceShellCore\x00elf'), None)
@@ -269,6 +325,27 @@ async def patch_memory_for_saves_900(ps4: PS4Debug, fw_version: int) -> MemoryIs
         data = await ps4.read_memory(s.pid, ex.start + 0x0006B51E, length=2)
         patches_made.append(ToRemovePatches(s.pid, ex.start + 0x0006B51E, data))
         await ps4.write_memory(s.pid, ex.start + 0x0006B51E, b'\x90\xE9')  # always jump
+    elif fw_version == 11:
+        patches_11_00 = (
+            (0x0E26439, b"\x00", 1),  # 'sce_sdmemory' patch 1
+            (0x0E26478, b"\x00", 1),  # 'sce_sdmemory1' patch
+            (0x0E26486, b"\x00", 1),  # 'sce_sdmemory2' patch
+            (0x0E26494, b"\x00", 1),  # 'sce_sdmemory3' patch
+            (0x08BAF40, b"\x48\x31\xC0\xC3", 4),  # verify keystone patch
+            (0x006B630, b"\x31\xC0\xC3", 3),  # transfer mount permission patch
+            (0x00C7060, b"\x31\xC0\xC3", 3),  # patch psn check
+            (0x006CFA5, b"\x90\x90", 2),  #     ^ (thanks to GRModSave_Username)
+            (0x006B177, b"\x90\x90\x90\x90\x90\x90", 6),  # something something patches...
+            (0x006AB32, b"\x90\x90\x90\x90\x90\x90", 6),  # don't even remember doing this
+            (0x006A394, b"\x90\x90", 2),  # nevah jump
+            (0x006A5EE, b"\xE9\xC8\x00", 3),  # always jump
+        )
+
+
+        for patch_address, patch_data, patch_data_length in patches_11_00:
+            data = await ps4.read_memory(s.pid, ex.start + patch_address, length=patch_data_length)
+            patches_made.append(ToRemovePatches(s.pid, ex.start + patch_address, data))
+            await ps4.write_memory(s.pid, ex.start + patch_address, patch_data)
     # WRITE CUSTOM FUNCTIONS (libSceLibcInternal)
     GetSaveDirectoriesAddr = await ps4.allocate_memory(pid, 0x8000)
     await ps4.write_memory(pid, GetSaveDirectoriesAddr, fu.GetSaveDirectories)
@@ -286,7 +363,8 @@ async def patch_memory_for_saves_900(ps4: PS4Debug, fw_version: int) -> MemoryIs
 
     async with ps4.memory(pid,length=1) as memory:
         ret = await ps4.call(pid, GetUsersAddr, memory.address, rpc_stub = stub)
-
+    
+    print('PS4 Save patches applied to memory') 
     await ps4.notify('PS4 Save patches applied to memory')
 
     return MemoryIsPatched(pid = pid, 
@@ -296,7 +374,9 @@ async def patch_memory_for_saves_900(ps4: PS4Debug, fw_version: int) -> MemoryIs
                             stub = stub,
                             GetSaveDirectoriesAddr = GetSaveDirectoriesAddr,
                             GetSaveDirectoriesAddr_length = 0x8000,
-                            patches_made = tuple(patches_made))
+                            patches_made = tuple(patches_made),
+                            sceunderscore_patch = sceunderscore_patch
+                            )
 
 """ # ITS BROKEN!, returns -1 for some reason
 async def get_user_id(ps4: PS4Debug ,mem: MemoryIsPatched) -> int:
