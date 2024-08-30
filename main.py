@@ -1129,7 +1129,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                     results.append(result) if result else None
                 except Exception as e:
                     if isinstance(e,ExpectedError):
-                        show_error_type = f'{type(e).__name__}: ' if type(e) == ExpectedError else ''
+                        show_error_type = '' if type(e) == ExpectedError else f'{type(e).__name__}: ' 
                         return HasExpectedError(f'{show_error_type}{e}',pretty_save_dir)
                     return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}','')
             # await log_message(ctx,'Connecting to PS4 ftp to do resign')
