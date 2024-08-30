@@ -3368,13 +3368,13 @@ def _make_quick_functions():
             
             if option['name'].startswith('dl_link') or option['name'] in ('decrypted_save_file','decrypted_save_folder','global_image_link'):
                 is_viable = True
-                if len(BUILT_IN_DL_LINKS) > DISCORD_CHOICE_LIMIT:
+                if len(BUILT_IN_DL_LINKS) > 0: # Force always use autocorrect to allow users to copy and paste urls too
                     auto_complete_things_dl_links.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
                 else:
                     option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_DL_LINKS]
             if option['name'] == 'save\x5ffiles':
                 is_viable = True
-                if len(BUILT_IN_SAVE_LINKS) > DISCORD_CHOICE_LIMIT:
+                if len(BUILT_IN_SAVE_LINKS) > 0: # Force always use autocorrect to allow users to copy and paste urls too
                     auto_complete_things_enc_saves.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
                 else:
                     option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_SAVE_LINKS]
