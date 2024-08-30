@@ -2575,9 +2575,8 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
         raise ExpectedError(f'{found_game_ids[0]!r}: {keystone_payload}')
 @interactions.slash_command(name="get_keystones", description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files you want the keystones of',interactions.OptionType.STRING,True)
-@account_id_opt
-async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str,account_id: str):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(get_keystone_key_from_save,{}))
+async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str: str):
+    await base_do_cheats(ctx,save_files,'1',CheatFunc(get_keystone_key_from_save,{}))
 
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
