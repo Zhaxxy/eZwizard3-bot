@@ -2569,7 +2569,7 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
             raise ValueError('Invalid keystone found in save')
 
 
-        raise ExpectedError(f'{found_game_ids[0]!r}: {non_format_susceptible_byte_repr(tp_keystone.read_bytes()})')
+        raise ExpectedError(f'{found_game_ids[0]!r}: {non_format_susceptible_byte_repr(tp_keystone.read_bytes())}')
 @interactions.slash_command(name="get_keystones", description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files you want the keystones of',interactions.OptionType.STRING,True)
 async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str):
@@ -3313,7 +3313,7 @@ async def base_saved_ting_autocomplete(ctx: interactions.AutocompleteContext,thi
         return await ctx.send(choices=[{'name':'Please start typing a built in save from /see_built_in_sabes','value':'Please start typing a built in save from /see_built_in_sabes'}])
     string_option_input = string_option_input.casefold()
     
-    print(string_option_input)
+    
     
     return await ctx.send(choices=[dict(name=x[1], value=x[0]) for x in thing if string_option_input in x[1].casefold()][:25])
 
