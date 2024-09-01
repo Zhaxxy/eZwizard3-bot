@@ -15,7 +15,6 @@ from zlib import crc32 # put modules you need at the bottom of list for custom c
 import struct
 import gzip
 from sqlite3 import connect as sqlite3_connect
-from ftplib import FTP,error_reply 
 _boot_start = time.perf_counter()
 
 from async_lru import alru_cache
@@ -204,6 +203,25 @@ _token_getter = asyncio.Lock()
 async def get_time_as_string_token() -> str:
     async with _token_getter:
         return datetime.now().strftime("%d_%m_%Y__%H_%M_%S")
+
+
+def delete_empty_folders(root: Path):
+    """
+    https://stackoverflow.com/questions/47093561/remove-empty-folders-python
+    """
+    deleted = set()
+    
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
+
+        still_has_subdirs = False
+        for subdir in subdirs:
+            if os.path.join(current_dir, subdir) not in deleted:
+                still_has_subdirs = True
+                break
+    
+        if not any(files) and not still_has_subdirs:
+            os.rmdir(current_dir)
+            deleted.add(current_dir)
 
 
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
@@ -803,12 +821,12 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         with open(direct_zip, 'wb') as f:
                             while True:
                                 if not(chunks_done % AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE):
-                                    await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
+                                    await log_message(ctx,f'Downloading {link} {pretty_bytes(downloaded_size)}/{pretty_bytes(file_size)}')
                                 chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE)
                                 if not chunk:
                                     break
                                 f.write(chunk)
-                                downloaded_size += DOWNLOAD_CHUNK_SIZE
+                                downloaded_size += len(chunk)
                                 chunks_done += 1
                                 if downloaded_size > max_size:
                                     return f'YOU LIED! {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
@@ -1412,6 +1430,17 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         add_1_total_amnt_used()
 
 ############################00 Real commands stuff
+def save_files_folder_structure_opt(func):
+    return interactions.slash_option(
+    name="folder_structure",
+    description="How do you want the saves to be laid out in the finished zip?",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[ 
+        interactions.SlashCommandChoice(name="Just the one PS4 folder, put duplicate saves in a other_saves folder (recommend option)", value=1),
+        interactions.SlashCommandChoice(name="Put each save in its own folder (usefull for save sets) (old behaviour)", value=0),
+    ]
+    )(func)
 def dec_enc_save_files(func):
     return interactions.slash_option(
     name="save_files",
@@ -1583,7 +1612,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         await free_save_str(save_dir_ftp)
 
 
-async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account_id: str, cheat: CheatFunc):
+async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_structure: int,account_id: str, cheat: CheatFunc):
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
@@ -1809,17 +1838,35 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         if not have_not_done_at_least_1_account_id_change:
                             raise
                     have_not_done_at_least_1_account_id_change = True
-            if False:
-                await log_message(ctx,'cleaning up the things you did')
-                await log_user_error(ctx,'unimplemented')
-                return
             
+            if folder_structure == 1:
+                await log_message(ctx,f'Putting all saves in one PS4 folder in {save_files}')
+                def long_lambda():
+                    enc_tp_other_saves = (enc_tp / 'other_saves')
+                    enc_tp_other_saves.mkdir()
+                    for x in enc_tp.iterdir():
+                        if x.name == 'other_saves':
+                            continue
+                        x.rename(Path(x.parent,'other_saves',x.name))
+                    
+                    new_ps4_path = Path(enc_tp,'PS4/SAVEDATA',account_id.account_id)
+                    new_ps4_path.mkdir(exist_ok=True,parents=True)
+                    
+                    for x in enc_tp_other_saves.rglob('*'):
+                        if not x.is_file():
+                            continue
+                        assert is_ps4_title_id(x.parent.name)
+                        
+                        (new_ps4_path / x.parent.name).mkdir(exist_ok=True)
+                        new_save_file_path = new_ps4_path / x.parent.name / x.name
+                        if new_save_file_path.is_file():
+                            continue
+                        x.rename(new_save_file_path)
+                
+                await asyncio.get_running_loop().run_in_executor(None,long_lambda)
+                
             await log_message(ctx,f'Deleting empty folders in {save_files}')
-            async for x in AsyncPath(enc_tp).rglob('*'):
-                try:
-                    await x.rmdir()
-                except Exception:
-                    pass
+            await asyncio.get_running_loop().run_in_executor(None,lambda: delete_empty_folders(enc_tp))
 
             await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({cheat.func.__name__})').strip())
             return
@@ -1981,9 +2028,10 @@ async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Res
 DUMMY_CHEAT_FUNC = CheatFunc(do_nothing,{})
 @interactions.slash_command(name="resign", description=f"Resign save files to an account id (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files to resign too',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
-async def do_resign(ctx: interactions.SlashContext,save_files: str,account_id: str):
-    await base_do_cheats(ctx,save_files,account_id,DUMMY_CHEAT_FUNC)
+async def do_resign(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,DUMMY_CHEAT_FUNC)
 
 async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,ignore_plans = False, **mod_files: Path):
     """
@@ -2015,6 +2063,7 @@ async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_nam
 littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", description="Cheats for LittleBigPlanet 3")
 @littlebigplanet_3.subcommand(sub_cmd_name="install_mods", sub_cmd_description="Install .mod files to a level backup or LBPxSAVE (bigfart)")
 @interactions.slash_option('save_files','The level backup or profile backup to install the mods too',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option(
     name = 'ignore_plans',
@@ -2082,11 +2131,11 @@ littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", descript
     required=False,
     opt_type=interactions.OptionType.STRING
 )
-async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     if not any(key.startswith('dl_link_mod_file') for key in kwargs.keys()):
         ctx = await set_up_ctx(ctx)
         return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(install_mods_for_lbp3_ps4,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(install_mods_for_lbp3_ps4,kwargs))
 
 async def strider_change_difficulty(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,difficulty: str):
     """
@@ -2118,14 +2167,15 @@ async def strider_change_difficulty(ftp: aioftp.Client, mount_dir: str, save_nam
 strider = cheats_base_command.group(name="strider", description="Cheats for Strider")
 @strider.subcommand(sub_cmd_name="change_difficulty", sub_cmd_description="Change the games difficulty! (i never played this game in my life)")
 @interactions.slash_option('save_files','The save files to change difficulty of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('difficulty','The difficulty ya want',interactions.OptionType.STRING,True,choices=[
         interactions.SlashCommandChoice(name="Easy mode", value='0'),
         interactions.SlashCommandChoice(name="Normal mode", value='1'),
         interactions.SlashCommandChoice(name="Hard mode", value='2')
     ])
-async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(strider_change_difficulty,kwargs))
+async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(strider_change_difficulty,kwargs))
 
 def make_cheat_func(base_cheat_applier, the_real_cheat, /, kwargs) -> CheatFunc:
     async def some_cheaty(ftp: aioftp.Client, mount_dir: str, save_name: str, /, **kwargs):
@@ -2188,12 +2238,13 @@ async def xenoverse2_change_tp_medals(dec_save: Path,/,*,tp_medals: int):
 dragonball_xenoverse_2 = cheats_base_command.group(name="dragonball_xenoverse_2", description="Cheats for DRAGON BALL XENOVERSE 2")
 @dragonball_xenoverse_2.subcommand(sub_cmd_name="change_tp_medals", sub_cmd_description="Change the TP medals of your save")
 @interactions.slash_option('save_files','The save files to change TP medals of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('tp_medals','The amount of TP medals you want',interactions.OptionType.INTEGER,True,**INT32_MAX_MIN_VALUES)
 @filename_p_opt
 @verify_checksum_opt
-async def do_xenoverse2_change_tp_medals(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,make_xenoverse2_cheat_func(xenoverse2_change_tp_medals,kwargs))
+async def do_xenoverse2_change_tp_medals(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,make_xenoverse2_cheat_func(xenoverse2_change_tp_medals,kwargs))
 
 async def _base_rayman_legend_cheats(ftp: aioftp.Client, mount_dir: str, save_name: str,/,**kwargs):
     the_real_cheat = kwargs.pop('the_real_cheat')
@@ -2294,12 +2345,13 @@ async def rayman_legends_change_lums(dec_save: Path,/,*,lums: int):
 rayman_legends = cheats_base_command.group(name="rayman_legends", description="Cheats for Rayman Legends")
 @rayman_legends.subcommand(sub_cmd_name="change_lums", sub_cmd_description="Change the Lums of your save")
 @interactions.slash_option('save_files','The save files to change Lums of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('lums','The amount of Lums you want',interactions.OptionType.INTEGER,True,**UINT32_MAX_MIN_VALUES)
 @filename_p_opt
 @verify_checksum_opt
-async def do_rayman_legends_change_lums(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,make_rayman_legend_cheat_func(rayman_legends_change_lums,kwargs))
+async def do_rayman_legends_change_lums(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,make_rayman_legend_cheat_func(rayman_legends_change_lums,kwargs))
 
 async def rayman_legends_change_jump_count(dec_save: Path,/,*,jump_count: int):
     """
@@ -2315,12 +2367,13 @@ async def rayman_legends_change_jump_count(dec_save: Path,/,*,jump_count: int):
 
 @rayman_legends.subcommand(sub_cmd_name="change_jump_count", sub_cmd_description="Change the jump count of your save")
 @interactions.slash_option('save_files','The save files to change jump count of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('jump_count','The jump count you want',interactions.OptionType.INTEGER,True)
 @filename_p_opt
 @verify_checksum_opt
-async def do_rayman_legends_change_jump_count(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,make_rayman_legend_cheat_func(rayman_legends_change_jump_count,kwargs))
+async def do_rayman_legends_change_jump_count(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,make_rayman_legend_cheat_func(rayman_legends_change_jump_count,kwargs))
 ###########################0 some base folder things idk
 async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,clean_encrypted_file: CleanEncryptedSaveOption, decrypted_save_file: Path = None, decrypted_save_folder: Path = None, unpack_first_root_folder: bool = False):
     """
@@ -2345,6 +2398,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     await ftp.upload(decrypted_save_file / 'savedata0',mount_last_name,write_into=True)
 @interactions.slash_command(name="raw_encrypt_folder", description=f"use /advanced_mode_import instead (max 1 save per command) only jb PS4 decrypted save")
 @interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('decrypted_save_file','A link to a folder or zip of your decrypted savedata0 folder',interactions.OptionType.STRING,True)
 @interactions.slash_option(
@@ -2358,16 +2412,17 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     ]
     )
 @allow_mulit_enc_opt
-async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_encrypt(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
         ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = False
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 @interactions.slash_command(name="raw_encrypt_folder_type_2", description=f"use /advanced_mode_import instead (max 1 save per command) only jb PS4 decrypted save")
 @interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('decrypted_save_folder','A link to a folder or zip containing your decrypted',interactions.OptionType.STRING,True)
 @interactions.slash_option(
@@ -2391,13 +2446,13 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
     ]
     )
 @allow_mulit_enc_opt
-async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
         ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 @interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrypted minecraft save")
 @account_id_opt
@@ -2435,7 +2490,7 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS
     kwargs['unpack_first_root_folder'] = True
     kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
-    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,0,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 
 @interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
@@ -2547,7 +2602,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         with open(tp_param_sfo,'rb+') as f:
             f.seek(0x9F8-8)
             f.write(struct.pack('<q',new_blocks_size))
-        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
+        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),0,account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
 
 async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -> NoReturn:
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
@@ -2573,7 +2628,7 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
 @interactions.slash_command(name="get_keystones", description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files you want the keystones of',interactions.OptionType.STRING,True)
 async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str):
-    await base_do_cheats(ctx,save_files,'1',CheatFunc(get_keystone_key_from_save,{}))
+    await base_do_cheats(ctx,save_files,0,'1',CheatFunc(get_keystone_key_from_save,{}))
 
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
@@ -2612,10 +2667,11 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
     return CheatFuncResult(savename,gameid)
 @interactions.slash_command(name="re_region", description=f"Re region your save files! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files to be re regioned',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('gameid','The gameid of the region you want, in format CUSAxxxxx',interactions.OptionType.STRING,True,max_length=9,min_length=9)
-async def do_re_region(ctx: interactions.SlashContext,save_files: str,account_id: str, gameid: str):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(re_region,{'gameid':gameid.upper()}))
+async def do_re_region(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, gameid: str):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(re_region,{'gameid':gameid.upper()}))
 
 async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_image_overlay: Path, option: ChangeSaveIconOption):
     """
@@ -2643,6 +2699,7 @@ async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         await ftp.upload(og_icon0_path,'icon0.png',write_into=True)
 @interactions.slash_command(name="change_icon",description=f"Add an icon overlay to your saves!")
 @interactions.slash_option('save_files','The save files to change the icon of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('dl_link_image_overlay','The link to an image overlay you want, check out file2url!',interactions.OptionType.STRING,True)
 @interactions.slash_option(
@@ -2657,9 +2714,9 @@ async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         interactions.SlashCommandChoice(name="Ignore aspect ratio and use bilnear for resizing", value=4),
     ]
     )
-async def do_change_save_icon(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_change_save_icon(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     kwargs['option'] = ChangeSaveIconOption(kwargs['option'])
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_icon,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(change_save_icon,kwargs))
 
 async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_name: bytes) -> None:
     """
@@ -2682,10 +2739,11 @@ async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
 
 @interactions.slash_command(name="change_save_name", description=f"Change the name of the save displayed on PS4 menu")
 @interactions.slash_option('save_files','The save files to change the name of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('psstring_new_name','the name you want, put hex code for symbols (eg this is a checkmark -> EFA1BE)',interactions.OptionType.STRING,True,min_length=1,max_length=0x80*3)
-async def do_change_save_name(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_name,kwargs))
+async def do_change_save_name(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(change_save_name,kwargs))
 
 
 async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_desc: bytes) -> None:
@@ -2710,10 +2768,11 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
 
 @interactions.slash_command(name="change_save_desc", description=f"Change the description of the save displayed on PS4 menu")
 @interactions.slash_option('save_files','The save files to change the description of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('psstring_new_desc','the description you want, put hex code for symbols (eg this is a TV -> EFA1B1)',interactions.OptionType.STRING,True,min_length=1,max_length=0x79*6)
-async def do_change_save_desc(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_desc,kwargs))
+async def do_change_save_desc(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(change_save_desc,kwargs))
 ############################03 Custom imports
 
 async def rayman_legends_upload_fix_checksum(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_single: Path, filename_p: str | None = None):
@@ -2893,6 +2952,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
 
 @interactions.slash_command(name="advanced_mode_import",description=f"Import/encrypt your exported/decrypted saves!")
 @interactions.slash_option('save_files','The save file to import the decrypted save to',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('dl_link_single','The file link you wanna import YOU SHOULD GET THIS FROM SAVEWIZARD OR advanced_mode_export',interactions.OptionType.STRING,True)
 @interactions.slash_option(name='game',
@@ -2904,12 +2964,12 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
     ])
 @filename_p_opt
 @allow_mulit_enc_opt
-async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
+async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
     if not kwargs.pop('allow_mulit_enc',None):
         ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     import_func = game_enc_functions[kwargs.pop('game')]
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(import_func,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(import_func,kwargs))
 ############################04 Cool bot features
 _did_first_boot = True
 @interactions.listen()
