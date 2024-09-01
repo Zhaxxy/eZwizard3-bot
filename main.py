@@ -802,26 +802,26 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                             filename = link.split('/')[-1].split('?')[0]
                         if validation_result := validation(filename):
                             return f'{link} failed validation reason: {validation_result}'
-                        file_size = response.headers.get('Content-Length')
-                        if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/') or link.startswith('https://file.io') or link.startswith('https://www.file.io'):
-                            file_size = 3
+                        file_size: int | None | str = response.headers.get('Content-Length')
                         if file_size is None:
-                            return 'There was no Content-Length header'
-                        try:
-                            file_size = int(file_size)
-                        except ValueError:
-                            return f'Content-Length {file_size!r} was not a valid number'
-                        if file_size > max_size:
-                            return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
-                        if file_size < 2:
-                            return f'The file {link} is too small lmao'
+                            file_size = '? Bytes'
+                        else:
+                            try:
+                                file_size = int(file_size)
+                            except ValueError:
+                                return f'Content-Length {file_size!r} was not a valid number'
+                            if file_size > max_size:
+                                return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                            if file_size < 2:
+                                return f'The file {link} is too small lmao'
+                            file_size = pretty_bytes(file_size)
                         downloaded_size = 0
                         chunks_done = 0
                         direct_zip = Path(donwload_location,filename)
                         with open(direct_zip, 'wb') as f:
                             while True:
                                 if not(chunks_done % AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE):
-                                    await log_message(ctx,f'Downloading {link} {pretty_bytes(downloaded_size)}/{pretty_bytes(file_size)}')
+                                    await log_message(ctx,f'Downloading {link} {pretty_bytes(downloaded_size)}/{file_size}')
                                 chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE)
                                 if not chunk:
                                     break
