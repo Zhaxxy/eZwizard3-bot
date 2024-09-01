@@ -803,7 +803,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         if validation_result := validation(filename):
                             return f'{link} failed validation reason: {validation_result}'
                         file_size = response.headers.get('Content-Length')
-                        if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/'):
+                        if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/') or link.startswith('https://file.io') or link.startswith('https://www.file.io'):
                             file_size = 3
                         if file_size is None:
                             return 'There was no Content-Length header'
