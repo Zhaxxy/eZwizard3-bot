@@ -3236,7 +3236,6 @@ async def bot_information(ctx: interactions.SlashContext):
     largest_guild = max(guilds, key=lambda g: g.member_count)
     smallest_guild = min(guilds, key=lambda g: g.member_count)
 
-    
     memory_usage = "XX MB"  
     cpu_usage = "YY%"       
     total_runtime = 123456  
@@ -3244,13 +3243,25 @@ async def bot_information(ctx: interactions.SlashContext):
     total_amnt_used = 5000  
     unique_users_session = 50  
     unique_users_total = 1000  
+
+    amnt_of_free = 3  
+    SAVE_DIRS = [1, 2, 3]  
     
+    if not amnt_of_free:
+        status = interactions.Status.DO_NOT_DISTURB
+        msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
+    elif amnt_of_free == len(SAVE_DIRS):
+        status = interactions.Status.IDLE
+        msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
+    else:
+        status = interactions.Status.ONLINE
+        msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
+
     embed = interactions.Embed(
         title="🤖 Bot Information 🤖",
-        color=0x0083ff  
+        color=0x0083ff
     )
 
-    
     embed.add_field(
         name="📡 Server Information 📡",
         value=(
@@ -3263,7 +3274,6 @@ async def bot_information(ctx: interactions.SlashContext):
         inline=False
     )
 
-   
     embed.add_field(
         name="🔍 Bot Overview 🔍",
         value=(
@@ -3279,7 +3289,6 @@ async def bot_information(ctx: interactions.SlashContext):
         inline=False
     )
 
-    
     embed.add_field(
         name="📊 Usage Statistics 📊",
         value=(
@@ -3292,7 +3301,6 @@ async def bot_information(ctx: interactions.SlashContext):
         inline=False
     )
 
-    
     embed.add_field(
         name="🖥️ System Information 🖥️",
         value=(
@@ -3303,7 +3311,6 @@ async def bot_information(ctx: interactions.SlashContext):
         inline=False
     )
 
-    
     embed.add_field(
         name="📚 Additional Information 📚",
         value=(
@@ -3314,10 +3321,13 @@ async def bot_information(ctx: interactions.SlashContext):
         inline=False
     )
 
-    
-    embed.set_footer(text="Enjoy our FREE savebots! Happy Modding :)")
+    embed.set_footer(
+        text=f"Enjoy our FREE savebots! Happy Modding :)\n{msg}",
+        icon_url="https://media.discordapp.net/attachments/1252945555940708433/1258855610078986382/Daco_4777087.png?ex=66daa465&is=66d952e5&hm=38ec4f9bbf6710cba38ce9457bfdec43f4f6f2daad222349e5ae87147ba3dd33&=&format=webp&quality=lossless&width=544&height=543"  
+    )
 
     await ctx.send(embed=embed)
+
 
 from interactions import SlashCommand, SlashContext, Embed, Button, ButtonStyle, component_callback, slash_command, Intents, Client
 
