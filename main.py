@@ -17,6 +17,7 @@ import gzip
 from sqlite3 import connect as sqlite3_connect
 from ftplib import FTP,error_reply 
 _boot_start = time.perf_counter()
+from interactions import Embed
 
 from async_lru import alru_cache
 import ujson as json
@@ -257,7 +258,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
 
 
-    full_msg = f'*Yo* <@{ctx.author_id}>:pepesayshi:\n{error_msg}'
+    full_msg = f'*Yo* <@{ctx.author_id}><a:pepesayshi:1272147595426271305>\n{error_msg}'
     
     first_time = True
     for msg_chunk in chunker(full_msg,2000-1-3):
@@ -284,7 +285,7 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
         success_msg = getattr(ctx,attr_name) + new_line_chars + success_msg
 
     
-    full_msg = f'**Yo!** <@{ctx.author_id}> :pepesayshi:\n{success_msg}'
+    full_msg = f'**Yo!** <@{ctx.author_id}> <a:pepesayshi:1272147595426271305>\n{success_msg}'
     
     first_time = True
     triple_backtick_start = False
@@ -560,7 +561,7 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
         leader = ''
         error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
     else:
-        leader = '*Your save is basically fucked...*\n'
+        leader = '*Your Layout was basically fucked...*\n*Please Follow the Instructions below to use this command*\n'
         error_msg = f'```{sys.exc_info()[1]}```'
     
     if error_msg == '```' + '```':
@@ -662,7 +663,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
 
             ps4_saves.append((zip_file.path,white_file))
         if not ps4_saves:
-            return f'*Oops, I couldnt find anything in your link*:Cry:\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
+            return f'*Oops, I couldnt find anything in your link* <:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
         
         try:
             ctx.ezwizard3_special_ctx_attr_special_save_files_thing
@@ -965,7 +966,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'*I couldnt find anything in your link*:Cry:\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
+            return f'*I couldnt find anything in your link* <:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
@@ -1024,7 +1025,7 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'*Please Wait*'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
-        await log_message(ctx,f'*Uploading* {pretty_save_dir} *to console*')
+        await log_message(ctx,f'*Uploading* {pretty_save_dir} *to Jailbroken 9.00 console & Working magic!* - *Please Wait*')
         custon_decss = lambda: asyncio.run(_upload_encrypted_to_ps4(bin_file, white_file, ftp_bin, ftp_white))
         await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
@@ -2949,11 +2950,7 @@ async def do_get_bot_status(ctx: interactions.SlashContext):
     min_length=3
     )
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
-    # for guild in ctx.bot.guilds:
-        # if guild.name == "nlord14Jr's server":
-            # await guild.leave()
-            # print(f'left {guild.name}')
-    # return
+
     ctx = await set_up_ctx(ctx)
 
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
@@ -3012,7 +3009,6 @@ async def see_cheat_chain(ctx: interactions.SlashContext):
     chets = ''.join(chet.pretty() for chet in get_cheat_chain(ctx.author_id))
     await log_user_success(ctx,f'Cheats in your chain are currently...{chets}')
 
-
 @interactions.slash_command(name="ping",description="Ping ItzGhosty420's bot to check online status")
 async def ping_test(ctx: interactions.SlashContext):
     await ctx.defer()
@@ -3065,16 +3061,15 @@ async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachm
     save_url(ctx.author_id,my_file.url,my_file_id)
     await log_user_success(ctx,f'the url is {my_file.url}, or use {my_file_id} in a field that needs a url, like save_files or dl_link')
 
-
 import sqlite3
 import atexit
-import interactions  # Ensure you're using the correct library for your bot (like discord.py, interactions.py, etc.)
+import interactions  
 
-# Connect to SQLite database (or create it if it doesn't exist)
+
 conn = sqlite3.connect('bot_usage.db')
 c = conn.cursor()
 
-# Create a table for tracking command usage
+
 c.execute('''
     CREATE TABLE IF NOT EXISTS command_usage (
         user_id TEXT PRIMARY KEY,
@@ -3083,32 +3078,32 @@ c.execute('''
 ''')
 conn.commit()
 
-# Ensure the database connection is closed when the bot shuts down
+
 @atexit.register
 def close_connection():
     conn.close()
 
-# Function to track command usage
+
 async def track_command_usage(user_id: str):
-    # Check if the user exists in the database
+   
     c.execute('SELECT usage_count FROM command_usage WHERE user_id = ?', (user_id,))
     result = c.fetchone()
     
     if result:
-        # If the user exists, increment their usage count
+        
         c.execute('UPDATE command_usage SET usage_count = usage_count + 1 WHERE user_id = ?', (user_id,))
     else:
-        # If the user doesn't exist, add them with an initial count of 1
+       
         c.execute('INSERT INTO command_usage (user_id, usage_count) VALUES (?, 1)', (user_id,))
     
     conn.commit()
 
-# Modify your existing function to track usage
+
 async def set_up_ctx(ctx: interactions.SlashContext, *, mode=0) -> interactions.SlashContext:
-    # Track command usage
+    
     await track_command_usage(str(ctx.author.id))
     
-    # Your existing code...
+    
     nth_time = 1
     try:
         ctx.ezwizard_setup_done += 1
@@ -3121,77 +3116,702 @@ async def set_up_ctx(ctx: interactions.SlashContext, *, mode=0) -> interactions.
     
     return ctx
 
-# Slash command to display the leaderboard
 @interactions.slash_command(
     name="leaderboard",
-    description="Shows the top users who have used the bot the most.",
+    description="Displays the top users who have used the bot the most.",
 )
 async def leaderboard(ctx: interactions.SlashContext):
-    # Retrieve and sort the data by usage_count in descending order
+
     c.execute('SELECT user_id, usage_count FROM command_usage ORDER BY usage_count DESC LIMIT 10')
     top_users = c.fetchall()
-    
-    if not top_users:
-        await ctx.send("No command usage data available.")
-        return
-    
-    # Build the leaderboard message
-    leaderboard_msg = "**Top Users by Command Usage:**\n\n"
-    for idx, (user_id, usage_count) in enumerate(top_users, start=1):
-        user = await ctx.guild.fetch_member(int(user_id))
-        leaderboard_msg += f"{idx}. {user} - {usage_count} commands\n"
-    
-    await ctx.send(leaderboard_msg)
 
+    if not top_users:
+        await ctx.send("📉 No command usage data available at the moment.")
+        return
+
+    leaderboard_embed = interactions.Embed(
+        title="🏆 **Top Users by Command Usage** 🏆",
+        description="Keep using the bot to climb the leaderboard!",
+        color=0x0083ff  
+    )
+
+    leaderboard_content = ""
+
+    for idx, (user_id, usage_count) in enumerate(top_users, start=1):
+        try:
+
+            user = await ctx.bot.fetch_user(int(user_id))
+            username = user.username
+        except Exception:
+
+            username = "Unknown User"
+        
+
+        leaderboard_content += f"**{idx}.** {username} - **{usage_count}** commands used\n"
+
+
+    leaderboard_embed.add_field(
+        name="Top Command Users",
+        value=leaderboard_content,
+        inline=False
+    )
+
+
+    leaderboard_embed.set_footer(
+        text="Last Updated at 📈",
+        icon_url=ctx.bot.user.avatar_url
+    )
+
+
+    leaderboard_embed.timestamp = datetime.utcnow()
+
+
+    await ctx.send(embed=leaderboard_embed)
 
 
 import interactions
 
-@interactions.slash_command(name='savebot_information', description="Displays information about the bot!")
-async def bot_info(ctx: interactions.SlashContext):
-    global usage_count
 
-        # Fetch guild information
+ADMIN_IDS = [1171410680054812683]  
+
+
+def is_admin(user_id):
+    return user_id in ADMIN_IDS
+
+
+
+@interactions.slash_command(
+    name='admin_server_list', 
+    description="Displays a list of all servers the bot is in. Admin only."
+)
+async def admin_server_list(ctx: interactions.SlashContext):
+    if not is_admin(ctx.author.id):
+        await ctx.send(f"**Yo!**<a:pepesayshi:1272147595426271305>\n*You don't need to know this information..*", ephemeral=False)
+        return
+
     guilds = ctx.bot.guilds
-    guild_names = [f"• {guild.name}" for guild in guilds]
+    guild_list = [f"• {guild.name} (ID: {guild.id})" for guild in guilds]
     guild_count = len(guilds)
 
-    # Collect system information (e.g., memory, CPU usage - optional, placeholder)
-    memory_usage = "XX MB"  # Replace with actual memory usage calculation if needed
-    cpu_usage = "YY%"       # Replace with actual CPU usage calculation if needed
-
-    # Generate the info message
-    info_message = (
-        f"**📡 Server Information**\n"
-        f"• **Server List:**\n" + "\n".join(guild_names) + "\n"
-        f"• **Number of Servers:** `{guild_count}`\n"
-        f"\n"
-        f"**🔍 Bot Overview**\n"
-        f"• **Bot Latency:** `{ctx.bot.latency * 1000:.2f}ms`\n"
-        f"• **Current Version:** `{await get_commit_count()}`\n"
-        f"• **Latest Version Available:** `{await get_remote_count()}`\n"
-        f"• **Uptime:** `{pretty_seconds_words(total_runtime)}`\n"
-        f"\n"
-        f"**📊 Usage Statistics**\n"
-        f"• **Commands Used (Session):** `{amnt_used_this_session}`\n"
-        f"• **Commands Used (Total):** `{get_total_amnt_used()}`\n"
+    embed = interactions.Embed(
+        title="📡 Server List",
+        description=(
+            f"• **Number of Servers:** `{guild_count}`\n"
+            + "\n".join(guild_list) + "\n\n"
+            f"To remove a server, use `/remove_server <guild_id>`."
+        ),
+        color=0x0083ff  
     )
 
-    # Send the information message to the channel
-    await ctx.send(info_message)
+    await ctx.send(embed=embed, ephemeral=False)
 
-# Define your invite link here
+
+
+@interactions.slash_command(
+    name='remove_server', 
+    description="Removes the bot from the specified server. Admin only."
+)
+@interactions.slash_option("guild_id", description="The ID of the server to remove", opt_type=interactions.OptionType.STRING, required=True)
+async def remove_server(ctx: interactions.SlashContext, guild_id: str):
+    if not is_admin(ctx.author.id):
+        await ctx.send("You do not have permission to use this command.", ephemeral=False)
+        return
+
+    guild = ctx.bot.get_guild(int(guild_id))
+    if guild:
+        await guild.leave()
+        await ctx.send(f"Successfully removed the bot from **{guild.name}** (ID: {guild_id}).", ephemeral=False)
+    else:
+        await ctx.send(f"Could not find a server with ID: {guild_id}.", ephemeral=False)
+
+@interactions.slash_command(
+    name='bot_information', 
+    description="Displays detailed information about the bot!"
+)
+async def bot_information(ctx: interactions.SlashContext):
+    
+    guilds = ctx.bot.guilds
+    guild_count = len(guilds)
+    total_members = sum([guild.member_count for guild in guilds])
+    largest_guild = max(guilds, key=lambda g: g.member_count)
+    smallest_guild = min(guilds, key=lambda g: g.member_count)
+
+    
+    memory_usage = "XX MB"  
+    cpu_usage = "YY%"       
+    total_runtime = 123456  
+    amnt_used_this_session = 100  
+    total_amnt_used = 5000  
+    unique_users_session = 50  
+    unique_users_total = 1000  
+    
+    embed = interactions.Embed(
+        title="🤖 Bot Information 🤖",
+        color=0x0083ff  
+    )
+
+    
+    embed.add_field(
+        name="📡 Server Information 📡",
+        value=(
+            f"• **Number of Servers:** `{guild_count}`\n"
+            f"• **Total Members:** `{total_members}`\n"
+            f"• **Largest Server:** `{largest_guild.name}` with `{largest_guild.member_count}` members\n"
+            f"• **Smallest Server:** `{smallest_guild.name}` with `{smallest_guild.member_count}` members\n"
+            f"• **Average Members per Server:** `{total_members // guild_count}`"
+        ),
+        inline=False
+    )
+
+   
+    embed.add_field(
+        name="🔍 Bot Overview 🔍",
+        value=(
+            f"• **Bot Latency:** `{ctx.bot.latency * 1000:.2f}ms`\n"
+            f"• **Current Version:** `{await get_commit_count()}`\n"
+            f"• **Latest Version Available:** `{await get_remote_count()}`\n"
+            f"• **Uptime:** `{pretty_seconds_words(total_runtime)}`\n"
+            f"• **Created On:** `{ctx.bot.user.created_at.strftime('%Y-%m-%d')}`\n"
+            f"• **Hoster:** `ItzGhosty420`\n"
+            f"• **Total Channels:** `{sum(len(guild.channels) for guild in guilds)}`\n"
+            f"• **Total Roles:** `{sum(len(guild.roles) for guild in guilds)}`"
+        ),
+        inline=False
+    )
+
+    
+    embed.add_field(
+        name="📊 Usage Statistics 📊",
+        value=(
+            f"• **Commands Used (Session):** `{amnt_used_this_session}`\n"
+            f"• **Commands Used (Total):** `{total_amnt_used}`\n"
+            f"• **Most Used Command:** `/Resign`\n"
+            f"• **Unique Users (Session):** `{unique_users_session}`\n"
+            f"• **Unique Users (Total):** `{unique_users_total}`"
+        ),
+        inline=False
+    )
+
+    
+    embed.add_field(
+        name="🖥️ System Information 🖥️",
+        value=(
+            f"• **Memory Usage:** `{memory_usage}`\n"
+            f"• **CPU Usage:** `{cpu_usage}`\n"
+            f"• **Running On:** `{ctx.bot.user}`"
+        ),
+        inline=False
+    )
+
+    
+    embed.add_field(
+        name="📚 Additional Information 📚",
+        value=(
+            f"• **Bot Prefix:** `/`\n"
+            f"• **Support Server:** [ItzGhosty420's Server](https://discord.gg/itzghosty420)\n"
+            f"• **GitHub Repository:** [View on GitHub](https://github.com/ItzGhosty420?tab=repositories)"
+        ),
+        inline=False
+    )
+
+    
+    embed.set_footer(text="Enjoy our FREE savebots! Happy Modding :)")
+
+    await ctx.send(embed=embed)
+
+from interactions import SlashCommand, SlashContext, Embed, Button, ButtonStyle, component_callback, slash_command, Intents, Client
+
+
+image_url = "https://media.discordapp.net/attachments/1252945555940708433/1278262164515459124/ezgif-5-5a0c085339.gif?ex=66d029e8&is=66ced868&hm=12b84c82431418aa04ecf4b2c7164bbc5803a53b087c988128a1150893cf8a74&=&width=120&height=120"
+discord_link = "https://discord.gg/itzghosty420"
+
+
+@slash_command(
+    name="help",
+    description="Get detailed help on how to use our PS SaveBots!"
+)
+async def help(ctx: SlashContext):
+   
+    embed = Embed(
+        title="📖 How to Use Our eZwizard3 SaveBots 📖",
+        description="A step-by-step guide to help you get the most out of our SaveBots for PS4/PS5. Whether you're resigning save files, re-regioning, or decrypting your saves, this guide has you covered.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="🔍 Retrieve PS Account ID from PSN Name",
+        value=(
+            "Easily retrieve your PlayStation account ID using your PSN username.\n\n"
+            "**Steps**:\n"
+            "1. **Run Command**: `/My_Account_ID`\n"
+            "2. **Input**: `PSN Username`\n"
+            "3. **Submit**: Execute the command\n"
+            "4. **Output**: Your PSN Account ID will be displayed.\n\n"
+            "📌 **Tip**: Double-check the PSN username for accuracy."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_1")
+
+    await ctx.send(embeds=[embed], components=[[next_button]])
+
+
+@component_callback("next_page_1")
+async def next_page_1(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🆔 Resign Save Data Files to Your Account 🆔",
+        description="Easily resign save files to match your PlayStation account ID. This is crucial for using saves from different accounts.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Resign Save Files:",
+        value=(
+            "1. **Upload**: Your save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Resign`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "6. **Download**: Your resigned file from the bot.\n\n"
+            "📌 **Note**: Ensure the correct account ID is used to avoid issues."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_1")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_2")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_1")
+async def previous_page_1(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="📖 How to Use Our eZwizard3 SaveBots 📖",
+        description="A step-by-step guide to help you get the most out of our SaveBots for PS4/PS5. Whether you're resigning save files, re-regioning, or decrypting your saves, this guide has you covered.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="🔍 Retrieve PS Account ID from PSN Name",
+        value=(
+            "Easily retrieve your PlayStation account ID using your PSN username.\n\n"
+            "**Steps**:\n"
+            "1. **Run Command**: `/My_Account_ID`\n"
+            "2. **Input**: `PSN Username`\n"
+            "3. **Submit**: Execute the command\n"
+            "4. **Output**: Your PSN Account ID will be displayed.\n\n"
+            "📌 **Tip**: Double-check the PSN username for accuracy."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_1")
+
+    await ctx.edit(embeds=[embed], components=[[next_button]])
+
+
+@component_callback("next_page_2")
+async def next_page_2(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🌍 Re-Region Your Save Files 🌍",
+        description="Change the region of your save files to make them compatible with different game versions.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Re-Region Save Files:",
+        value=(
+            "1. **Upload**: Your save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Re-Region`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Specify Region**: Select the desired game region.\n"
+            "6. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "7. **Download**: Your re-regioned file from the bot.\n\n"
+            "📌 **Tip**: Make sure the new region matches your game version to avoid compatibility issues."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_2")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_3")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_2")
+async def previous_page_2(ctx: SlashContext):
+    await next_page_1(ctx)
+
+
+@component_callback("next_page_3")
+async def next_page_3(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🔓 Decrypt Your Save Files 🔓",
+        description="Decrypt your save files to make them editable or viewable.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Decrypt Save Files:",
+        value=(
+            "1. **Upload**: Your save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Decrypt`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "6. **Download**: Your decrypted file from the bot.\n\n"
+            "📌 **Reminder**: Always backup your original save file before making changes."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_3")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_4")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_3")
+async def previous_page_3(ctx: SlashContext):
+    await next_page_2(ctx)
+
+
+@component_callback("next_page_4")
+async def next_page_4(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🔒 Encrypt Your Save Files 🔒",
+        description="Re-encrypt your modified save files to ensure they work properly on your PlayStation.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Encrypt Save Files:",
+        value=(
+            "1. **Upload**: Your modified save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Encrypt`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "6. **Download**: Your encrypted file from the bot.\n\n"
+            "📌 **Tip**: Ensure the file is in the correct format before encrypting."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_4")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_5")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_4")
+async def previous_page_4(ctx: SlashContext):
+    await next_page_3(ctx)
+
+
+@component_callback("next_page_5")
+async def next_page_5(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🖼️ Customize Your Save Icon 🖼️",
+        description="Personalize the icon of your save files for a unique touch.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Customize Save Icons:",
+        value=(
+            "1. **Choose an Icon**: Select or create an icon image.\n"
+            "2. **Upload**: Your icon image to Google Drive.\n"
+            "3. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "4. **Run Command**: `/Change_Icon`\n"
+            "5. **Submit**: Provide the link to the bot.\n"
+            "6. **Download**: Your customized save file.\n\n"
+            "📌 **Note**: Use a square image with the correct resolution for best results."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_5")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_6")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_5")
+async def previous_page_5(ctx: SlashContext):
+    await next_page_4(ctx)
+
+
+@component_callback("next_page_6")
+async def next_page_6(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🆔 Understanding CUSA IDs & Resources 🆔",
+        description="Learn what CUSA IDs are and how to find them, along with useful resources for save files.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="What is a CUSA ID?",
+        value=(
+            "A **CUSA ID** is a unique identifier assigned to each PlayStation game. It's essential for identifying the correct version of a game when dealing with save files, patches, or mods.\n\n"
+            "Each game version may have a different CUSA ID, especially across regions. Ensuring you have the correct CUSA ID is crucial when applying saves or mods."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="Useful Resources:",
+        value=(
+            "- **[OrbisPatches](https://orbispatches.com/)**: A comprehensive database to find CUSA IDs and related game patches.\n"
+            "- **[TheTechGame](https://www.thetechgame.com/Downloads.html)**: A popular site to find and download save files for PS4/PS5 games."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_6")
+    start_over_button = Button(style=ButtonStyle.PRIMARY, label="🔄 Start Over 🔄", custom_id="start_over")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, start_over_button]])
+
+
+@component_callback("previous_page_6")
+async def previous_page_6(ctx: SlashContext):
+    await next_page_5(ctx)
+
+
+@component_callback("start_over")
+async def start_over(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="📖 How to Use Our eZwizard3 SaveBots 📖",
+        description="A step-by-step guide to help you get the most out of our SaveBots for PS4/PS5. Whether you're resigning save files, re-regioning, or decrypting your saves, this guide has you covered.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="🔍 Retrieve PS Account ID from PSN Name",
+        value=(
+            "Easily retrieve your PlayStation account ID using your PSN username.\n\n"
+            "**Steps**:\n"
+            "1. **Run Command**: `/My_Account_ID`\n"
+            "2. **Input**: `PSN Username`\n"
+            "3. **Submit**: Execute the command\n"
+            "4. **Output**: Your PSN Account ID will be displayed.\n\n"
+            "📌 **Tip**: Double-check the PSN username for accuracy."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_1")
+
+    await ctx.edit(embeds=[embed], components=[[next_button]])
+
+import requests
+from interactions import Extension, slash_command, SlashContext, slash_option, OptionType, Embed
+from rapidfuzz import fuzz, process, utils
+from data_files import KNOWN_TITLE_IDS, KNOWN_REGIONS, REGION_EMOJIS
+import re
+
+
+API_KEY = "1e217489cd114460b32fc3174044e052"
+
+
+CUSA_TITLE_ID = re.compile(r'CUSA\d{5}')
+
+
+ERROR_SIDE_EMBED_COLOUR = 0xFF4C4C  
+NORMAL_EMBED_COLOUR = 0x1E90FF  
+
+
+NO_GAMES_FOUND_EMBED = Embed(
+    title='❌ **No Games Found**',
+    description='🔍 Please check the spelling or try a different name.',
+    footer='If you believe this game exists, please report it.',
+    color=ERROR_SIDE_EMBED_COLOUR
+)
+
+def fetch_rawg_game_details(game_name):
+    """Fetch game details from RAWG.io based on the game name."""
+    rawg_url = f"https://api.rawg.io/api/games?search={game_name.replace(' ', '%20')}&key={API_KEY}"
+    try:
+        response = requests.get(rawg_url)
+        response.raise_for_status()
+        data = response.json()
+        if data['results']:
+            game_details = data['results'][0]
+            game_slug = game_details.get('slug')
+            detailed_url = f"https://api.rawg.io/api/games/{game_slug}?key={API_KEY}"
+            detailed_response = requests.get(detailed_url)
+            detailed_response.raise_for_status()
+            detailed_data = detailed_response.json()
+            return game_details, detailed_data
+    except requests.exceptions.RequestException as e:
+        return None, str(e)
+    return None, "No game details found."
+
+def format_embed_fields(game_details, detailed_data):
+    """Format game details into embed fields."""
+    developers = ', '.join([dev["name"] for dev in detailed_data.get("developers", [])]) or '*Not Available*'
+    release_date = game_details.get('released', 'Not Available')
+    rating = f"{detailed_data.get('rating', 'N/A')} / 5 ⭐"
+
+
+    fields = [
+        ("🎮 **Developers**", developers),
+        ("📅 **Release Date**", release_date),
+        ("📊 **Rating**", rating)
+    ]
+    
+
+    english_tags = ', '.join([tag["name"] for tag in game_details.get("tags", []) if re.match(r"^[A-Za-z\s]+$", tag["name"])][:3]) or '*Not Available*'
+    
+    return fields, english_tags
+
+@slash_command(
+    name="game_info",
+    description="Fetch detailed information about a game.",
+)
+@slash_option(
+    name="game_name",
+    description="Name of the game you want information about",
+    opt_type=OptionType.STRING,
+    required=True
+)
+async def game_info(ctx: SlashContext, game_name: str):
+    await ctx.defer()
+
+
+    best_match = process.extractOne(
+        game_name, 
+        [name[0] for name in KNOWN_TITLE_IDS.values()],
+        scorer=fuzz.partial_ratio
+    )
+
+    if not best_match or best_match[1] < 70:
+        await ctx.send(embed=NO_GAMES_FOUND_EMBED)
+        return
+
+    corrected_game_name = best_match[0]
+    game_details, detailed_data = fetch_rawg_game_details(corrected_game_name)
+
+    if not game_details:
+        await ctx.send(f"❗ Failed to fetch information: {detailed_data}.")
+        return
+
+
+    game_description = detailed_data.get('description_raw', '*No description available.*')
+    if len(game_description) > 200:  
+        game_description = game_description[:200] + '...'
+
+    game_embed = Embed(
+        title=f"🎮 **{game_details.get('name', 'Unknown Game')}**",
+        description=f"*{game_description}*",
+        color=NORMAL_EMBED_COLOUR
+    )
+
+
+    fields, english_tags = format_embed_fields(game_details, detailed_data)
+    for field_name, field_value in fields:
+        game_embed.add_field(name=field_name, value=field_value, inline=True)
+
+
+    if english_tags != '*Not Available*':
+        game_embed.add_field(name="🏷️ **Tags**", value=f"*{english_tags}*", inline=True)
+
+
+    platforms = ', '.join([platform['platform']['name'] for platform in game_details.get('platforms', [])]) or '*Not Available*'
+    game_embed.add_field(name="🔖 **Platforms**", value=f"*{platforms}*", inline=True)
+
+
+    found_cusa = set()
+    for title_id, game_info in KNOWN_TITLE_IDS.items():
+        if fuzz.QRatio(game_info[0], corrected_game_name, processor=utils.default_process) >= 95:
+            found_cusa.add((f'CUSA{title_id:05}', *game_info))
+
+    if found_cusa:
+        cusa_text = '\n'.join([f"📂 {title_id} - {region}" for title_id, _, region in found_cusa])
+        game_embed.add_field(name="🌍 **CUSA Regions**", value=cusa_text, inline=False)
+
+
+    if game_details.get('website'):
+        game_embed.add_field(name="🔗 **Official Website**", value=f"[Visit Website]({game_details['website']})", inline=False)
+
+
+    if game_details.get('background_image'):
+        game_embed.set_thumbnail(url=game_details['background_image'])
+
+
+    game_embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+
+    await ctx.send(embeds=[game_embed])
+
+
 INVITE_LINK_1 = "https://discord.gg/itzghosty420"
 INVITE_LINK_2 = "https://www.youtube.com/@ItzGhosty420"
 
 @interactions.slash_command(name='discord_invite', description="ItzGhosty420's Discord Server")
 async def discord_invite(ctx: interactions.SlashContext):
-    # Send the invite link to the channel where the command was used
+
     await ctx.send(f"*Jump over & Check out the Bot Hosters Discord Server!*\n{INVITE_LINK_1}")
 
 @interactions.slash_command(name='youtube_channel', description="ItzGhosty420's Youtube Channel")
 async def youtube_channel(ctx: interactions.SlashContext):
-    # Send the invite link to the channel where the command was used
+    
     await ctx.send(f"*Jump over & Check out the Bot Hosters Youtube Channel!*\n{INVITE_LINK_2}")
 
 @interactions.slash_command(name='delete_files2urls',description="Delete all your saved urls!")
@@ -3571,8 +4191,6 @@ async def main() -> int:
     await send_ps4debug(CONFIG['ps4_ip'],port=9090)
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     print('ps4debug payload successfully injected')
-
-    
 
     print('testing if ftp works')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:

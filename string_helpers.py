@@ -332,13 +332,13 @@ built_in_saves:
 
 
 SILLY_RANDOM_STRINGS_NOT_UNIQUE = """
-:arrow_right: https://dsc.gg/itzghosty420 :arrow_left:
+:arrow_right: https://discord.gg/itzghosty420 :arrow_left:
 :arrow_right: https://www.youtube.com/@ItzGhosty420 :arrow_left:
-:arrow_right: https://dsc.gg/itzghosty420 :arrow_left:
+:arrow_right: https://discord.gg/itzghosty420 :arrow_left:
 If you can make her giggle you can make that ||ass clap and jiggle||
 :regional_indicator_v::regional_indicator_m::regional_indicator_s: https://cdn.discordapp.com/emojis/1253039272492142622.gif?size=128&quality=lossless
-:arrow_right: https://dsc.gg/itzghosty420 :arrow_left:
-:arrow_right: https://discord.gg/vmsservices :arrow_left:
+:arrow_right: https://discord.gg/itzghosty420 :arrow_left:
+:arrow_right: https://discord.gg/itzghosty420 :arrow_left:
 """.strip().split('\n')
 
 
