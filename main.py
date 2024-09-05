@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import nullcontext
 import sys
 import re
 from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, NoReturn, assert_never
@@ -33,7 +34,7 @@ from PIL import Image
 from lbptoolspy import far4_tools,install_mods_to_bigfart # put modules you need at the bottom of list for custom cheats, in correct block
 
 from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words, non_format_susceptible_byte_repr
-from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
+from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile,SevenZipInfo, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
 from savemount_py.firmware_getter_from_libc_ps4 import get_fw_version
@@ -175,6 +176,9 @@ class ExpectedError(Exception):
 class HasExpectedError(NamedTuple):
     error_text: str
     pretty_dir: Path
+
+class InvalidBinFile(Exception):
+    pass
 
 # class TemporaryDirectory():
 #     def __enter__(self):
@@ -667,34 +671,88 @@ async def ps4_life_check(ctx: interactions.SlashContext | None = None):
         assert_never('bot should be ended')
     
 
+def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/) -> tuple[list[tuple[Path,Path]], list[SevenZipFile]]:
+    ps4_saves: list[tuple[Path,Path]] = []
+    found_zips: list[SevenZipFile] = [] # we are only doing one level of recusion, this is because its common practise to put single CUSAxxxxx zips inside of one large zip
+    
+    for zip_file in ps4_saves_thing.files.values():
+        if '__MACOSX' in zip_file.path.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
+        if zip_file.path.name.startswith('._'): continue
+        
+        if not filename_valid_extension(zip_file.path): # returns error string if not valid archive
+            found_zips.append(zip_file)
+            continue
+            
+        if zip_file.path.suffix != '.bin': continue
+        if not zip_file.is_file: continue
+        if not is_ps4_title_id(zip_file.path.parent.name): continue
+        
+        white_file = zip_file.path.with_suffix('')
+        if not ps4_saves_thing.files.get(white_file): continue
+        if zip_file.size != 96:
+            raise InvalidBinFile(f'Invalid bin file {zip_file.path} found in {link}')
+
+        ps4_saves.append((zip_file.path,white_file))
+    return ps4_saves,found_zips
+
+
 
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
-        await log_message(ctx,f'Checking {link} if valid archive')
-        try:
-            zip_info = await get_archive_info(archive_name)
-        except Exception as e:
-            return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
-
-        if zip_info.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'The decompressed {link} is too big, the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
-        
-        await log_message(ctx,f'Looking for saves in {link}')
-        ps4_saves: list[tuple[Path,Path]] = []
-        for zip_file in zip_info.files.values():
-            if not zip_file.is_file: continue
-            if not is_ps4_title_id(zip_file.path.parent.name): continue
-            if zip_file.path.suffix != '.bin': continue
-            if '__MACOSX' in zip_file.path.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
-            if zip_file.path.name.startswith('._'): continue
+    await log_message(ctx,f'Checking {link} if valid archive')
+    try:
+        zip_info = await get_archive_info(archive_name)
+    except Exception as e:
+        return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+    
+    current_total_size = zip_info.total_uncompressed_size
+    
+    if current_total_size > FILE_SIZE_TOTAL_LIMIT:
+        return f'The decompressed {link} is too big ({pretty_bytes(current_total_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+    
+    await log_message(ctx,f'Looking for saves in {link}')
+    
+    try:
+        ps4_saves,found_zips = get_only_ps4_saves_from_zip(zip_info)
+    except InvalidBinFile as e:
+        return str(e)
+    
+    found_zips_2 = [] # Just to not raise NameError later on
+    
+    async with TemporaryDirectory() if found_zips else nullcontext() as temp_store_zips:
+        for i,zip_file in enumerate(found_zips):
+            await log_message(ctx,f'Extracting subzip {zip_file} from {link}')
             
-            white_file = zip_file.path.with_suffix('')
-            if not zip_info.files.get(white_file): continue
-            if zip_file.size != 96:
-                return f'Invalid bin file {zip_file.path} found in {link}'
+            here_the_zip = Path(temp_store_zips,f'z{i}')
+            real_zip_path = here_the_zip / zip_file.path.name
+            
+            try:
+                await extract_single_file(archive_name,zip_file.path,here_the_zip)
+            except Exception as e:
+                return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+            
+            current_total_size -= zip_file.size
+            
+            await log_message(ctx,f'Checking if subzip {zip_file} from {link} is valid')
+            try:
+                zip_info = await get_archive_info(here_the_zip)
+            except Exception as e:
+                return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+            
+            current_total_size += zip_info.total_uncompressed_size
+            if current_total_size > FILE_SIZE_TOTAL_LIMIT:
+                return f'The decompressed {link} is too big ({pretty_bytes(current_total_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
-            ps4_saves.append((zip_file.path,white_file))
+            try:
+                ps4_saves_2,found_zips_2 = get_only_ps4_saves_from_zip(zip_info)
+            except InvalidBinFile as e:
+                return str(e)
+            
+            ps4_saves += [(bin_file,(white_file,real_zip_path,zip_file.path)) for bin_file,white_file in ps4_saves_2]
+            
+
         if not ps4_saves:
-            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAxxxxx folder? we also do not support nested archives so make sure there are no archives in this. your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
+            nested_archives_middle_text = ' we also only support one level of nested archives.' if found_zips_2 else ''
+            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAxxxxx folder?{nested_archives_middle_text} your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         
         try:
             ctx.ezwizard3_special_ctx_attr_special_save_files_thing
@@ -709,13 +767,21 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
         
         for bin_file,white_file in ps4_saves:
-            pretty_dir_name = make_folder_name_safe(bin_file.parent)
+            if isinstance(white_file,tuple):
+                white_file,current_white_file_archive_path,pretty_zip_file_path = white_file
+                
+                pretty_dir_name = make_folder_name_safe(pretty_zip_file_path / bin_file.parent)
+            else:
+                pretty_zip_file_path = ''
+                current_white_file_archive_path = archive_name
+                pretty_dir_name = make_folder_name_safe(bin_file.parent)
+            
             new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_file.parent.name))
             new_path.mkdir(exist_ok=True,parents=True) # TODO look into parents=True
-            await log_message(ctx,f'Extracting {white_file} from {link}')
+            await log_message(ctx,f'Extracting {white_file} from {link} + {pretty_zip_file_path}')
             try:
-                await extract_single_file(archive_name,white_file,new_path)
-                await extract_single_file(archive_name,bin_file,new_path)
+                await extract_single_file(current_white_file_archive_path,white_file,new_path)
+                await extract_single_file(current_white_file_archive_path,bin_file,new_path)
             except Exception as e:
                 return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
         return ''
@@ -762,7 +828,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
             return f'{link} failed validation reason: {validation_result}'
         
         if zip_file.size > max_size:
-            return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+            return f'The file {link} is too big ({pretty_bytes(zip_file.size)}), we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
         if zip_file.size < 1:
             return f'The file {link} is too small lmao wyd'
 
@@ -811,7 +877,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                             except ValueError:
                                 return f'Content-Length {file_size!r} was not a valid number'
                             if file_size > max_size:
-                                return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                                return f'The file {link} is too big ({pretty_bytes(file_size)}), we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
                             if file_size < 2:
                                 return f'The file {link} is too small lmao'
                             file_size = pretty_bytes(file_size)
@@ -829,7 +895,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                                 downloaded_size += len(chunk)
                                 chunks_done += 1
                                 if downloaded_size > max_size:
-                                    return f'YOU LIED! {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                                    return f'YOU LIED! {link} is too big ({pretty_bytes(downloaded_size)}), we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
                         await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
                         break
                     elif (response.status == 524) and link.startswith('https://zaprit.fish/dl_archive/'):
@@ -883,7 +949,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         except Exception:
             return 'blud thinks hes funny'
         if test[0] > FILE_SIZE_TOTAL_LIMIT:
-            return f'The decrypted save {link} is too big, maybe you uploaded a wrong file to it? max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+            return f'The decrypted save {link} is too big ({pretty_bytes(test[0])}), maybe you uploaded a wrong file to it? max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
             return f'The decrypted save {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
 
@@ -927,7 +993,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
 
     if a.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-        return f'The decompressed {link} is too big, the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+        return f'The decompressed {link} is too big ({pretty_bytes(a.total_uncompressed_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
         return f'The decompressed {link} has too many loose files ({len(a.files)}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
