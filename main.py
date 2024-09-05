@@ -17,6 +17,7 @@ import struct
 import gzip
 from sqlite3 import connect as sqlite3_connect
 _boot_start = time.perf_counter()
+from interactions import Embed
 
 from async_lru import alru_cache
 import ujson as json
@@ -55,8 +56,8 @@ except:
 else:
     __file__ = str(Path(__file__) / 'huh.huh')
 
-CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled commands in dms'
-CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
+CANT_USE_BOT_IN_DMS = '*You are not special, get the F of my DMs right now*\n*If you would like to use me, go to* **ITZGHOSTY420s or OFFICIAL SAVEBOT SERVERS**.'
+CANT_USE_BOT_IN_TEST_MODE = '*Unlucky for some! But ItzGhosty420\'s Savebot is in* **TEST MODE**\n*Only staff has permission*'
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
 
@@ -238,7 +239,7 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
     ctx.ezwizard3_special_ctx_attr_mode = mode
-    await log_message(ctx,f'Pleast wait, if over a minute is spent here do the command again! {nth_time}th time here',_do_print = False)
+    await log_message(ctx, f'*Pleast wait, ItzGhosty420\'s Bot is currently in use!\nPlease retry the command in a few moments*\n*Your* **{nth_time}st** *time trying a command, Please do not try multiple times!*', _do_print=False)
     ctx.ezwizard3_special_ctx_attr_setup_done = 1
     return ctx
 
@@ -271,10 +272,10 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     tick = 0
     while True:
         if ctx.expired:
-            await log_message(ctx, f'{msg}, over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)', _do_print=False)
+            await log_message(ctx, f'{msg}, *over 15 minutes spent here, likely bot is stuck and needs reboot* (including the PS4)', _do_print=False)
             while True:
                 await asyncio.sleep(10)
-        await log_message(ctx, f'{msg} {tick} seconds spent here', _do_print=False)
+        await log_message(ctx, f'{msg} {tick} *seconds spent here*', _do_print=False)
         await asyncio.sleep(10)
         tick += 10
     
@@ -285,14 +286,13 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         # return
     print(f'user bad ##################\n{error_msg}')
     channel = ctx.channel or ctx.author
-    
     noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
     for attr_name in noitce_msgs:
         new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
         error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
-    
-    
-    full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
+
+
+    full_msg = f'*Yo* <@{ctx.author_id}><a:pepesayshi:1272147595426271305>\n{error_msg}'
     
     first_time = True
     for msg_chunk in chunker(full_msg,2000-1-3):
@@ -311,16 +311,15 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
     await update_status()
 
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
-    print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
+    print(f'{ctx.user} id: {ctx.author_id} *Has started a new command* {success_msg}')
     channel = ctx.channel or ctx.author
-    
     noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
     for attr_name in noitce_msgs:
         new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
         success_msg = getattr(ctx,attr_name) + new_line_chars + success_msg
 
     
-    full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
+    full_msg = f'**Yo!** <@{ctx.author_id}> <a:pepesayshi:1272147595426271305>\n{success_msg}'
     
     first_time = True
     triple_backtick_start = False
@@ -599,13 +598,13 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
         leader = ''
         error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
     else:
-        leader = '**Want more verbose or detailed error messages? use the /set_verbose_mode command**\n'
+        leader = '*Your Layout was basically fucked...*\n*Please Follow the Instructions below to use this command*\n'
         error_msg = f'```{sys.exc_info()[1]}```'
     
     if error_msg == '```' + '```':
         error_msg = f'```{sys.exc_info()[0].__name__}```'
     
-    return leader + f'{message_1} reasom:\n{error_msg}\n {message_2}'
+    return leader + f'{message_1} reason:\n{error_msg}\n {message_2}'
 
 
 user_cheat_chains = {}
@@ -637,7 +636,7 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
         try:
             return PS4AccountID(get_user_account_id(author_id))
         except KeyError:
-            return 'You dont have any account id saved to the database!, try running the `/my_account_id` again'
+            return '*You dont have any account id saved to the database!, try running the* `/my_account_id` again*'
     elif account_id == '1':
         return PS4AccountID('0000000000000000')
 
@@ -648,10 +647,10 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
         except KeyError: pass
         else:
             if my_account_id_for_my_acc == my_account_id:
-                ctx.ezwizard3_special_ctx_attr_noticemsg_omljustusethe0optionsaccountid = '**Remember, you dont have to manually type in your account id, just put 0 in the field!**'
+                ctx.ezwizard3_special_ctx_attr_noticemsg_omljustusethe0optionsaccountid = '*You dont have to manually type in your account id, Put 0 in the Account ID option!*\n'
         return my_account_id
     except ValueError:
-        return f'{account_id} is not a valid account id, it should be the one in your SAVEDATA folder! Or get it from the `/my_account_id` command'
+        return f'*Are you sure you spelled your Account-ID Correctly boss?*\n**{account_id}** *is not a valid*<:whatthe:1272145776344305757>'
 
 
 def list_ps4_saves(folder_containing_saves: Path,/) -> Generator[tuple[Path,Path],None,None]:
@@ -664,7 +663,7 @@ async def ps4_life_check(ctx: interactions.SlashContext | None = None):
     channel = ctx.channel or ctx.author
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
-        await ps4.notify('life check!')
+        await ps4.notify('Hello hello ello, Bot Ping Motherfucka')
     except Exception:
         try:
             await channel.send(HUH) if ctx else None
@@ -701,18 +700,18 @@ def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/) -> tuple[list[t
 
 
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
-    await log_message(ctx,f'Checking {link} if valid archive')
+await log_message(ctx,f'*Checking* {link} *if valid archive*')
     try:
         zip_info = await get_archive_info(archive_name)
     except Exception as e:
-        return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+        return f'*Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
     
     current_total_size = zip_info.total_uncompressed_size
     
     if current_total_size > FILE_SIZE_TOTAL_LIMIT:
-        return f'The decompressed {link} is too big ({pretty_bytes(current_total_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+        return f'*The decompressed* {link} *is too big*({pretty_bytes(current_total_size)})\n*Please note the limit is* **{pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}**'
     
-    await log_message(ctx,f'Looking for saves in {link}')
+    await log_message(ctx,f'*Having a quick look for saves in* {link}')
     
     try:
         ps4_saves,found_zips = get_only_ps4_saves_from_zip(zip_info)
@@ -751,10 +750,9 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
                 return str(e)
             
             ps4_saves += [(bin_file,(white_file,real_zip_path,zip_file.path)) for bin_file,white_file in ps4_saves_2]
-            
 
         if not ps4_saves:
-            nested_archives_middle_text = ' we also only support one level of nested archives.' if found_zips_2 else ''
+           nested_archives_middle_text = ' we also only support one level of nested archives.' if found_zips_2 else ''
             return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAxxxxx folder?{nested_archives_middle_text} your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         
         try:
@@ -764,10 +762,10 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
         else:
             if ctx.ezwizard3_special_ctx_attr_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
-                    return f'The archive {link} has more then one save, we can only do 1 save at once for encrypt and import commands, please delete the other saves in this. If you want to upload the same decrypted save to mutiple encrypted saves (which you probably dont) set allow_mulit_enc to Yes'
+                    return f'*The archive* {link} *has more then one save, we can only do 1 save at once for encrypt and import commands, please delete the other saves in this. If you want to upload the same decrypted save to mutiple encrypted saves (which you probably dont) set allow_mulit_enc to Yes*'
         
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
-            return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
+            return f'*The archive* {link} *has too many saves* {len(ps4_saves)}, *the max is* {MAX_RESIGNS_PER_ONCE} *remove* {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} *saves and try again*'
         
         for bin_file,white_file in ps4_saves:
             if isinstance(white_file,tuple):
@@ -781,12 +779,12 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             
             new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_file.parent.name))
             new_path.mkdir(exist_ok=True,parents=True) # TODO look into parents=True
-            await log_message(ctx,f'Extracting {white_file} from {link} + {pretty_zip_file_path}')
+            await log_message(ctx,f'*Mc Booooming!!* {white_file} {link} + {pretty_zip_file_path}')
             try:
                 await extract_single_file(current_white_file_archive_path,white_file,new_path)
                 await extract_single_file(current_white_file_archive_path,bin_file,new_path)
             except Exception as e:
-                return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+                return f'*Oops.. Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
         return ''
 
 
@@ -822,11 +820,11 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
 
     new_link = extract_drive_file_id(link)
     if new_link:
-        await log_message(ctx,f'Getting file metadata from {link}')
+        await log_message(ctx,f'*Working Magic gathering the file metadata from* {link}')
         try:
             zip_file = await get_file_info_from_id(new_link)
         except Exception as e:
-            return f'Could not get file metadata from {link}, got error {type(e).__name__}: {e}, maybe its not public?'
+            return f'**THIS LINK IS NOT PUBLIC** <a:pespepenotfunnyt:1272150300114944062>\n {link}\n*Please click share on your link* & **Give access to anybody with this link** <:Nice:1272144601033211924>'
         if validation_result := validation(zip_file.file_name_as_path):
             return f'{link} failed validation reason: {validation_result}'
         
@@ -837,7 +835,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
 
         archive_name = Path(donwload_location,zip_file.file_name_as_path.name)
         try:
-            await log_message(ctx,f'Downloading {zip_file.file_name_as_path.name} from {link}')
+            await log_message(ctx,f'*Working Magic with your* {zip_file.file_name_as_path.name} *from* {link}')
             await download_file(zip_file.file_id,archive_name)
         except Exception:
             return f'blud thinks hes funny'
@@ -870,7 +868,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         if not filename:
                             filename = link.split('/')[-1].split('?')[0]
                         if validation_result := validation(filename):
-                            return f'{link} failed validation reason: {validation_result}'
+                            return f'{link} *failed validation reason:* {validation_result}'
                         file_size: int | None | str = response.headers.get('Content-Length')
                         if file_size is None:
                             file_size = '? Bytes'
@@ -878,11 +876,12 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                             try:
                                 file_size = int(file_size)
                             except ValueError:
-                                return f'Content-Length {file_size!r} was not a valid number'
+                                return f'*Content-Length {file_size!r} was not a valid number*'
                             if file_size > max_size:
-                                return f'The file {link} is too big ({pretty_bytes(file_size)}), we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+                                return f'*The file* {link} *is too big ({pretty_bytes(file_size)}), I only accept* {pretty_bytes(max_size)}'
+
                             if file_size < 2:
-                                return f'The file {link} is too small lmao'
+                                return f'*The file {link} is too small man whats the fuck even is this lol*'
                             file_size = pretty_bytes(file_size)
                         downloaded_size = 0
                         chunks_done = 0
@@ -890,7 +889,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                         with open(direct_zip, 'wb') as f:
                             while True:
                                 if not(chunks_done % AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE):
-                                    await log_message(ctx,f'Downloading {link} {pretty_bytes(downloaded_size)}/{file_size}')
+                                    await log_message(ctx,f'*Ive downloaded* {link} {pretty_bytes(downloaded_size)}/{file_size}')
                                 chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE)
                                 if not chunk:
                                     break
@@ -898,21 +897,21 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                                 downloaded_size += len(chunk)
                                 chunks_done += 1
                                 if downloaded_size > max_size:
-                                    return f'YOU LIED! {link} is too big ({pretty_bytes(downloaded_size)}), we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
-                        await log_message(ctx,f'Downloaded {link} {pretty_bytes(downloaded_size)}')
+                                    return f'*Oops* {link} *is too big, ({pretty_bytes(downloaded_size)})* *I only accept* {pretty_bytes(max_size)}'
+                        await log_message(ctx,f'*Ive downloaded* {link} {pretty_bytes(downloaded_size)}')
                         break
                     elif (response.status == 524) and link.startswith('https://zaprit.fish/dl_archive/'):
-                        await log_message(ctx,f'Slot id {link} has never been downloaded before, so waiting 2 minutes to try downloading it again')
+                        await log_message(ctx,f'*Slot ID* {link} *has never been downloaded before, so waiting 2 minutes to try downloading it again*')
                         await asyncio.sleep(2*60)
                         continue
                     else:
                         if link.startswith('https://zaprit.fish/dl_archive/') and (b"Level not found" in (await response.content.read(10_000_000))):
                             return ZapritFishKnownLinkError(f'The slot id {link} doesn\'t exist')
-                        return f'Failed to download {link}. Status code: {response.status}'
+                        return f'*Oops, Failed to download* {link}. **Status code:** {response.status}'
             else: # no break, or return in this case
-                return ZapritFishKnownLinkError(f'Took too many tries to download {link}, perhaps try command again')
+                return ZapritFishKnownLinkError(f'*Took too many tries to download* {link},\n*Retry the command*')
         except Exception as e:
-            return make_error_message_if_verbose_or_not(ctx.author_id,f'Invalid url {link}','maybe you copied the wrong link?')
+            return make_error_message_if_verbose_or_not(ctx.author_id,f'*Invalid url* {link}','*maybe you copied the wrong link?*')
     return direct_zip
 
 
@@ -923,14 +922,14 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
-        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_savedata0 = '**Since eZwizard3, you no longer have to upload decrypted saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
-        await log_message(ctx,f'Getting files metadata from folder {link}')
+        #ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_savedata0 = '**Since eZwizard3, you no longer have to upload decrypted saves as google drive folders, we support archives (zips, rars etc) contaning the savedata0 folder from any download link, (like discord file links) or use /file2url command**'
+        await log_message(ctx,f'*Grabbing files metadata from folder* {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
         except Exception as e:
-            return f'Could not get files metadata from folder {link}, got error {type(e).__name__}: {e}, maybe its not public?'
+            return f'**THIS LINK IS NOT PUBLIC**<a:pespepenotfunnyt:1272150300114944062>\n {link}\n*Please click share on your link* & **Give access to anybody with this link**<:Nice:1272144601033211924>'
         if not allow_any_folder:
-            await log_message(ctx,f'Looking for a savedata0 folder in {link}')
+            await log_message(ctx,f'*Looking for your savedata0 folder in* {link}')
             seen_savedata0_folders: set[GDriveFile] = {
                 p
                 for p in raw_files.values()
@@ -938,25 +937,25 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
             }
 
             if not seen_savedata0_folders:
-                return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and upload that, or use the /raw_encrypt_folder_type_2 command'
+                return f'*Could not find any decrypted saves in* {link}, *make sure to put the decrypted save contents in a savedata0 folder and upload that, or use the /raw_encrypt_folder_type_2 command*'
 
             if len(seen_savedata0_folders) > 1:
-                return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
+                return f'*Too many decrypted saves in* {link},\n**Please note:**\n*Please make sure you have a* **Zipped CUSAXXXX & SaveData Folder** *If encrypting multiple files!\nOtherwise I only support encrypting* **1 ** *Save per command boss!*'
             for savedata0_folder in seen_savedata0_folders:
                 pass
         else:
             savedata0_folder = await get_folder_info_from_id(new_link)
-        await log_message(ctx,f'Checking if {link} savedata0 folder is too big or not')
+        await log_message(ctx,f'*Checking if* {link} *savedata0 folder is too big or not*')
         try:
             test = await get_gdrive_folder_size(savedata0_folder.file_id)
         except Exception:
             return 'blud thinks hes funny'
         if test[0] > FILE_SIZE_TOTAL_LIMIT:
-            return f'The decrypted save {link} is too big ({pretty_bytes(test[0])}), maybe you uploaded a wrong file to it? max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+            return f'*The decrypted save* {link} *is too big* ({pretty_bytes(test[0])})\n*Maybe you uploaded a wrong file? max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
-            return f'The decrypted save {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+            return f'*The decrypted save* {link} *has too many loose files* ({test[1]}), *max is* {ZIP_LOOSE_FILES_MAX_AMT} *loose files*'
 
-        await log_message(ctx,f'Downloading {link} savedata0 folder')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!*\n{link}')
         Path(output_folder,'savedata0').mkdir(parents=True,exist_ok=True)# TODO maybe i dont gotta do this, but i am
         new_savedata0_folder_made = Path(output_folder,'savedata0')
         try:
@@ -964,7 +963,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         except Exception:
             return 'blud thinks hes funny'
         if unpack_first_root_folder:
-            await log_message(ctx,f'Doing some file management with {link}')
+            await log_message(ctx,f'*Doing magic with the file management in your save* {link}')
             checker = AsyncPath(new_savedata0_folder_made)
             thing_count = 0
             async for thing in checker.iterdir():
@@ -989,52 +988,52 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
 
 
 async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: str, output_folder: Path, archive_name: Path, allow_any_folder: bool, unpack_first_root_folder: bool) -> str:
-    await log_message(ctx,f'Checking {link} if valid archive')
+    await log_message(ctx,f'*Checking* {link} *if valid archive*')
     try:
         a = await get_archive_info(archive_name)
     except Exception as e:
-        return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+        return f'*Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
 
     if a.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-        return f'The decompressed {link} is too big ({pretty_bytes(a.total_uncompressed_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+        return f'*The decompressed* {link} *is too big ({pretty_bytes(a.total_uncompressed_size)}), the max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
-        return f'The decompressed {link} has too many loose files ({len(a.files)}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+        return f'*The decompressed* {link} *has too many loose files* ({len(a.files)}),\n **max is** {ZIP_LOOSE_FILES_MAX_AMT} **loose files**'
     if not allow_any_folder:
-        await log_message(ctx,f'Looking for decrypted saves in {link}')
+        await log_message(ctx,f'*Scanning for decrypted saves in* {link}')
         seen_savedata0_folders: set[SevenZipFile] = {
             p
             for p in a.files.values()
             if (not p.is_file) and (p.path.parts.count('savedata0') == 1) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
         }
         if not seen_savedata0_folders:
-            return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that, or use the /raw_encrypt_folder_type_2 command'
+            return f'*Could not find any decrypted saves in* {link}, *make sure to put the decrypted save contents in a savedata0 folder and archive that, or use the /raw_encrypt_folder_type_2 command*'
 
         if len(seen_savedata0_folders) > 1:
-            return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
+            return f'*Too many decrypted saves in* {link}, *we only support encrypting one save per command*'
 
         for savedata0_folder in seen_savedata0_folders:
             pass
         
-        await log_message(ctx,f'Extracting savedata0 from {link}')
+        await log_message(ctx,f'*Nearly done, Extracting savedata0* {link}')
         try:
             await extract_single_file(archive_name,savedata0_folder.path,output_folder,'x')
         except Exception as e:
-            return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+            return f'*Invalid archive after downloading* {link}, **error** {type(e).__name__}: {e}'
         if not savedata0_folder.path == Path('savedata0'):
-            await log_message(ctx,f'Doing some file management with {link}')
+            await log_message(ctx,f'*Doing some file management with* {link}')
             await shutil.move(Path(output_folder, savedata0_folder.path),output_folder)
             if savedata0_folder.path.parts[0] != Path('savedata0'):
                 await shutil.rmtree(Path(output_folder,savedata0_folder.path.parts[0]))
 
         return ''
     else:
-        await log_message(ctx,f'Extracting decrypted save from {link}')
+        await log_message(ctx,f'*Extracting decrypted save from* {link}')
         new_savedata0_folder_made = Path(output_folder,'savedata0')
         new_savedata0_folder_made.mkdir(parents=True, exist_ok=True)
         await extract_full_archive(archive_name,new_savedata0_folder_made,'x')
         if unpack_first_root_folder:
-            await log_message(ctx,f'Doing some file management with {link}')
+            await log_message(ctx,f'*Doing some file management with* {link}')
             checker = AsyncPath(new_savedata0_folder_made)
             thing_count = 0
             async for thing in checker.iterdir():
@@ -1055,18 +1054,18 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
     """
     new_link = extract_drive_folder_id(link)
     if new_link:
-        ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the CUSAxxxxx folder from any download link, (like discord file links) or use /file2url command**'
+        #ctx.ezwizard3_special_ctx_attr_noticemsg_google_drive_folders_not_needed_anymore_encsaves = '**Since eZwizard3, you no longer have to upload saves as google drive folders, we support archives (zips, rars etc) contaning the CUSAxxxxx folder from any download link, (like discord file links) or use /file2url command**'
         
-        await log_message(ctx,f'Getting files metadata from folder {link}')
+        await log_message(ctx,f'*Getting files metadata from folder*\n {link}')
         try:
             raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link))
         except Exception as e:
-            return f'Could not get files metadata from folder {link}, got error {type(e).__name__}: {e}, maybe its not public?'
-        await log_message(ctx,f'Looking for saves in the folder {link}')
+            return f'**THIS LINK IS NOT PUBLIC**<a:pespepenotfunnyt:1272150300114944062>\n {link}\n*Please click share on your link* & **Give access to anybody with this link**<:Nice:1272144601033211924>'
+        await log_message(ctx,f'*Looking for saves in the folder* {link}')
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAxxxxx folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
+            return f'*I couldnt find anything in your link* <:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
@@ -1076,22 +1075,22 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         else:
             if ctx.ezwizard3_special_ctx_attr_special_save_files_thing == SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT:#
                 if len(ps4_saves) != 1:
-                    return f'The folder {link} has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes'
+                    return f'*The folder* {link} *has more then one save, we can only do 1 save at once for encrypt and import commands, if you want to upload the same decrypted save to mutiple encrypted saves set allow_mulit_enc to Yes*'
 
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
-            return f'The folder {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
+            return f'*The folder* {link} *has too many saves* {len(ps4_saves)}, *the max is* {MAX_RESIGNS_PER_ONCE} *remove* {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} *saves and try again*'
 
         if total_ps4_saves_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'The total number of saves in {link} is too big, the max size of saves is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}, {pretty_bytes(total_ps4_saves_size)} is too big'
+            return f'*The total number of saves in* {link} *is too big, the max size of saves is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}, {pretty_bytes(total_ps4_saves_size)} *is too big*'
 
         for bin_file,white_file in ps4_saves:
             if bin_file.size != 96:
-                return f'Invalid bin file {bin_file.file_name_as_path} found in {link}'
+                return f'*Invalid bin file* {bin_file.file_name_as_path} *found in* {link}'
             
             new_white_path = Path(output_folder, make_folder_name_safe(white_file.file_name_as_path.parent), make_ps4_path(account_id,white_file.file_name_as_path.parent.name),white_file.file_name_as_path.name)
             new_bin_path = Path(output_folder, make_folder_name_safe(bin_file.file_name_as_path.parent), make_ps4_path(account_id,bin_file.file_name_as_path.parent.name),bin_file.file_name_as_path.name)
 
-            await log_message(ctx,f'Downloading {white_file.file_name_as_path} from {link}')
+            await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {white_file.file_name_as_path} *from* {link}')
             try:
                 await download_file(white_file.file_id,new_white_path)
                 await download_file(bin_file.file_id,new_bin_path)
@@ -1104,7 +1103,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         direct_zip = await download_direct_link(ctx,link,tp,filename_valid_extension)
         if isinstance(direct_zip,str):
             if 'failed validation reason:' in direct_zip: # TODO this method means if i change the error msg in download_direct_link and not this, then this if statement never happens
-                return f'{direct_zip} **(do not put decrypted saves into the save_files option)**'
+                return f'{direct_zip} \n**(do not put decrypted saves into the save_files option)**'
             return direct_zip
         return await extract_ps4_encrypted_saves_archive(ctx,link,output_folder,account_id,direct_zip)
 
@@ -1122,10 +1121,10 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     # await log_message(ctx,'Ensuring base save exists on PS4 before uploading')
     # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,save_dir_ftp) as mp:
         # pass
-    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to upload encrypted save (this may take a while if mutiple slots are in use)'))
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'*Please Wait*'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
-        await log_message(ctx,f'Uploading {pretty_save_dir} to PS4')
+        await log_message(ctx,f'*Uploading* {pretty_save_dir} *to Jailbroken 9.00 console & Working magic!* - *Please Wait*')
         custon_decss = lambda: asyncio.run(_upload_encrypted_to_ps4(bin_file, white_file, ftp_bin, ftp_white))
         await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
@@ -1141,10 +1140,10 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file_out.relative_to(parent_dir)
-    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to download encrypted save (this may take a while if mutiple slots are in use)'))
+    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'*Please Wait*'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
-        await log_message(ctx,f'Downloading {pretty_save_dir} from PS4')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {pretty_save_dir}')
         custon_decss = lambda: asyncio.run(_download_encrypted_from_ps4(bin_file_out, white_file_out, ftp_bin, ftp_white))
         await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
@@ -1165,7 +1164,7 @@ async def resign_mounted_save(ctx: interactions.SlashContext | None, ftp: aioftp
             await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
     except Exception as e:
         if ctx:
-            await log_message(ctx,f'Something went wrong when resigning the save, {type(e).__name__}: {e}, ignoring!')
+            await log_message(ctx,f'*Something went wrong when resigning the save,* {type(e).__name__}: {e}, ignoring!')
     finally:
         return old_account_id
 
@@ -1189,7 +1188,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
             savedatax = mp.savedatax
             new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
             if not mp:
-                return f'Could not mount {pretty_save_dir}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")}) (base save {mount_save_title_id}/{save_dir_ftp}), if you get SCE_SAVE_DATA_ERROR_BROKEN please try the command again, this is a known issue to sometimes happen, if happens consistently, then the save may really is broken'
+                return f'*Nope.. I couldn\'t mount your save*\n {pretty_save_dir} \n Because: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")}) (base save {mount_save_title_id}/{save_dir_ftp}),\n*I see* ``SCE_SAVE_DATA_ERROR_BROKEN`` *Maybe, retry the command, if I give this you issue again, the save is fucked, Please find a new save!*'
             # input(f'{mp}\n {new_mount_dir}')
             # We need to get real filename as the white_file.name can be differnt (such as a ` (1)` subfixed to it)
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1281,7 +1280,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
     if special_thing == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
         for chet in cheats:
             if chet.kwargs.get('decrypted_save_folder'):
-                await log_message(ctx,f'Doing some file management for your mc world')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!*')
                 savedata0hehe = chet.kwargs.get('decrypted_save_folder') / 'savedata0'
 
                 if not (savedata0hehe / 'level.dat').is_file():
@@ -1390,7 +1389,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 await fix_packs('world_resource_packs.json','resource_packs','resource')
                 cheats.append(CheatFunc(re_region,{'gameid':chet.kwargs.pop('gameid')}))
 
-    await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
+    await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!*\n{"".join(chet.pretty() for chet in cheats)} *to* {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id,special_thing))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
@@ -1411,7 +1410,7 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                     try:
                         await decrypt_fun.func(ftp,new_mount_dir,white_file.name,decrypted_save_ouput,**decrypt_fun.kwargs)
                     except Exception:
-                        return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not custom decrypt your save {pretty_save_dir}.','')
+                        return make_error_message_if_verbose_or_not(ctx_author_id,f'*I couldn\'t custom decrypt your save* {pretty_save_dir}.','')
             else:
                 # await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
                 async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1449,9 +1448,9 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
 
     # await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
     if decrypt_fun:
-        await log_message(ctx,f'Attemping custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
+        await log_message(ctx,f'*Adding custom decryption* {decrypt_fun.pretty()} *for* {pretty_save_dir}')
     else:
-        await log_message(ctx,f'Attemping to download savedata0 folder from decrypted {pretty_save_dir}')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_decrypt_saves_on_ps4(bin_file, white_file, parent_dir, decrypted_save_ouput, save_dir_ftp, decrypt_fun, pretty_save_dir,ctx.author_id))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
@@ -1464,12 +1463,12 @@ def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: P
 
 async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str):
     global amnt_used_this_session
-    await log_message(ctx,f'Zipping up modified {link_for_pretty} saves (2 more steps left)')
+    await log_message(ctx,f'*Big mf files that takes extra steps lol, Nearly done, Please wait* **(2 more steps left)**\n {link_for_pretty}')
     await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
     
     real_file_size = new_zip_name.stat().st_size
     if real_file_size > ATTACHMENT_MAX_FILE_SIZE:
-        await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!) ({pretty_bytes(real_file_size)} file)')
+        await log_message(ctx,f'*Finally on the* **(last step!)**\n*This mf savefile is..* ({pretty_bytes(real_file_size)} file)')
         try:
             google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
         except Exception as e:
@@ -1477,7 +1476,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                 pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
                 await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
                 await asyncio.sleep(2*60)
-                await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!) ({pretty_bytes(real_file_size)} file)')
+                await log_message(ctx,f'*Finally on the* **(last step!)**\n*This mf savefile is.. lol* ({pretty_bytes(real_file_size)} file)')
                 try:
                     google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
                 except Exception as e2:
@@ -1488,11 +1487,11 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
                         raise
             else:
                 raise
-        await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\nPlease download this asap as it can be deleted at any time ({pretty_bytes(real_file_size)} file)')
+        await log_user_success(ctx,f'<:j_:1272151363530522655>*Hope you have Fun!!*<:Nice:1272144601033211924>\n<:labs_down:1272152021398454366>**Here is your resigned save!**<:labs_down:1272152021398454366>\n{google_drive_uploaded_user_zip_download_link}\n*Big ass savefile was* **({pretty_bytes(real_file_size)})**<:j_:1272151363530522655>')
     else:
         # await shutil.move(new_zip_name,new_zip_name.name)
-        await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment (last step!) ({pretty_bytes(real_file_size)} file)')
-        await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
+        await log_message(ctx,f'*Finally uploading to Discord, Please wait!* **(last step!)**\n*This mf savefile is.. lol* ({pretty_bytes(real_file_size)} file)')
+        await log_user_success(ctx,f'<:75271arrowcat3:1272162166203617353>*Hope you have Fun!!*<:Nice:1272144601033211924>\n<:labs_down:1272152021398454366>**Here is your resigned save!**<:labs_down:1272152021398454366>',file=str(new_zip_name))
         # os.remove(new_zip_name.name)
     amnt_used_this_session += 1
     if not is_in_test_mode():
@@ -1567,14 +1566,14 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                         await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
                         return False
                 link = get_dl_link_if_desc(link)
-                await log_message(ctx,f'Downloading {link} {arg_name}')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {link} {arg_name}')
                 result = await download_direct_link(ctx,link,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT,validation=filename_is_not_an_archive)
                 if isinstance(result,str):
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = result
             if isinstance(link,interactions.Attachment):
-                await log_message(ctx,f'Downloading attachment {arg_name}')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {arg_name}')
                 result = await download_direct_link(ctx,link.url,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT)
                 if isinstance(result,str):
                     await log_user_error(ctx,result)
@@ -1587,17 +1586,17 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     try:
                         link = get_saved_url(ctx.author_id,int(link))
                     except KeyError:
-                        await log_user_error(ctx,f'You dont have any url saved for {link}, try running the file2url command again!')
+                        await log_user_error(ctx,f'*You dont have any url saved for* {link}, *try running the file2url command again!*')
                         return False
                 link = get_dl_link_if_desc(link)
-                await log_message(ctx,f'Downloading {link} savedata0 folder or zip')
+                await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {link} *savedata0 folder*')
                 result = await download_decrypted_savedata0_folder(ctx,link,savedata0_folder,arg_name=='decrypted_save_folder',cheat.kwargs['unpack_first_root_folder'])
                 if result:
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = savedata0_folder
             if arg_name == 'gameid' and (not is_ps4_title_id(link)):
-                await log_user_error(ctx,f'Invalid gameid {link}')
+                await log_user_error(ctx,f'*Invalid gameid* {link}')
                 return False
             if arg_name.startswith('psstring'):
                 link = link.encode('utf-8')
@@ -1630,13 +1629,13 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         try:
             save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
-            await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
+            await log_user_error(ctx,f'*You dont have any url saved for* {save_files}, *try running the file2url command again!*')
             return
     
     try:
         save_dir_ftp = await get_save_str()
     except SaveMountPointResourceError:
-        await log_user_error(ctx,'Theres too many people using the bot at the moment, please wait for a spot to free up')
+        await log_user_error(ctx,'*Ghosty\'s Bot is Coooooking!!!*, \n**please wait for a spot to free up**')
         return
     try:
         my_token = await get_time_as_string_token()
@@ -1663,7 +1662,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                 pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
                 new_dec = (dec_tp / pretty_folder_thing)
                 new_dec.mkdir()
-                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
+                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to mount* {pretty_folder_thing} /n'))
                 async with mounted_saves_at_once:
                     tick_tock_task.cancel()
                     a = await decrypt_saves_on_ps4(ctx,bin_file,white_file,enc_tp,new_dec,save_dir_ftp,decrypt_fun)
@@ -1672,9 +1671,9 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                     if a == WARNING_COULD_NOT_UNMOUNT_MSG:
                         breakpoint()
                     return
-            your_saves_msg = 'savedata0 decrypted save (Please use /advanced_mode_export command instead)'
+            your_saves_msg = '*savedata0 decrypted save*\n**(Please use /advanced_mode_export command instead)**'
             if decrypt_fun:
-               your_saves_msg = (decrypt_fun.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({decrypt_fun.func.__name__})').strip()
+               your_saves_msg = (decrypt_fun.func.__doc__ or f'ItzGhosty420 ({decrypt_fun.func.__name__})').strip()
             await send_result_as_zip(ctx,save_files,dec_tp,dec_tp,Path(tp,my_token + '.zip'),your_saves_msg)
             return
     finally:
@@ -1698,7 +1697,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
         try:
             save_files = get_saved_url(ctx.author_id,int(save_files))
         except KeyError:
-            await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
+            await log_user_error(ctx,f'*You dont have any url saved for* {save_files}, *try running the file2url command again!*')
             return
 
     account_id: str | PS4AccountID = account_id_from_str(account_id,ctx.author_id,ctx)
@@ -1708,13 +1707,13 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
 
     if save_files == '0':
         add_cheat_chain(ctx.author_id,cheat)
-        await log_user_success(ctx,f'Added the cheat {cheat.pretty()} to your chain!')
+        await log_user_success(ctx,f'*Added the cheat* {cheat.pretty()} *to your chain!*')
         return
         
     try:
         save_dir_ftp = await get_save_str()
     except SaveMountPointResourceError:
-        await log_user_error(ctx,'Theres too many people using the bot at the moment, please wait for a spot to free up')
+        await log_user_error(ctx,'*Ghosty\'s Bot is Cooooking*, **please wait for a spot to free up**')
         return
     try:
         my_token = await get_time_as_string_token()
@@ -1722,10 +1721,10 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
             mc_filename = f'BedrockWorld{my_token.replace("_","")}@P547'
             mc_base_title_id = 'CUSA00265'
             real_save_dir_ftp = mc_filename
-            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to make base mc world {real_save_dir_ftp} (this may take a while if mutiple slots are in use)'))
+            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to make base mc world* {real_save_dir_ftp}'))
             async with mounted_saves_at_once:
                 tick_tock_task.cancel()
-                await log_message(ctx,f'Making base mc world {real_save_dir_ftp}')
+                await log_message(ctx,f'**Making base mc world** {real_save_dir_ftp}')
                 owner_of_blocks_blocks = cheat.kwargs.get('mc_encrypted_save_size',None)
                 assert isinstance(owner_of_blocks_blocks,int)
                 custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=owner_of_blocks_blocks))
@@ -1734,13 +1733,13 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
             mc_filename = save_files.start_of_file_name + my_token.replace("_","")
             mc_base_title_id = save_files.title_id
             real_save_dir_ftp = mc_filename
-            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to make base lbp3 level backup {real_save_dir_ftp} (this may take a while if mutiple slots are in use)'))
+            tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to make base lbp3 level backup* {real_save_dir_ftp} '))
             async with mounted_saves_at_once:
                 tick_tock_task.cancel()
-                await log_message(ctx,f'Making base lbp3 level backup {real_save_dir_ftp}')
+                await log_message(ctx,f'*Making base lbp3 level backup* {real_save_dir_ftp}')
                 custon_decss1 = lambda: asyncio.run(clean_base_mc_save(BASE_TITLE_ID,real_save_dir_ftp,blocks=save_files.new_blocks_size))
                 await asyncio.get_running_loop().run_in_executor(None,custon_decss1)
-            await log_message(ctx,f'Setting level filename to {mc_filename}')
+            await log_message(ctx,f'*Setting level filename to* {mc_filename}')
             temp_savedata0 = cheat.kwargs['decrypted_save_file']
             with open(temp_savedata0 / 'savedata0/sce_sys/param.sfo','rb+') as f:
                 desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -1788,7 +1787,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
                 else:
                     await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
                 pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
-                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'Getting ready to mount {pretty_folder_thing} (this may take a while if mutiple slots are in use)'))
+                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to mount* {pretty_folder_thing}'))
                 async with mounted_saves_at_once:
                     tick_tock_task.cancel()
                     a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,real_save_dir_ftp,save_files)
@@ -1809,15 +1808,15 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
                 results_big.append(results_small)
             
             if got_expected_errors:
-                save_msgs = ''.join(f'{x[1]}:\n```{x[0]}```\n' for x in results_big)
+                save_msgs = ''.join(f'{x[1]}:\n``{x[0]}``\n' for x in results_big)
                 await log_user_success(ctx,f'Got your messages\n\n{save_msgs}')
                 return
                 
-            await log_message(ctx,f'Making sure file names in {save_files} are all correct')
+            await log_message(ctx,f'*Making sure file names in* {save_files} *are all correct*')
             found_fakes = False
             for real_name, (bin_file, white_file) in zip(real_names, done_ps4_saves, strict=True):
                 if white_file.name != real_name:
-                    await log_message(ctx,f'Renaming {white_file.name} to {real_name}')
+                    await log_message(ctx,f'*Renaming* **{white_file.name}**\n *To* **{real_name}**')
                     try:
                         white_file.rename(white_file.parent / real_name)
                     except FileExistsError:
@@ -1854,7 +1853,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
                 await log_message(ctx,f'Refreshing {save_files} internal list 1/2')
                 done_ps4_saves = list(list_ps4_saves(enc_tp))
                 
-            await log_message(ctx,f'looking through results to do some renaming for {save_files}')
+            await log_message(ctx,f'*looking through results to do some renaming for* {save_files}')
             for results, (bin_file, white_file) in zip(results_big, done_ps4_saves, strict=True):
                 for savename, gameid in results:
                     if savename:
@@ -1898,7 +1897,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
             
             if not account_id:
                 have_not_done_at_least_1_account_id_change = False
-                await log_message(ctx,f'Refreshing {save_files} internal list 2/2')
+                await log_message(ctx,f'*Refreshing* {save_files} internal list 2/2')
                 done_ps4_saves = list(list_ps4_saves(enc_tp))
                 for bin_file, white_file in done_ps4_saves:
                     try:
@@ -1937,7 +1936,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
             await log_message(ctx,f'Deleting empty folders in {save_files}')
             await asyncio.get_running_loop().run_in_executor(None,lambda: delete_empty_folders(enc_tp))
 
-            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({cheat.func.__name__})').strip())
+            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or f'ItzGhosty420 ({cheat.func.__name__})').strip())
             return
     finally:
         await free_save_str(save_dir_ftp)
@@ -2077,7 +2076,7 @@ game_dec_functions = { # Relying on the dict ordering here, "Game not here (migh
 }
 
 
-@interactions.slash_command(name='advanced_mode_export',description="Export/decrypt your saves!")
+@interactions.slash_command(name='advanced_mode_export',description="This is Save Wizard Advanced Mode! Easily Export/decrypt your save!")
 @dec_enc_save_files
 @interactions.slash_option(name='game',
     description='The game you want to export/decrypt saves of',
@@ -2095,7 +2094,7 @@ cheats_base_command = interactions.SlashCommand(name="cheats", description="Comm
 
 async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
 DUMMY_CHEAT_FUNC = CheatFunc(do_nothing,{})
-@interactions.slash_command(name="resign", description=f"Resign save files to an account id (max {MAX_RESIGNS_PER_ONCE} saves per command)")
+@interactions.slash_command(name="resign", description=f"Resign any PS4 save to your account!")
 @interactions.slash_option('save_files','The save files to resign too',interactions.OptionType.STRING,True)
 @save_files_folder_structure_opt
 @account_id_opt
@@ -2588,7 +2587,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
     gameid = kwargs.pop('gameid')
     async with TemporaryDirectory() as tp:
         tp = Path(tp)
-        await log_message(ctx,f'Downloading slot `{slotid_from_drydb}`')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* `{slotid_from_drydb}`')
         result = await download_direct_link(ctx,f'https://zaprit.fish/dl_archive/{slotid_from_drydb}',tp)
         if isinstance(result,str):
             if not isinstance(result,ZapritFishKnownLinkError):
@@ -2734,7 +2733,7 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
         savename = save_name.replace(save_name[x:x+9],gameid)
         save_name = savename
     return CheatFuncResult(savename,gameid)
-@interactions.slash_command(name="re_region", description=f"Re region your save files! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
+@interactions.slash_command(name="re_region", description=f"Re region your save files!")
 @interactions.slash_option('save_files','The save files to be re regioned',interactions.OptionType.STRING,True)
 @save_files_folder_structure_opt
 @account_id_opt
@@ -2766,7 +2765,7 @@ async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
                 im.paste(icon_overlay,(0,0),icon_overlay)
                 im.save(og_icon0_path)
         await ftp.upload(og_icon0_path,'icon0.png',write_into=True)
-@interactions.slash_command(name="change_icon",description=f"Add an icon overlay to your saves!")
+@interactions.slash_command(name="change_icon",description=f"Add a picture to customise your modded save!")
 @interactions.slash_option('save_files','The save files to change the icon of',interactions.OptionType.STRING,True)
 @save_files_folder_structure_opt
 @account_id_opt
@@ -2806,7 +2805,7 @@ async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
-@interactions.slash_command(name="change_save_name", description=f"Change the name of the save displayed on PS4 menu")
+@interactions.slash_command(name="change_save_name", description=f"Customise the title of your modded save")
 @interactions.slash_option('save_files','The save files to change the name of',interactions.OptionType.STRING,True)
 @save_files_folder_structure_opt
 @account_id_opt
@@ -2835,7 +2834,7 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
-@interactions.slash_command(name="change_save_desc", description=f"Change the description of the save displayed on PS4 menu")
+@interactions.slash_command(name="change_save_desc", description=f"Customise the description of your modded save")
 @interactions.slash_option('save_files','The save files to change the description of',interactions.OptionType.STRING,True)
 @save_files_folder_structure_opt
 @account_id_opt
@@ -3019,7 +3018,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
 }
 
 
-@interactions.slash_command(name="advanced_mode_import",description=f"Import/encrypt your exported/decrypted saves!")
+@interactions.slash_command(name="advanced_mode_import",description=f"This is Save Wizard Advanced Mode! Easily Import/encrypt your exported/decrypted save!")
 @interactions.slash_option('save_files','The save file to import the decrypted save to',interactions.OptionType.STRING,True)
 @save_files_folder_structure_opt
 @account_id_opt
@@ -3049,8 +3048,8 @@ async def ready():
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     await update_status()
     _update_status.start()
-    await ps4.notify('eZwizard3-bot connected!')
-    print('eZwizard3-bot connected!')
+    await ps4.notify('eZwizard3-bot connected motherfucka!')
+    print('Ohh Shit.. Here we go again with eZwizard3-bot!')
     if _did_first_boot:
         print(f'took {time.perf_counter() - _boot_start:.1f} seconds to boot')
     _did_first_boot = False
@@ -3079,13 +3078,13 @@ async def get_bot_status(*,trunacte_status_text: bool = True) -> tuple[str,inter
         
         if not amnt_of_free:
             status = interactions.Status.DO_NOT_DISTURB
-            msg = f'NO slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time}, used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+            msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
         elif amnt_of_free == len(SAVE_DIRS):
             status = interactions.Status.IDLE
-            msg = f'All slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+            msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
         else:
             status = interactions.Status.ONLINE
-            msg = f'Some slots free {amnt_of_free}/{len(SAVE_DIRS)} for {new_time} used {amnt_used_this_session} times this session, {get_total_amnt_used()} total. Cumulative uptime: {cumulative_up_time}'
+            msg = f'𝐅𝐢𝐫𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐛𝐨𝐨𝐭𝐡♫'
         
         bot_status_text = leader+msg
         
@@ -3118,7 +3117,7 @@ async def do_get_bot_status(ctx: interactions.SlashContext):
     await ctx.send(f'bot latency is {ctx.bot.latency * 1000:.2f}ms\n' + bot_status_text)
     await ctx.send(await ezwizard3_info())
     
-@interactions.slash_command(name="my_account_id",description="Get your Account ID from your psn name")
+@interactions.slash_command(name="my_account_id",description="Enter your PSN Username to recieve your HEX Save ID")
 @interactions.slash_option(
     name="psn_name",
     description='your psn name',
@@ -3128,11 +3127,7 @@ async def do_get_bot_status(ctx: interactions.SlashContext):
     min_length=3
     )
 async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
-    # for guild in ctx.bot.guilds:
-        # if guild.name == "nlord14Jr's server":
-            # await guild.leave()
-            # print(f'left {guild.name}')
-    # return
+
     ctx = await set_up_ctx(ctx)
 
     if is_in_test_mode() and not is_user_bot_admin(ctx.author_id):
@@ -3143,18 +3138,18 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
         return
     
     if not is_psn_name(psn_name):
-        await log_user_error(ctx,f'Not a valid psn name {psn_name}, check it again!')
+        await log_user_error(ctx,f'*Not a valid* **{psn_name}** *check it again!*')
         return
         
-    await log_message(ctx,f'Looking for psn name {psn_name}')
+    await log_message(ctx,f'*Looking for* **{psn_name}**')
     try:
         user = psnawp.user(online_id=psn_name)
     except PSNAWPNotFound:
-        await log_user_error(ctx,f'Could not find psn name {psn_name}, perhaps you mispelled it?')
+        await log_user_error(ctx,f'*Are you sure you spelled your PSN Username Correctly boss?*\n**{psn_name}** *is not a valid PSN username*<:whatthe:1272145776344305757>')
         return
     account_id_hex = PS4AccountID.from_account_id_number(user.account_id).account_id
     
-    start_msg = 'your account id for {0} is {1}, saved to database, put 0 in the account_id option to use this account id!'
+    start_msg = '*Your account id for* **{0}** *is* **{1},**<:j_:1272151363530522655>\n*Put **0** in the account_id option to use this account id!*<:Plant:1272144642753953844>'
     my_database_account_id: str = ''
     try:
         my_database_account_id = get_user_account_id(ctx.author_id)
@@ -3164,7 +3159,7 @@ async def my_account_id(ctx: interactions.SlashContext,psn_name: str):
     if my_database_account_id != account_id_hex:
         add_user_account_id(ctx.author_id,account_id_hex)
     else:
-        start_msg = '**We\'ve already saved your account id for {0}**, it\'s {1}, put 0 in the account_id option to use this account id!'
+        start_msg = '*We\'ve already saved your account id for* **{0}**, *it\'s* **{1},**<:j_:1272151363530522655>\n*Put* **0** *in the account_id option to use this account id!*<:Plant:1272144642753953844>'
     await log_user_success(ctx,start_msg.format(user.online_id,account_id_hex))
 
 
@@ -3191,12 +3186,11 @@ async def see_cheat_chain(ctx: interactions.SlashContext):
     chets = ''.join(chet.pretty() for chet in get_cheat_chain(ctx.author_id))
     await log_user_success(ctx,f'Cheats in your chain are currently...{chets}')
 
-
-@interactions.slash_command(name="ping",description="Test if the bot is responding")
+@interactions.slash_command(name="ping",description="Ping ItzGhosty420's bot to check online status")
 async def ping_test(ctx: interactions.SlashContext):
     await ctx.defer()
     await ps4_life_check(ctx)
-    cool_ping_msg = f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms'
+    cool_ping_msg =  f'<@{ctx.author_id}> <a:pepesayshi:1272147595426271305>\n<:j_:1272151363530522655>*Online & Activee!*<:j_:1272151363530522655>\n📢 *Bot latency is* **{ctx.bot.latency * 1000:.2f}ms** <:Plant:1272144642753953844>\n'
     
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'
@@ -3210,7 +3204,7 @@ async def ping_test(ctx: interactions.SlashContext):
     if CONFIG['should_ping_command_show_git_stuff']:
         await ctx.send(await ezwizard3_info())
 
-@interactions.slash_command(name='file2url',description="Convenience command to get url from discord attachment")
+@interactions.slash_command(name='link_creator',description="Upload your files for quicker option than using Google Drive links")
 @interactions.slash_option(
     name="my_file",
     description='The file you want as a url',
@@ -3244,6 +3238,759 @@ async def file2url(ctx: interactions.SlashContext, my_file: interactions.Attachm
     save_url(ctx.author_id,my_file.url,my_file_id)
     await log_user_success(ctx,f'the url is {my_file.url}, or use {my_file_id} in a field that needs a url, like save_files or dl_link')
 
+import sqlite3
+import atexit
+import interactions  
+
+
+conn = sqlite3.connect('bot_usage.db')
+c = conn.cursor()
+
+
+c.execute('''
+    CREATE TABLE IF NOT EXISTS command_usage (
+        user_id TEXT PRIMARY KEY,
+        usage_count INTEGER DEFAULT 0
+    )
+''')
+conn.commit()
+
+
+@atexit.register
+def close_connection():
+    conn.close()
+
+
+async def track_command_usage(user_id: str):
+   
+    c.execute('SELECT usage_count FROM command_usage WHERE user_id = ?', (user_id,))
+    result = c.fetchone()
+    
+    if result:
+        
+        c.execute('UPDATE command_usage SET usage_count = usage_count + 1 WHERE user_id = ?', (user_id,))
+    else:
+       
+        c.execute('INSERT INTO command_usage (user_id, usage_count) VALUES (?, 1)', (user_id,))
+    
+    conn.commit()
+
+
+async def set_up_ctx(ctx: interactions.SlashContext, *, mode=0) -> interactions.SlashContext:
+    
+    await track_command_usage(str(ctx.author.id))
+    
+    
+    nth_time = 1
+    try:
+        ctx.ezwizard_setup_done += 1
+        nth_time = ctx.ezwizard_setup_done
+    except AttributeError:
+        await ctx.defer()
+    ctx.ezwizard_mode = mode
+    await log_message(ctx, f'*Pleast wait, ItzGhosty420\'s Bot is currently in use!\nPlease retry the command in a few moments*\n*Your* **{nth_time}st** *time trying a command, Please do not try multiple times!*', _do_print=False)
+    ctx.ezwizard_setup_done = 1
+    
+    return ctx
+
+@interactions.slash_command(
+    name="leaderboard",
+    description="Displays the top users who have used the bot the most.",
+)
+async def leaderboard(ctx: interactions.SlashContext):
+
+    c.execute('SELECT user_id, usage_count FROM command_usage ORDER BY usage_count DESC LIMIT 10')
+    top_users = c.fetchall()
+
+    if not top_users:
+        await ctx.send("📉 No command usage data available at the moment.")
+        return
+
+    leaderboard_embed = interactions.Embed(
+        title="🏆 **Top Users by Command Usage** 🏆",
+        description="Keep using the bot to climb the leaderboard!",
+        color=0x0083ff  
+    )
+
+    leaderboard_content = ""
+
+    for idx, (user_id, usage_count) in enumerate(top_users, start=1):
+        try:
+
+            user = await ctx.bot.fetch_user(int(user_id))
+            username = user.username
+        except Exception:
+
+            username = "Unknown User"
+        
+
+        leaderboard_content += f"**{idx}.** {username} - **{usage_count}** commands used\n"
+
+
+    leaderboard_embed.add_field(
+        name="Top Command Users",
+        value=leaderboard_content,
+        inline=False
+    )
+
+
+    leaderboard_embed.set_footer(
+        text="Last Updated at 📈",
+        icon_url=ctx.bot.user.avatar_url
+    )
+
+
+    leaderboard_embed.timestamp = datetime.utcnow()
+
+
+    await ctx.send(embed=leaderboard_embed)
+
+
+import interactions
+
+
+ADMIN_IDS = [1171410680054812683]  
+
+
+def is_admin(user_id):
+    return user_id in ADMIN_IDS
+
+
+
+@interactions.slash_command(
+    name='admin_server_list', 
+    description="Displays a list of all servers the bot is in. Admin only."
+)
+async def admin_server_list(ctx: interactions.SlashContext):
+    if not is_admin(ctx.author.id):
+        await ctx.send(f"**Yo!**<a:pepesayshi:1272147595426271305>\n*You don't need to know this information..*", ephemeral=False)
+        return
+
+    guilds = ctx.bot.guilds
+    guild_list = [f"• {guild.name} (ID: {guild.id})" for guild in guilds]
+    guild_count = len(guilds)
+
+    embed = interactions.Embed(
+        title="📡 Server List",
+        description=(
+            f"• **Number of Servers:** `{guild_count}`\n"
+            + "\n".join(guild_list) + "\n\n"
+            f"To remove a server, use `/remove_server <guild_id>`."
+        ),
+        color=0x0083ff  
+    )
+
+    await ctx.send(embed=embed, ephemeral=False)
+
+
+
+@interactions.slash_command(
+    name='remove_server', 
+    description="Removes the bot from the specified server. Admin only."
+)
+@interactions.slash_option("guild_id", description="The ID of the server to remove", opt_type=interactions.OptionType.STRING, required=True)
+async def remove_server(ctx: interactions.SlashContext, guild_id: str):
+    if not is_admin(ctx.author.id):
+        await ctx.send("You do not have permission to use this command.", ephemeral=False)
+        return
+
+    guild = ctx.bot.get_guild(int(guild_id))
+    if guild:
+        await guild.leave()
+        await ctx.send(f"Successfully removed the bot from **{guild.name}** (ID: {guild_id}).", ephemeral=False)
+    else:
+        await ctx.send(f"Could not find a server with ID: {guild_id}.", ephemeral=False)
+
+@interactions.slash_command(
+    name='bot_information', 
+    description="Displays detailed information about the bot!"
+)
+async def bot_information(ctx: interactions.SlashContext):
+    
+    guilds = ctx.bot.guilds
+    guild_count = len(guilds)
+    total_members = sum([guild.member_count for guild in guilds])
+    largest_guild = max(guilds, key=lambda g: g.member_count)
+    smallest_guild = min(guilds, key=lambda g: g.member_count)
+
+    
+    memory_usage = "XX MB"  
+    cpu_usage = "YY%"       
+    total_runtime = 123456  
+    amnt_used_this_session = 100  
+    total_amnt_used = 5000  
+    unique_users_session = 50  
+    unique_users_total = 1000  
+    
+    embed = interactions.Embed(
+        title="🤖 Bot Information 🤖",
+        color=0x0083ff  
+    )
+
+    
+    embed.add_field(
+        name="📡 Server Information 📡",
+        value=(
+            f"• **Number of Servers:** `{guild_count}`\n"
+            f"• **Total Members:** `{total_members}`\n"
+            f"• **Largest Server:** `{largest_guild.name}` with `{largest_guild.member_count}` members\n"
+            f"• **Smallest Server:** `{smallest_guild.name}` with `{smallest_guild.member_count}` members\n"
+            f"• **Average Members per Server:** `{total_members // guild_count}`"
+        ),
+        inline=False
+    )
+
+   
+    embed.add_field(
+        name="🔍 Bot Overview 🔍",
+        value=(
+            f"• **Bot Latency:** `{ctx.bot.latency * 1000:.2f}ms`\n"
+            f"• **Current Version:** `{await get_commit_count()}`\n"
+            f"• **Latest Version Available:** `{await get_remote_count()}`\n"
+            f"• **Uptime:** `{pretty_seconds_words(total_runtime)}`\n"
+            f"• **Created On:** `{ctx.bot.user.created_at.strftime('%Y-%m-%d')}`\n"
+            f"• **Hoster:** `ItzGhosty420`\n"
+            f"• **Total Channels:** `{sum(len(guild.channels) for guild in guilds)}`\n"
+            f"• **Total Roles:** `{sum(len(guild.roles) for guild in guilds)}`"
+        ),
+        inline=False
+    )
+
+    
+    embed.add_field(
+        name="📊 Usage Statistics 📊",
+        value=(
+            f"• **Commands Used (Session):** `{amnt_used_this_session}`\n"
+            f"• **Commands Used (Total):** `{total_amnt_used}`\n"
+            f"• **Most Used Command:** `/Resign`\n"
+            f"• **Unique Users (Session):** `{unique_users_session}`\n"
+            f"• **Unique Users (Total):** `{unique_users_total}`"
+        ),
+        inline=False
+    )
+
+    
+    embed.add_field(
+        name="🖥️ System Information 🖥️",
+        value=(
+            f"• **Memory Usage:** `{memory_usage}`\n"
+            f"• **CPU Usage:** `{cpu_usage}`\n"
+            f"• **Running On:** `{ctx.bot.user}`"
+        ),
+        inline=False
+    )
+
+    
+    embed.add_field(
+        name="📚 Additional Information 📚",
+        value=(
+            f"• **Bot Prefix:** `/`\n"
+            f"• **Support Server:** [ItzGhosty420's Server](https://discord.gg/itzghosty420)\n"
+            f"• **GitHub Repository:** [View on GitHub](https://github.com/ItzGhosty420?tab=repositories)"
+        ),
+        inline=False
+    )
+
+    
+    embed.set_footer(text="Enjoy our FREE savebots! Happy Modding :)")
+
+    await ctx.send(embed=embed)
+
+from interactions import SlashCommand, SlashContext, Embed, Button, ButtonStyle, component_callback, slash_command, Intents, Client
+
+
+image_url = "https://media.discordapp.net/attachments/1252945555940708433/1278262164515459124/ezgif-5-5a0c085339.gif?ex=66d029e8&is=66ced868&hm=12b84c82431418aa04ecf4b2c7164bbc5803a53b087c988128a1150893cf8a74&=&width=120&height=120"
+discord_link = "https://discord.gg/itzghosty420"
+
+
+@slash_command(
+    name="help",
+    description="Get detailed help on how to use our PS SaveBots!"
+)
+async def help(ctx: SlashContext):
+   
+    embed = Embed(
+        title="📖 How to Use Our eZwizard3 SaveBots 📖",
+        description="A step-by-step guide to help you get the most out of our SaveBots for PS4/PS5. Whether you're resigning save files, re-regioning, or decrypting your saves, this guide has you covered.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="🔍 Retrieve PS Account ID from PSN Name",
+        value=(
+            "Easily retrieve your PlayStation account ID using your PSN username.\n\n"
+            "**Steps**:\n"
+            "1. **Run Command**: `/My_Account_ID`\n"
+            "2. **Input**: `PSN Username`\n"
+            "3. **Submit**: Execute the command\n"
+            "4. **Output**: Your PSN Account ID will be displayed.\n\n"
+            "📌 **Tip**: Double-check the PSN username for accuracy."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_1")
+
+    await ctx.send(embeds=[embed], components=[[next_button]])
+
+
+@component_callback("next_page_1")
+async def next_page_1(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🆔 Resign Save Data Files to Your Account 🆔",
+        description="Easily resign save files to match your PlayStation account ID. This is crucial for using saves from different accounts.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Resign Save Files:",
+        value=(
+            "1. **Upload**: Your save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Resign`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "6. **Download**: Your resigned file from the bot.\n\n"
+            "📌 **Note**: Ensure the correct account ID is used to avoid issues."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_1")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_2")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_1")
+async def previous_page_1(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="📖 How to Use Our eZwizard3 SaveBots 📖",
+        description="A step-by-step guide to help you get the most out of our SaveBots for PS4/PS5. Whether you're resigning save files, re-regioning, or decrypting your saves, this guide has you covered.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="🔍 Retrieve PS Account ID from PSN Name",
+        value=(
+            "Easily retrieve your PlayStation account ID using your PSN username.\n\n"
+            "**Steps**:\n"
+            "1. **Run Command**: `/My_Account_ID`\n"
+            "2. **Input**: `PSN Username`\n"
+            "3. **Submit**: Execute the command\n"
+            "4. **Output**: Your PSN Account ID will be displayed.\n\n"
+            "📌 **Tip**: Double-check the PSN username for accuracy."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_1")
+
+    await ctx.edit(embeds=[embed], components=[[next_button]])
+
+
+@component_callback("next_page_2")
+async def next_page_2(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🌍 Re-Region Your Save Files 🌍",
+        description="Change the region of your save files to make them compatible with different game versions.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Re-Region Save Files:",
+        value=(
+            "1. **Upload**: Your save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Re-Region`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Specify Region**: Select the desired game region.\n"
+            "6. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "7. **Download**: Your re-regioned file from the bot.\n\n"
+            "📌 **Tip**: Make sure the new region matches your game version to avoid compatibility issues."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_2")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_3")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_2")
+async def previous_page_2(ctx: SlashContext):
+    await next_page_1(ctx)
+
+
+@component_callback("next_page_3")
+async def next_page_3(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🔓 Decrypt Your Save Files 🔓",
+        description="Decrypt your save files to make them editable or viewable.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Decrypt Save Files:",
+        value=(
+            "1. **Upload**: Your save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Decrypt`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "6. **Download**: Your decrypted file from the bot.\n\n"
+            "📌 **Reminder**: Always backup your original save file before making changes."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_3")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_4")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_3")
+async def previous_page_3(ctx: SlashContext):
+    await next_page_2(ctx)
+
+
+@component_callback("next_page_4")
+async def next_page_4(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🔒 Encrypt Your Save Files 🔒",
+        description="Re-encrypt your modified save files to ensure they work properly on your PlayStation.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Encrypt Save Files:",
+        value=(
+            "1. **Upload**: Your modified save file to Google Drive.\n"
+            "2. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "3. **Run Command**: `/Encrypt`\n"
+            "4. **Submit**: Provide the link to the bot.\n"
+            "5. **Enter Account ID**: Input your PlayStation account ID (or use `0` for default).\n"
+            "6. **Download**: Your encrypted file from the bot.\n\n"
+            "📌 **Tip**: Ensure the file is in the correct format before encrypting."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_4")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_5")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_4")
+async def previous_page_4(ctx: SlashContext):
+    await next_page_3(ctx)
+
+
+@component_callback("next_page_5")
+async def next_page_5(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🖼️ Customize Your Save Icon 🖼️",
+        description="Personalize the icon of your save files for a unique touch.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="How to Customize Save Icons:",
+        value=(
+            "1. **Choose an Icon**: Select or create an icon image.\n"
+            "2. **Upload**: Your icon image to Google Drive.\n"
+            "3. **Set Permissions**: Allow 'Anyone with the link' to access.\n"
+            "4. **Run Command**: `/Change_Icon`\n"
+            "5. **Submit**: Provide the link to the bot.\n"
+            "6. **Download**: Your customized save file.\n\n"
+            "📌 **Note**: Use a square image with the correct resolution for best results."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_5")
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_6")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, next_button]])
+
+
+@component_callback("previous_page_5")
+async def previous_page_5(ctx: SlashContext):
+    await next_page_4(ctx)
+
+
+@component_callback("next_page_6")
+async def next_page_6(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="🆔 Understanding CUSA IDs & Resources 🆔",
+        description="Learn what CUSA IDs are and how to find them, along with useful resources for save files.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="What is a CUSA ID?",
+        value=(
+            "A **CUSA ID** is a unique identifier assigned to each PlayStation game. It's essential for identifying the correct version of a game when dealing with save files, patches, or mods.\n\n"
+            "Each game version may have a different CUSA ID, especially across regions. Ensuring you have the correct CUSA ID is crucial when applying saves or mods."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="Useful Resources:",
+        value=(
+            "- **[OrbisPatches](https://orbispatches.com/)**: A comprehensive database to find CUSA IDs and related game patches.\n"
+            "- **[TheTechGame](https://www.thetechgame.com/Downloads.html)**: A popular site to find and download save files for PS4/PS5 games."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    prev_button = Button(style=ButtonStyle.PRIMARY, label="⬅️ Previous", emoji="⬅️", custom_id="previous_page_6")
+    start_over_button = Button(style=ButtonStyle.PRIMARY, label="🔄 Start Over 🔄", custom_id="start_over")
+
+    await ctx.edit(embeds=[embed], components=[[prev_button, start_over_button]])
+
+
+@component_callback("previous_page_6")
+async def previous_page_6(ctx: SlashContext):
+    await next_page_5(ctx)
+
+
+@component_callback("start_over")
+async def start_over(ctx: SlashContext):
+    await ctx.defer(edit_origin=True)
+
+    embed = Embed(
+        title="📖 How to Use Our eZwizard3 SaveBots 📖",
+        description="A step-by-step guide to help you get the most out of our SaveBots for PS4/PS5. Whether you're resigning save files, re-regioning, or decrypting your saves, this guide has you covered.",
+        color=0x0083ff
+    )
+
+    embed.set_thumbnail(url=image_url)
+
+    embed.add_field(
+        name="🔍 Retrieve PS Account ID from PSN Name",
+        value=(
+            "Easily retrieve your PlayStation account ID using your PSN username.\n\n"
+            "**Steps**:\n"
+            "1. **Run Command**: `/My_Account_ID`\n"
+            "2. **Input**: `PSN Username`\n"
+            "3. **Submit**: Execute the command\n"
+            "4. **Output**: Your PSN Account ID will be displayed.\n\n"
+            "📌 **Tip**: Double-check the PSN username for accuracy."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+    next_button = Button(style=ButtonStyle.PRIMARY, label="Next ➡️", emoji="➡️", custom_id="next_page_1")
+
+    await ctx.edit(embeds=[embed], components=[[next_button]])
+
+import requests
+from interactions import Extension, slash_command, SlashContext, slash_option, OptionType, Embed
+from rapidfuzz import fuzz, process, utils
+from data_files import KNOWN_TITLE_IDS, KNOWN_REGIONS, REGION_EMOJIS
+import re
+
+
+API_KEY = "1e217489cd114460b32fc3174044e052"
+
+
+CUSA_TITLE_ID = re.compile(r'CUSA\d{5}')
+
+
+ERROR_SIDE_EMBED_COLOUR = 0xFF4C4C  
+NORMAL_EMBED_COLOUR = 0x1E90FF  
+
+
+NO_GAMES_FOUND_EMBED = Embed(
+    title='❌ **No Games Found**',
+    description='🔍 Please check the spelling or try a different name.',
+    footer='If you believe this game exists, please report it.',
+    color=ERROR_SIDE_EMBED_COLOUR
+)
+
+def fetch_rawg_game_details(game_name):
+    """Fetch game details from RAWG.io based on the game name."""
+    rawg_url = f"https://api.rawg.io/api/games?search={game_name.replace(' ', '%20')}&key={API_KEY}"
+    try:
+        response = requests.get(rawg_url)
+        response.raise_for_status()
+        data = response.json()
+        if data['results']:
+            game_details = data['results'][0]
+            game_slug = game_details.get('slug')
+            detailed_url = f"https://api.rawg.io/api/games/{game_slug}?key={API_KEY}"
+            detailed_response = requests.get(detailed_url)
+            detailed_response.raise_for_status()
+            detailed_data = detailed_response.json()
+            return game_details, detailed_data
+    except requests.exceptions.RequestException as e:
+        return None, str(e)
+    return None, "No game details found."
+
+def format_embed_fields(game_details, detailed_data):
+    """Format game details into embed fields."""
+    developers = ', '.join([dev["name"] for dev in detailed_data.get("developers", [])]) or '*Not Available*'
+    release_date = game_details.get('released', 'Not Available')
+    rating = f"{detailed_data.get('rating', 'N/A')} / 5 ⭐"
+
+
+    fields = [
+        ("🎮 **Developers**", developers),
+        ("📅 **Release Date**", release_date),
+        ("📊 **Rating**", rating)
+    ]
+    
+
+    english_tags = ', '.join([tag["name"] for tag in game_details.get("tags", []) if re.match(r"^[A-Za-z\s]+$", tag["name"])][:3]) or '*Not Available*'
+    
+    return fields, english_tags
+
+@slash_command(
+    name="game_info",
+    description="Fetch detailed information about a game.",
+)
+@slash_option(
+    name="game_name",
+    description="Name of the game you want information about",
+    opt_type=OptionType.STRING,
+    required=True
+)
+async def game_info(ctx: SlashContext, game_name: str):
+    await ctx.defer()
+
+
+    best_match = process.extractOne(
+        game_name, 
+        [name[0] for name in KNOWN_TITLE_IDS.values()],
+        scorer=fuzz.partial_ratio
+    )
+
+    if not best_match or best_match[1] < 70:
+        await ctx.send(embed=NO_GAMES_FOUND_EMBED)
+        return
+
+    corrected_game_name = best_match[0]
+    game_details, detailed_data = fetch_rawg_game_details(corrected_game_name)
+
+    if not game_details:
+        await ctx.send(f"❗ Failed to fetch information: {detailed_data}.")
+        return
+
+
+    game_description = detailed_data.get('description_raw', '*No description available.*')
+    if len(game_description) > 200:  
+        game_description = game_description[:200] + '...'
+
+    game_embed = Embed(
+        title=f"🎮 **{game_details.get('name', 'Unknown Game')}**",
+        description=f"*{game_description}*",
+        color=NORMAL_EMBED_COLOUR
+    )
+
+
+    fields, english_tags = format_embed_fields(game_details, detailed_data)
+    for field_name, field_value in fields:
+        game_embed.add_field(name=field_name, value=field_value, inline=True)
+
+
+    if english_tags != '*Not Available*':
+        game_embed.add_field(name="🏷️ **Tags**", value=f"*{english_tags}*", inline=True)
+
+
+    platforms = ', '.join([platform['platform']['name'] for platform in game_details.get('platforms', [])]) or '*Not Available*'
+    game_embed.add_field(name="🔖 **Platforms**", value=f"*{platforms}*", inline=True)
+
+
+    found_cusa = set()
+    for title_id, game_info in KNOWN_TITLE_IDS.items():
+        if fuzz.QRatio(game_info[0], corrected_game_name, processor=utils.default_process) >= 95:
+            found_cusa.add((f'CUSA{title_id:05}', *game_info))
+
+    if found_cusa:
+        cusa_text = '\n'.join([f"📂 {title_id} - {region}" for title_id, _, region in found_cusa])
+        game_embed.add_field(name="🌍 **CUSA Regions**", value=cusa_text, inline=False)
+
+
+    if game_details.get('website'):
+        game_embed.add_field(name="🔗 **Official Website**", value=f"[Visit Website]({game_details['website']})", inline=False)
+
+
+    if game_details.get('background_image'):
+        game_embed.set_thumbnail(url=game_details['background_image'])
+
+
+    game_embed.set_footer(text="Enjoy our FREE SaveBots! Happy Modding :)")
+
+
+    await ctx.send(embeds=[game_embed])
+
+
+INVITE_LINK_1 = "https://discord.gg/itzghosty420"
+INVITE_LINK_2 = "https://www.youtube.com/@ItzGhosty420"
+
+@interactions.slash_command(name='discord_invite', description="ItzGhosty420's Discord Server")
+async def discord_invite(ctx: interactions.SlashContext):
+
+    await ctx.send(f"*Jump over & Check out the Bot Hosters Discord Server!*\n{INVITE_LINK_1}")
+
+@interactions.slash_command(name='youtube_channel', description="ItzGhosty420's Youtube Channel")
+async def youtube_channel(ctx: interactions.SlashContext):
+    
+    await ctx.send(f"*Jump over & Check out the Bot Hosters Youtube Channel!*\n{INVITE_LINK_2}")
+
 @interactions.slash_command(name='delete_files2urls',description="Delete all your saved urls!")
 async def delete_files2urls(ctx: interactions.SlashContext):
     ctx = await set_up_ctx(ctx)
@@ -3266,7 +4013,6 @@ async def see_saved_files2urls(ctx: interactions.SlashContext):
     for key,value in saved_urls_dict.items():
         pretty += f'{key} -> {value}\n'
     await log_user_success(ctx,f'Your saved urls are... \n{pretty.strip()}')
-
 
 @interactions.slash_command(name='see_built_in_sabes',description="See all of the built in saves/dl_link files of this instance")
 @interactions.slash_option(
@@ -3291,6 +4037,8 @@ async def see_built_in_sabes(ctx: interactions.SlashContext, show: str):
 
     await log_user_success(ctx,'\n'.join(f'{i}: {x[1]}' for i,x in enumerate(CONFIG[show])))
 
+
+#ben
 @interactions.slash_command(name='set_verbose_mode',description="Do you want error messages more verbose (detailed)?")
 @interactions.slash_option(
     name="verbose_mode",
@@ -3310,8 +4058,6 @@ async def set_verbose_mode(ctx: interactions.SlashContext, verbose_mode: bool):
     else:
         await log_user_success(ctx,'Verbose mode (more detailed error messages) is *OFF*')
 
-
-
 async def ezwizard3_info() -> str:
     if not GIT_EXISTS:
         return 'bruh, This instance does not use git, please tell the instance owner to use git clone instead of download zip'
@@ -3329,7 +4075,6 @@ async def ezwizard3_info() -> str:
     
     return lah_message
 
-
 @interactions.slash_command(name='delete_all_google_drive_saves',description="Only run this command if the gdrive is full, will delete all gdrive files bot has given to users")
 async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
     global UPLOAD_SAVES_FOLDER_ID
@@ -3342,8 +4087,7 @@ async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
     UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
     return await log_user_success(ctx,'All saves deleted successfully')
 
-
-@interactions.slash_command(name='delete_certain_gdrive_save',description="Only run this command if the gdrive is full, will delete a certain google drive file sent by bot")
+@interactions.slash_command(name='delete_certain_gdrive_save',description="Run this command to delete all the bleeding saves from Google  drive")
 @interactions.slash_option(
     name="gdrive_url_from_bot",
     description="A google drive link the bot has given",
@@ -3353,28 +4097,28 @@ async def delete_ezwizardtwo_saves_folder(ctx: interactions.SlashContext):
 async def do_delete_certain_gdrive_save(ctx: interactions.SlashContext, gdrive_url_from_bot: str):
     ctx = await set_up_ctx(ctx)
     if not is_user_bot_admin(ctx.author_id):
-        return await log_user_error(ctx,'Only bot instance admins may use this command, please ask one to run this command if google drive is full')
+        return await log_user_error(ctx,'*Only **ItzGhosty420** *can use this command*')
 
     gdrive_url_from_bot_id = extract_drive_file_id(gdrive_url_from_bot)
     
     if not gdrive_url_from_bot_id:
-        return await log_user_error(ctx,f'{gdrive_url_from_bot} is not a valid google drive link, please copy the exact link the bot sent')
+        return await log_user_error(ctx,f'{gdrive_url_from_bot} *is not a valid google drive link, please copy the exact link the bot sent*')
     
     try:
         a = await get_file_info_from_id(gdrive_url_from_bot_id)
     except Exception as e:
-        msg = make_error_message_if_verbose_or_not(ctx.author_id,f'Could not get file metadata from {gdrive_url_from_bot}','')
+        msg = make_error_message_if_verbose_or_not(ctx.author_id,f'*Could not get file metadata from* {gdrive_url_from_bot}','')
         return await log_user_error(ctx,msg)
 
     try:
         await delete_google_drive_file_or_file_permentaly(gdrive_url_from_bot_id)
     except Exception:
-        return await log_user_error(ctx,f'Could not delete {gdrive_url_from_bot}, are you sure its from the same bot as you running this command?')
+        return await log_user_error(ctx,f'*Could not delete* {gdrive_url_from_bot}, *are you sure its from the same bot as you running this command?*')
     
     await log_user_success(ctx,f'Deleted {gdrive_url_from_bot} successfully')
     
 setting_global_image_lock = asyncio.Lock()
-@interactions.slash_command(name='set_global_watermark',description="Allows a bot instance admin to set a global watermark to all saves icons")
+@interactions.slash_command(name='set_global_watermark',description="ItzGhosty420\'s secert troll command lmao")
 @interactions.slash_option(
     name="global_image_link",
     description="A direct download to your image, will be saved to current dir",
@@ -3383,7 +4127,7 @@ setting_global_image_lock = asyncio.Lock()
     )
 @interactions.slash_option(
     name="option",
-    description="Some options you might want",
+    description="Extra features you can apply",
     required=True,
     opt_type=interactions.OptionType.INTEGER,
     choices=[
@@ -3396,17 +4140,17 @@ setting_global_image_lock = asyncio.Lock()
 async def do_global_image_link(ctx: interactions.SlashContext, global_image_link: str, option: int):
     ctx = await set_up_ctx(ctx)
     if not is_user_bot_admin(ctx.author_id):
-        return await log_user_error(ctx,'Only bot instance admins may use this command')
+        return await log_user_error(ctx,'ItzGhosty420\'s secert troll command lmao')
     async with setting_global_image_lock:
         if is_str_int(global_image_link) and int(global_image_link) > 1:
             try:
                 global_image_link = get_saved_url(ctx.author_id,int(global_image_link))
             except KeyError:
-                await log_user_error(ctx,f'You dont have any url saved for {global_image_link}, try running the file2url command again!')
+                await log_user_error(ctx,f'*You dont have any url saved for* {global_image_link}, *try running the file2url command again!*')
                 return False
         global_image_link = get_dl_link_if_desc(global_image_link)
         print(f'{global_image_link = }')
-        await log_message(ctx,f'Downloading {global_image_link}')
+        await log_message(ctx,f'*ItzGhosty420\'s Savebot working magic!* {global_image_link}')
         async with TemporaryDirectory() as tp:
             result = await download_direct_link(ctx,global_image_link,tp,max_size=DL_FILE_TOTAL_LIMIT)
             if isinstance(result,str):
@@ -3416,7 +4160,7 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
                 with Image.open(result) as img:
                     pass
             except Exception:
-                return await log_user_error(ctx,f'{global_image_link} is not a valid image, please give a image link')
+                return await log_user_error(ctx,f'{global_image_link} *is not a valid image, please give a image link*')
             
             with Image.open(result).convert("RGBA") as img:
                 img.save(Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png')
@@ -3435,6 +4179,10 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
         (Path(__file__).parent / f'DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt').unlink(missing_ok=True)
         (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
     return await log_user_success(ctx,f'Global watermark image removed successfully')
+
+#ben
+
+
 
 async def base_saved_ting_autocomplete(ctx: interactions.AutocompleteContext,thing: tuple[tuple[str,str]],/):
     string_option_input = ctx.input_text
@@ -3562,6 +4310,7 @@ if __name__ == '__main__':
     print('done making the /quick commands')
 
 
+#ben
 async def main() -> int:
     check_base_saves = not is_in_fast_boot_mode()
     global GIT_EXISTS
@@ -3619,8 +4368,6 @@ async def main() -> int:
     await send_ps4debug(CONFIG['ps4_ip'],port=9090)
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     print('ps4debug payload successfully injected')
-
-    
 
     print('testing if ftp works')
     async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:

@@ -167,6 +167,7 @@ config.yaml
 DO_NOT_DELETE_automatically_generated_gdrive_token.json
 credentials.json
 user_stuff.sqlite
+bot_usage.db
 jsoninator.jar
 savedata.db
 DO_NOT_DELETE_OR_EDIT_global_image_watermark_option.txt

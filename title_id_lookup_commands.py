@@ -50,71 +50,81 @@ def title_id_not_found_embed_gen(title_id: str) -> Embed:
         color = ERROR_SIDE_EMBED_COLOUR
     )
 
+from interactions import Extension, SlashContext, AutocompleteContext, OptionType, slash_command, slash_option, Embed  # Import Embed from interactions
 
 class TitleIdLookupCommands(Extension):
-    @slash_command(name = 'game_lookup', description = 'Find all title ids based on game name')
-    @slash_option(name='game_name',
+    @slash_command(name='game_lookup', description='Find all title ids based on game name')
+    @slash_option(
+        name='game_name',
         description='The name of the game to lookup',
         opt_type=OptionType.STRING,
         required=True,
-        )
-    @slash_option(name='region',
+    )
+    @slash_option(
+        name='region',
         description='The region of the game you want',
         opt_type=OptionType.STRING,
         required=True,
         autocomplete=True
-        )
-    @slash_option(name='fuzz_score_to_match',
+    )
+    @slash_option(
+        name='fuzz_score_to_match',
         description='The lower this number, the more title ids it will find, default 95',
         opt_type=OptionType.NUMBER,
-        min_value = 0.0,
-        max_value = 100.0,
+        min_value=0.0,
+        max_value=100.0,
         required=False
-        )
-    async def find_title_ids_base_on_game_name(self,ctx: SlashContext,game_name: str, region: str | None, fuzz_score_to_match: float = 95.0):
+    )
+    async def find_title_ids_base_on_game_name(self, ctx: SlashContext, game_name: str, region: str | None, fuzz_score_to_match: float = 95.0):
         if region == 'All regions':
             region = None
         else:
             if region not in KNOWN_REGIONS:
                 return await ctx.send('Please enter a region of the choice from the bot')
-        
+
         found_things = set()
-        for title_id,game_name_and_region in KNOWN_TITLE_IDS.items():
-            if len(found_things) > 10:
-                return await ctx.send(embed=TOO_MANY_GAMES_EMBED)
+        for title_id, game_name_and_region in KNOWN_TITLE_IDS.items():
             if fuzz.QRatio(game_name_and_region[0], game_name, processor=utils.default_process) >= fuzz_score_to_match:
-                if (not region or region in game_name_and_region[1]):
-                    found_things.add((f'CUSA{title_id:05}',*game_name_and_region))
+                if not region or region in game_name_and_region[1]:
+                    found_things.add((f'CUSA{title_id:05}', *game_name_and_region))
+        
         if not found_things:
             return await ctx.send(embed=NO_GAMES_FOUND_EMBED)
-        return await ctx.send(embeds = [title_id_embed_gen(*x) for x in found_things])
+
+        # Create a single embed with multiple fields
+        embed = Embed(title="Game Lookup Results", description=f"Results for game: {game_name}", color=0x00ff00)
+        for title_id, game_name, game_region in found_things:
+            embed.add_field(name=game_name, value=f"Title ID: {title_id}\nRegion: {game_region}", inline=False)
         
+        return await ctx.send(embed=embed)
+
     @find_title_ids_base_on_game_name.autocomplete('region')
-    async def find_title_ids_base_on_game_name_autocomplete(self,ctx: AutocompleteContext):
+    async def find_title_ids_base_on_game_name_autocomplete(self, ctx: AutocompleteContext):
         string_option_input = ctx.input_text
         if not string_option_input:
-            return await ctx.send(choices=[{'name':'All regions','value':'All regions'}])
+            return await ctx.send(choices=[{'name': 'All regions', 'value': 'All regions'}])
         string_option_input = string_option_input.lower()
-        
-        
+
         return await ctx.send(choices=[x for x in REGION_SLASH_OPTIONS if string_option_input in x['name'].lower()])
-    
-    @slash_command(name = 'title_id_lookup', description = 'Get game and region from title id')
-    @slash_option(name='title_id',
+
+    @slash_command(name='title_id_lookup', description='Get game and region from title id')
+    @slash_option(
+        name='title_id',
         description='The title id of the game (starting with CUSA)',
         opt_type=OptionType.STRING,
         required=True,
-        max_length = 4 + 5,
-        min_length = 4 + 5,
-        )
-    async def find_game_based_on_title_id(self,ctx: AutocompleteContext, title_id: str):
+        max_length=4 + 5,
+        min_length=4 + 5,
+    )
+    async def find_game_based_on_title_id(self, ctx: AutocompleteContext, title_id: str):
         title_id = title_id.upper()
         if not CUSA_TITLE_ID.fullmatch(title_id):
             return await ctx.send(f'Invalid title id {title_id}')
-        
+
         try:
             game_name_and_region = KNOWN_TITLE_IDS[int(title_id[4:])]
         except KeyError:
             return await ctx.send(embed=title_id_not_found_embed_gen(title_id))
-        
-        return await ctx.send(embed = title_id_embed_gen(title_id,*game_name_and_region))
+
+        embed = title_id_embed_gen(title_id, *game_name_and_region)
+        return await ctx.send(embed=embed)
