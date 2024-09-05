@@ -4,6 +4,7 @@ import json
 import re
 from random import choice as random_choice
 from tempfile import TemporaryDirectory
+import string
 
 import yaml
 from frozendict import frozendict
@@ -12,6 +13,8 @@ from humanize import naturalsize
 with TemporaryDirectory() as _tp_to_get_parent_temp_dir:
     PARENT_TEMP_DIR: Path = Path(_tp_to_get_parent_temp_dir).parent
 del _tp_to_get_parent_temp_dir # Global variable cleanup
+
+BASE_62_CHARS = string.ascii_letters + string.digits
 
 CUSA_TITLE_ID = re.compile(r'CUSA\d{5}')
 PSN_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9-_]{2,15}$') # https://regex101.com/library/4XPer9
@@ -76,6 +79,17 @@ def extract_drive_folder_id(link: str,/) -> str:
     return link.split('folders/')[-1].split('?')[0] if link.startswith('https://drive.google.com/drive') else ''
 
 
+def non_format_susceptible_byte_repr(some_bytes: bytes | bytearray) -> str:
+    """
+    Returns a repr of the bytes, which should not get formatted weridly by discord or some other markdown viewer
+    """
+    new_str = (r"b'\x" + some_bytes.hex(' ').replace(' ',r'\x') + "'")
+    for char in BASE_62_CHARS:
+        new_str = new_str.replace(fr'\x{ord(char):x}',char)
+    
+    return new_str
+    
+
 def is_str_int(thing: str,/) -> bool:
     try:
         int(thing)
@@ -103,8 +117,8 @@ def extract_drive_file_id(link: str,/) -> str:
     return ''
 
 MAKE_FOLDER_NAME_SAFE_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_'
-def make_folder_name_safe(some_string_path_ig: str, /) -> str:
-    some_string_path_ig = str(some_string_path_ig).replace(' ','_').replace('/','_').replace('\\','_')
+def make_folder_name_safe(some_string_path_ig: str | Path, /) -> str:
+    some_string_path_ig = str(some_string_path_ig).replace(' ','_').replace('/','_').replace('\\','_').replace('.','-')
     some_string_path_ig = some_string_path_ig.removeprefix('PS4_FOLDER_IN_ME_')
     leader = 'PS4_FOLDER_IN_ME_' if is_ps4_title_id(some_string_path_ig.replace('_','')) else ''
     result = leader + ("".join(c for c in some_string_path_ig if c in MAKE_FOLDER_NAME_SAFE_CHARS).rstrip())

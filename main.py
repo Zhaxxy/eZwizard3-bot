@@ -1,7 +1,8 @@
 import asyncio
+from contextlib import nullcontext
 import sys
 import re
-from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, assert_never
+from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, NoReturn, assert_never
 from enum import Enum
 from pathlib import Path
 from traceback import format_exc
@@ -15,7 +16,6 @@ from zlib import crc32 # put modules you need at the bottom of list for custom c
 import struct
 import gzip
 from sqlite3 import connect as sqlite3_connect
-from ftplib import FTP,error_reply 
 _boot_start = time.perf_counter()
 from interactions import Embed
 
@@ -34,8 +34,8 @@ from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools,install_mods_to_bigfart # put modules you need at the bottom of list for custom cheats, in correct block
 
-from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words
-from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile, extract_full_archive, filename_is_not_an_archive
+from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words, non_format_susceptible_byte_repr
+from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile,SevenZipInfo, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
 from savemount_py.firmware_getter_from_libc_ps4 import get_fw_version
@@ -81,9 +81,10 @@ SAVE_FOLDER_ENCRYPTED = f'{BASE_SAVEDATA_FOLDER}/{BASE_TITLE_ID}'
 MOUNTED_POINT = Path('/mnt/sandbox/NPXS20001_000')
 
 PS4_SAVE_KEYSTONES = {
-    'CUSA05350':b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb5\xaa\xa6\xdd\x19*\xfd\xdd\x8dy\x93\x8eJ\xce\x13\x7f\xd4H\x1d\xf1\x11\xbd\x18\x8a\xf3\x02\xc5l6j\x91\x12K\xcbZe\x06tj\x9d\x08\xd53;\xc1\x9cD\x96h\xff\xef\xe2\x18$W\x96\x8fQ\xa1\xc8<\x0b\x18\x96',
-    'CUSA05088':b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00&\xedp\x94\xb2\x94\xa3\x9bc\xbd\x94\x11;\x06l\x93x\x9d\xc2K\xe2\xed\xfc\xd78\xff\xdd\x8dU\x86\xab\xd8N\x1dx8q\xcf\xd3\x0b\xfc\x8cr<il\xbbd\xbd\x17\xbe(?\x85Xn\xa5\xf4T\xe8s\xdcu\xaa',
-    'CUSA08767':b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0fmj\x91\x05\x0e\xa7"\x9e3I\x94\x12].2\xe1\xbd\xff\x86\xac9\x0b{\xf0\x13\\\xa8\x83\x04o\xf0\x9c\xda\x9e64\x07H\x90o\xeb\xed\x86\xdc\x9aA$x\xe3\xbfZe\xb0\x9d\t\x92\xfa\xa4\xe8x\xb6\x1d\x8a'
+    'CUSA05350': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb5\xaa\xa6\xdd\x19*\xfd\xdd\x8dy\x93\x8eJ\xce\x13\x7f\xd4H\x1d\xf1\x11\xbd\x18\x8a\xf3\x02\xc5l6j\x91\x12K\xcbZe\x06tj\x9d\x08\xd53;\xc1\x9cD\x96h\xff\xef\xe2\x18$W\x96\x8fQ\xa1\xc8<\x0b\x18\x96',
+    'CUSA05088': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00&\xedp\x94\xb2\x94\xa3\x9bc\xbd\x94\x11;\x06l\x93x\x9d\xc2K\xe2\xed\xfc\xd78\xff\xdd\x8dU\x86\xab\xd8N\x1dx8q\xcf\xd3\x0b\xfc\x8cr<il\xbbd\xbd\x17\xbe(?\x85Xn\xa5\xf4T\xe8s\xdcu\xaa',
+    'CUSA08767': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0fmj\x91\x05\x0e\xa7"\x9e3I\x94\x12].2\xe1\xbd\xff\x86\xac9\x0b{\xf0\x13\\\xa8\x83\x04o\xf0\x9c\xda\x9e64\x07H\x90o\xeb\xed\x86\xdc\x9aA$x\xe3\xbfZe\xb0\x9d\t\x92\xfa\xa4\xe8x\xb6\x1d\x8a',
+    'CUSA12555': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c\xc3\xc4\xea\x6a\x09\x09\x5f\x03\x6c\x2b\xcc\x61\x3b\x3f\x99\x6a\x35\xff\xbd\xb8\xf3\x59\x35\xbf\x86\x27\x92\x18\x53\x9b\xbe\x73\x52\xda\x5f\x95\x13\x53\x73\x16\xf2\x2c\x9b\xe5\xeb\x02\x58\x75\x4e\x5e\x02\x30\x9c\x38\xad\x58\x57\xc1\x25\xc9\xf9\xa1\x49',
 }
 
 XENOVERSE_TITLE_IDS = frozenset(('CUSA12394', 'CUSA05088', 'CUSA12330', 'CUSA04904', 'CUSA10051', 'CUSA12358', 'CUSA06202', 'CUSA05774', 'CUSA05350', 'CUSA12390', 'CUSA06208', 'CUSA05085'))
@@ -166,6 +167,20 @@ PARAM_SFO_SPECIAL_STRINGS = (
 )
 
 HUH = "Connection terminated. I'm sorry to interrupt you Elizabeth, if you still even remember that name. But I'm afraid you've been misinformed. You are not here to receive a gift, nor have you been called here by the individual you assume. Although you have indeed been called. You have all been called here. Into a labyrinth of sounds and smells, misdirection and misfortune. A labyrinth with no exit, a maze with no prize. You don't even realize that you are trapped. Your lust for blood has driven you in endless circles, chasing the cries of children in some unseen chamber, always seeming so near, yet somehow out of reach. But you will never find them, none of you will. This is where your story ends. And to you, my brave volunter, who somehow found this job listing not intended for you. Although there was a way out planned for you, I have a feeling that's not what you want. I have a feeling that you are right where you want to be. I am remaining as well, I am nearby. This place will not be remembered, and the memory of everything that started this can finally begin to fade away. As the agony of every tragedy should. And to you monsters trapped in the corridors: Be still and give up your spirits, they don't belong to you. For most of you, I believe there is peace and perhaps more waiting for you after the smoke clears. Although, for one of you, the darkest pit of Hell has opened to swallow you whole, so don't keep the devil waiting, old friend. My daughter, if you can hear me, I knew you would return as well. It's in your nature to protect the innocent. I'm sorry that on that day, the day you were shut out and left to die, no one was there to lift you up into their arms the way you lifted others into yours. And then, what became of you. I should have known you wouldn't be content to disappear, not my daughter. I couldn't save you then, so let me save you now. It's time to rest. For you, and for those you have carried in your arms. This ends for all of us. End communication."
+
+
+class ExpectedError(Exception):
+    """
+    Raise this error if you just wanna print some information about a save as a cheat
+    """
+
+class HasExpectedError(NamedTuple):
+    error_text: str
+    pretty_dir: Path
+
+class InvalidBinFile(Exception):
+    pass
+
 # class TemporaryDirectory():
 #     def __enter__(self):
 #         self.new_path = Path(str(time.perf_counter()).replace('.','_'))
@@ -193,6 +208,25 @@ _token_getter = asyncio.Lock()
 async def get_time_as_string_token() -> str:
     async with _token_getter:
         return datetime.now().strftime("%d_%m_%Y__%H_%M_%S")
+
+
+def delete_empty_folders(root: Path):
+    """
+    https://stackoverflow.com/questions/47093561/remove-empty-folders-python
+    """
+    deleted = set()
+    
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
+
+        still_has_subdirs = False
+        for subdir in subdirs:
+            if os.path.join(current_dir, subdir) not in deleted:
+                still_has_subdirs = True
+                break
+    
+        if not any(files) and not still_has_subdirs:
+            os.rmdir(current_dir)
+            deleted.add(current_dir)
 
 
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
@@ -379,9 +413,11 @@ async def get_amnt_free_save_strs() -> int:
 
 mounted_saves_at_once = asyncio.Semaphore(12) # 3 i sadly got an unmount error, and with 2 too
 
+
 class PS4AccountID:
     __slots__ = ('_account_id',)
     def __init__(self, account_id: str):
+        account_id = account_id.split(' ')[0]
         if len(account_id) != 16:
             raise ValueError('Invalid account id, length is not 16')
         int(account_id,16)
@@ -413,12 +449,13 @@ class PS4AccountID:
         return self._account_id
 
     @classmethod
-    def from_bytes(cls,account_id_bytes: bytes):
+    def from_bytes(cls,account_id_bytes: bytes) -> 'PS4AccountID':
         return cls(account_id_bytes[::-1].hex())
 
     @classmethod
-    def from_account_id_number(cls, account_id_int: str | int):
+    def from_account_id_number(cls, account_id_int: str | int) -> 'PS4AccountID':
         return cls(f'{int(account_id_int):016x}')
+
 
 def remove_pc_user_from_path(the_path: object,/) -> object:
     if not isinstance(the_path,(Path,AsyncPath)):
@@ -636,34 +673,87 @@ async def ps4_life_check(ctx: interactions.SlashContext | None = None):
         assert_never('bot should be ended')
     
 
+def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/) -> tuple[list[tuple[Path,Path]], list[SevenZipFile]]:
+    ps4_saves: list[tuple[Path,Path]] = []
+    found_zips: list[SevenZipFile] = [] # we are only doing one level of recusion, this is because its common practise to put single CUSAxxxxx zips inside of one large zip
+    
+    for zip_file in ps4_saves_thing.files.values():
+        if '__MACOSX' in zip_file.path.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
+        if zip_file.path.name.startswith('._'): continue
+        
+        if not filename_valid_extension(zip_file.path): # returns error string if not valid archive
+            found_zips.append(zip_file)
+            continue
+            
+        if zip_file.path.suffix != '.bin': continue
+        if not zip_file.is_file: continue
+        if not is_ps4_title_id(zip_file.path.parent.name): continue
+        
+        white_file = zip_file.path.with_suffix('')
+        if not ps4_saves_thing.files.get(white_file): continue
+        if zip_file.size != 96:
+            raise InvalidBinFile(f'Invalid bin file {zip_file.path} found in {link}')
+
+        ps4_saves.append((zip_file.path,white_file))
+    return ps4_saves,found_zips
+
+
 
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
-        await log_message(ctx,f'*Checking* {link} *if valid archive*')
-        try:
-            zip_info = await get_archive_info(archive_name)
-        except Exception as e:
-            return f'*Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
-
-        if zip_info.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-            return f'*The decompressed* {link} *is too big*\n*Please note the limit is* **{pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}**'
-        
-        await log_message(ctx,f'*Having a quick look for saves in* {link}')
-        ps4_saves: list[tuple[Path,Path]] = []
-        for zip_file in zip_info.files.values():
-            if not zip_file.is_file: continue
-            if not is_ps4_title_id(zip_file.path.parent.name): continue
-            if zip_file.path.suffix != '.bin': continue
-            if '__MACOSX' in zip_file.path.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
-            if zip_file.path.name.startswith('._'): continue
+await log_message(ctx,f'*Checking* {link} *if valid archive*')
+    try:
+        zip_info = await get_archive_info(archive_name)
+    except Exception as e:
+        return f'*Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
+    
+    current_total_size = zip_info.total_uncompressed_size
+    
+    if current_total_size > FILE_SIZE_TOTAL_LIMIT:
+        return f'*The decompressed* {link} *is too big*({pretty_bytes(current_total_size)})\n*Please note the limit is* **{pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}**'
+    
+    await log_message(ctx,f'*Having a quick look for saves in* {link}')
+    
+    try:
+        ps4_saves,found_zips = get_only_ps4_saves_from_zip(zip_info)
+    except InvalidBinFile as e:
+        return str(e)
+    
+    found_zips_2 = [] # Just to not raise NameError later on
+    
+    async with TemporaryDirectory() if found_zips else nullcontext() as temp_store_zips:
+        for i,zip_file in enumerate(found_zips):
+            await log_message(ctx,f'Extracting subzip {zip_file} from {link}')
             
-            white_file = zip_file.path.with_suffix('')
-            if not zip_info.files.get(white_file): continue
-            if zip_file.size != 96:
-                return f'*Invalid bin file* {zip_file.path} *found in* {link}'
+            here_the_zip = Path(temp_store_zips,f'z{i}')
+            real_zip_path = here_the_zip / zip_file.path.name
+            
+            try:
+                await extract_single_file(archive_name,zip_file.path,here_the_zip)
+            except Exception as e:
+                return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+            
+            current_total_size -= zip_file.size
+            
+            await log_message(ctx,f'Checking if subzip {zip_file} from {link} is valid')
+            try:
+                zip_info = await get_archive_info(here_the_zip)
+            except Exception as e:
+                return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+            
+            current_total_size += zip_info.total_uncompressed_size
+            if current_total_size > FILE_SIZE_TOTAL_LIMIT:
+                return f'The decompressed {link} is too big ({pretty_bytes(current_total_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
-            ps4_saves.append((zip_file.path,white_file))
+            try:
+                ps4_saves_2,found_zips_2 = get_only_ps4_saves_from_zip(zip_info)
+            except InvalidBinFile as e:
+                return str(e)
+            
+            ps4_saves += [(bin_file,(white_file,real_zip_path,zip_file.path)) for bin_file,white_file in ps4_saves_2]
+
         if not ps4_saves:
-            return f'*Oops, I couldnt find anything in your link* <:Cry:1272144629373997106>\n {link}\n*Please make sure your* **CUSAxxxxx** *folder only has your* **Two** *Savefiles inside it!*\n*If there is multiple folders/savefiles inside your folder, I will not find your desired savefile!*'
+           nested_archives_middle_text = ' we also only support one level of nested archives.' if found_zips_2 else ''
+            return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAxxxxx folder?{nested_archives_middle_text} your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         
         try:
             ctx.ezwizard3_special_ctx_attr_special_save_files_thing
@@ -678,13 +768,21 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             return f'*The archive* {link} *has too many saves* {len(ps4_saves)}, *the max is* {MAX_RESIGNS_PER_ONCE} *remove* {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} *saves and try again*'
         
         for bin_file,white_file in ps4_saves:
-            pretty_dir_name = make_folder_name_safe(bin_file.parent)
+            if isinstance(white_file,tuple):
+                white_file,current_white_file_archive_path,pretty_zip_file_path = white_file
+                
+                pretty_dir_name = make_folder_name_safe(pretty_zip_file_path / bin_file.parent)
+            else:
+                pretty_zip_file_path = ''
+                current_white_file_archive_path = archive_name
+                pretty_dir_name = make_folder_name_safe(bin_file.parent)
+            
             new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_file.parent.name))
             new_path.mkdir(exist_ok=True,parents=True) # TODO look into parents=True
-            await log_message(ctx,f'*Mc Booooming!!* {white_file} {link}')
+            await log_message(ctx,f'*Mc Booooming!!* {white_file} {link} + {pretty_zip_file_path}')
             try:
-                await extract_single_file(archive_name,white_file,new_path)
-                await extract_single_file(archive_name,bin_file,new_path)
+                await extract_single_file(current_white_file_archive_path,white_file,new_path)
+                await extract_single_file(current_white_file_archive_path,bin_file,new_path)
             except Exception as e:
                 return f'*Oops.. Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
         return ''
@@ -731,7 +829,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
             return f'{link} failed validation reason: {validation_result}'
         
         if zip_file.size > max_size:
-            return f'The file {link} is too big, we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
+            return f'The file {link} is too big ({pretty_bytes(zip_file.size)}), we only accept {pretty_bytes(max_size)}, if you think this is wrong please report it'
         if zip_file.size < 1:
             return f'The file {link} is too small lmao wyd'
 
@@ -771,34 +869,35 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
                             filename = link.split('/')[-1].split('?')[0]
                         if validation_result := validation(filename):
                             return f'{link} *failed validation reason:* {validation_result}'
-                        file_size = response.headers.get('*Content-Length*')
-                        if link.startswith('https://zaprit.fish/dl_archive/') or link.startswith('https://zaprit.fish/icon/'):
-                            file_size = 3
+                        file_size: int | None | str = response.headers.get('Content-Length')
                         if file_size is None:
-                            return '*There was no Content-Length header*'
-                        try:
-                            file_size = int(file_size)
-                        except ValueError:
-                            return f'*Content-Length* {file_size!r} *was not a valid number*'
-                        if file_size > max_size:
-                            return f'*The file* {link} *is too big, I only accept* {pretty_bytes(max_size)}'
-                        if file_size < 2:
-                            return f'*The file {link} is too small man whats the fuck even is this lol*'
+                            file_size = '? Bytes'
+                        else:
+                            try:
+                                file_size = int(file_size)
+                            except ValueError:
+                                return f'*Content-Length {file_size!r} was not a valid number*'
+                            if file_size > max_size:
+                                return f'*The file* {link} *is too big ({pretty_bytes(file_size)}), I only accept* {pretty_bytes(max_size)}'
+
+                            if file_size < 2:
+                                return f'*The file {link} is too small man whats the fuck even is this lol*'
+                            file_size = pretty_bytes(file_size)
                         downloaded_size = 0
                         chunks_done = 0
                         direct_zip = Path(donwload_location,filename)
                         with open(direct_zip, 'wb') as f:
                             while True:
                                 if not(chunks_done % AMNT_OF_CHUNKS_TILL_DOWNLOAD_BAR_UPDATE):
-                                    await log_message(ctx,f'*Ive downloaded* {link} {pretty_bytes(downloaded_size)}')
+                                    await log_message(ctx,f'*Ive downloaded* {link} {pretty_bytes(downloaded_size)}/{file_size}')
                                 chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE)
                                 if not chunk:
                                     break
                                 f.write(chunk)
-                                downloaded_size += DOWNLOAD_CHUNK_SIZE
+                                downloaded_size += len(chunk)
                                 chunks_done += 1
                                 if downloaded_size > max_size:
-                                    return f'*Oops* {link} *is too big,* *I only accept* {pretty_bytes(max_size)}'
+                                    return f'*Oops* {link} *is too big, ({pretty_bytes(downloaded_size)})* *I only accept* {pretty_bytes(max_size)}'
                         await log_message(ctx,f'*Ive downloaded* {link} {pretty_bytes(downloaded_size)}')
                         break
                     elif (response.status == 524) and link.startswith('https://zaprit.fish/dl_archive/'):
@@ -852,7 +951,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         except Exception:
             return 'blud thinks hes funny'
         if test[0] > FILE_SIZE_TOTAL_LIMIT:
-            return f'*The decrypted save* {link} *is too big*\n*Maybe you uploaded a wrong file? max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+            return f'*The decrypted save* {link} *is too big* ({pretty_bytes(test[0])})\n*Maybe you uploaded a wrong file? max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
             return f'*The decrypted save* {link} *has too many loose files* ({test[1]}), *max is* {ZIP_LOOSE_FILES_MAX_AMT} *loose files*'
 
@@ -896,7 +995,7 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         return f'*Invalid archive after downloading it* {link}, *error when unpacking* {type(e).__name__}: {e}'
 
     if a.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
-        return f'*The decompressed* {link} *is too big, the max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
+        return f'*The decompressed* {link} *is too big ({pretty_bytes(a.total_uncompressed_size)}), the max is* {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
     if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
         return f'*The decompressed* {link} *has too many loose files* ({len(a.files)}),\n **max is** {ZIP_LOOSE_FILES_MAX_AMT} **loose files**'
@@ -1082,7 +1181,7 @@ async def delete_base_save_just_ftp(title_id: str, dir_name: str):
         await ftp.remove(f'sdimg_{dir_name}')
         await ftp.remove(f'{dir_name}.bin')
         
-async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str, special_thing: SpecialSaveFiles | None) -> str | tuple[list | PS4AccountID | str]:
+async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str, special_thing: SpecialSaveFiles | None) -> str | tuple[list | PS4AccountID | str] | tuple[ExpectedError,str]:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
         async with MountSave(ps4,mem,int(CONFIG['user_id'],16),mount_save_title_id,save_dir_ftp) as mp:
@@ -1114,7 +1213,10 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                         # await log_message(ctx,f'Applying cheat {chet.pretty()} {index + 1}/{len(cheats)} for {pretty_save_dir}')
                         result = await chet.func(ftp,new_mount_dir,real_name,**chet.kwargs)
                     results.append(result) if result else None
-                except Exception:
+                except Exception as e:
+                    if isinstance(e,ExpectedError):
+                        show_error_type = '' if type(e) == ExpectedError else f'{type(e).__name__}: ' 
+                        return HasExpectedError(f'{show_error_type}{e}',pretty_save_dir)
                     return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}','')
             # await log_message(ctx,'Connecting to PS4 ftp to do resign')
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1169,7 +1271,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                             # breakpoint()
                             return WARNING_COULD_NOT_UNMOUNT_MSG
                     return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided. If you did mcworld2ps4 try setting mc_encrypted_save_size higher'
-async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], special_thing: SpecialSaveFiles | str | None) -> str | tuple[list | PS4AccountID]:
+async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], special_thing: SpecialSaveFiles | str | None) -> str | tuple[list | PS4AccountID] | ExpectedError:
     if isinstance(special_thing,str):
         special_thing = None
     pretty_save_dir = white_file.relative_to(parent_dir)
@@ -1396,6 +1498,17 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         add_1_total_amnt_used()
 
 ############################00 Real commands stuff
+def save_files_folder_structure_opt(func):
+    return interactions.slash_option(
+    name="folder_structure",
+    description="How do you want the saves to be laid out in the finished zip?",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[ 
+        interactions.SlashCommandChoice(name="Just the one PS4 folder, put duplicate saves in a other_saves folder (recommend option)", value=1),
+        interactions.SlashCommandChoice(name="Put each save in its own folder (usefull for save sets) (old behaviour)", value=0),
+    ]
+    )(func)
 def dec_enc_save_files(func):
     return interactions.slash_option(
     name="save_files",
@@ -1567,7 +1680,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         await free_save_str(save_dir_ftp)
 
 
-async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account_id: str, cheat: CheatFunc):
+async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_structure: int,account_id: str, cheat: CheatFunc):
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
@@ -1649,48 +1762,56 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             if not await pre_process_cheat_args(ctx,my_cheats_chain,chet_files_custom,savedata0_folder):
                 return
             
-            if False:
-                await log_message(ctx,'doing special built in save thing')
-                await log_user_error(ctx,'unimplemented')
-                return
-            else:
-                if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD or isinstance(save_files,Lbp3BackupThing):
-                    mc_new_white_path = Path(enc_tp, make_ps4_path(account_id,mc_base_title_id),mc_filename)
-                    mc_new_bin_path = Path(enc_tp , make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
-                    
-                    mc_new_white_path.parent.mkdir(parents=True)
 
-                    mc_new_white_path.write_bytes(b'\xFF')
-                    mc_new_bin_path.write_bytes(b'\xFF')
+            if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD or isinstance(save_files,Lbp3BackupThing):
+                mc_new_white_path = Path(enc_tp, make_ps4_path(account_id,mc_base_title_id),mc_filename)
+                mc_new_bin_path = Path(enc_tp , make_ps4_path(account_id,mc_base_title_id),mc_filename+'.bin')
+                
+                mc_new_white_path.parent.mkdir(parents=True)
+
+                mc_new_white_path.write_bytes(b'\xFF')
+                mc_new_bin_path.write_bytes(b'\xFF')
+            else:
+                download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
+                if download_ps4_saves_result:
+                    await log_user_error(ctx,download_ps4_saves_result)
+                    return
+            real_names = []
+            results_big = []
+            got_expected_errors = False
+            for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
+                if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
+                    pass
+                elif isinstance(save_files,Lbp3BackupThing):
+                    pass
                 else:
-                    download_ps4_saves_result = await download_ps4_saves(ctx,save_files,enc_tp,account_id)
-                    if download_ps4_saves_result:
-                        await log_user_error(ctx,download_ps4_saves_result)
-                        return
-                real_names = []
-                results_big = []
-                for bin_file, white_file in (done_ps4_saves := list(list_ps4_saves(enc_tp))):
-                    if save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
-                        pass
-                    elif isinstance(save_files,Lbp3BackupThing):
-                        pass
-                    else:
-                        await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
-                    pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
-                    tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to mount* {pretty_folder_thing}'))
-                    async with mounted_saves_at_once:
-                        tick_tock_task.cancel()
-                        a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,real_save_dir_ftp,save_files)
-                    if isinstance(a,str):
-                        await log_user_error(ctx,a)
-                        if a == WARNING_COULD_NOT_UNMOUNT_MSG:
-                            breakpoint()
-                        return
-                    results_small,old_account_id,real_name = a
-                    await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
-                    real_names.append(real_name)
-                    results_big.append(results_small)
+                    await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
+                pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
+                tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,f'*Getting ready to mount* {pretty_folder_thing}'))
+                async with mounted_saves_at_once:
+                    tick_tock_task.cancel()
+                    a: tuple[list[CheatFuncResult],PS4AccountID] = await apply_cheats_on_ps4(ctx,account_id,bin_file,white_file,enc_tp,my_cheats_chain,real_save_dir_ftp,save_files)
+                if a == WARNING_COULD_NOT_UNMOUNT_MSG:
+                    breakpoint()
+                
+                if isinstance(a,HasExpectedError):
+                    got_expected_errors = True
+                    results_big.append(a)
+                    continue
+                    
+                if isinstance(a,str):
+                    await log_user_error(ctx,a)
+                    return
+                results_small,old_account_id,real_name = a
+                await download_encrypted_from_ps4(ctx,bin_file,white_file,enc_tp,real_save_dir_ftp)
+                real_names.append(real_name)
+                results_big.append(results_small)
             
+            if got_expected_errors:
+                save_msgs = ''.join(f'{x[1]}:\n``{x[0]}``\n' for x in results_big)
+                await log_user_success(ctx,f'Got your messages\n\n{save_msgs}')
+                return
+                
             await log_message(ctx,f'*Making sure file names in* {save_files} *are all correct*')
             found_fakes = False
             for real_name, (bin_file, white_file) in zip(real_names, done_ps4_saves, strict=True):
@@ -1785,17 +1906,35 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         if not have_not_done_at_least_1_account_id_change:
                             raise
                     have_not_done_at_least_1_account_id_change = True
-            if False:
-                await log_message(ctx,'*cleaning up the things you did*')
-                await log_user_error(ctx,'*unimplemented*')
-                return
             
+            if folder_structure == 1:
+                await log_message(ctx,f'Putting all saves in one PS4 folder in {save_files}')
+                def long_lambda():
+                    enc_tp_other_saves = (enc_tp / 'other_saves')
+                    enc_tp_other_saves.mkdir()
+                    for x in enc_tp.iterdir():
+                        if x.name == 'other_saves':
+                            continue
+                        x.rename(Path(x.parent,'other_saves',x.name))
+                    
+                    new_ps4_path = Path(enc_tp,'PS4/SAVEDATA',account_id.account_id)
+                    new_ps4_path.mkdir(exist_ok=True,parents=True)
+                    
+                    for x in enc_tp_other_saves.rglob('*'):
+                        if not x.is_file():
+                            continue
+                        assert is_ps4_title_id(x.parent.name)
+                        
+                        (new_ps4_path / x.parent.name).mkdir(exist_ok=True)
+                        new_save_file_path = new_ps4_path / x.parent.name / x.name
+                        if new_save_file_path.is_file():
+                            continue
+                        x.rename(new_save_file_path)
+                
+                await asyncio.get_running_loop().run_in_executor(None,long_lambda)
+                
             await log_message(ctx,f'Deleting empty folders in {save_files}')
-            async for x in AsyncPath(enc_tp).rglob('*'):
-                try:
-                    await x.rmdir()
-                except Exception:
-                    pass
+            await asyncio.get_running_loop().run_in_executor(None,lambda: delete_empty_folders(enc_tp))
 
             await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or f'ItzGhosty420 ({cheat.func.__name__})').strip())
             return
@@ -1957,9 +2096,10 @@ async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Res
 DUMMY_CHEAT_FUNC = CheatFunc(do_nothing,{})
 @interactions.slash_command(name="resign", description=f"Resign any PS4 save to your account!")
 @interactions.slash_option('save_files','The save files to resign too',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
-async def do_resign(ctx: interactions.SlashContext,save_files: str,account_id: str):
-    await base_do_cheats(ctx,save_files,account_id,DUMMY_CHEAT_FUNC)
+async def do_resign(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,DUMMY_CHEAT_FUNC)
 
 async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,ignore_plans = False, **mod_files: Path):
     """
@@ -1991,6 +2131,7 @@ async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_nam
 littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", description="Cheats for LittleBigPlanet 3")
 @littlebigplanet_3.subcommand(sub_cmd_name="install_mods", sub_cmd_description="Install .mod files to a level backup or LBPxSAVE (bigfart)")
 @interactions.slash_option('save_files','The level backup or profile backup to install the mods too',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option(
     name = 'ignore_plans',
@@ -2058,11 +2199,11 @@ littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", descript
     required=False,
     opt_type=interactions.OptionType.STRING
 )
-async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     if not any(key.startswith('dl_link_mod_file') for key in kwargs.keys()):
         ctx = await set_up_ctx(ctx)
         return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(install_mods_for_lbp3_ps4,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(install_mods_for_lbp3_ps4,kwargs))
 
 async def strider_change_difficulty(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,difficulty: str):
     """
@@ -2094,14 +2235,15 @@ async def strider_change_difficulty(ftp: aioftp.Client, mount_dir: str, save_nam
 strider = cheats_base_command.group(name="strider", description="Cheats for Strider")
 @strider.subcommand(sub_cmd_name="change_difficulty", sub_cmd_description="Change the games difficulty! (i never played this game in my life)")
 @interactions.slash_option('save_files','The save files to change difficulty of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('difficulty','The difficulty ya want',interactions.OptionType.STRING,True,choices=[
         interactions.SlashCommandChoice(name="Easy mode", value='0'),
         interactions.SlashCommandChoice(name="Normal mode", value='1'),
         interactions.SlashCommandChoice(name="Hard mode", value='2')
     ])
-async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(strider_change_difficulty,kwargs))
+async def do_strider_change_difficulty(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(strider_change_difficulty,kwargs))
 
 def make_cheat_func(base_cheat_applier, the_real_cheat, /, kwargs) -> CheatFunc:
     async def some_cheaty(ftp: aioftp.Client, mount_dir: str, save_name: str, /, **kwargs):
@@ -2164,12 +2306,13 @@ async def xenoverse2_change_tp_medals(dec_save: Path,/,*,tp_medals: int):
 dragonball_xenoverse_2 = cheats_base_command.group(name="dragonball_xenoverse_2", description="Cheats for DRAGON BALL XENOVERSE 2")
 @dragonball_xenoverse_2.subcommand(sub_cmd_name="change_tp_medals", sub_cmd_description="Change the TP medals of your save")
 @interactions.slash_option('save_files','The save files to change TP medals of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('tp_medals','The amount of TP medals you want',interactions.OptionType.INTEGER,True,**INT32_MAX_MIN_VALUES)
 @filename_p_opt
 @verify_checksum_opt
-async def do_xenoverse2_change_tp_medals(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,make_xenoverse2_cheat_func(xenoverse2_change_tp_medals,kwargs))
+async def do_xenoverse2_change_tp_medals(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,make_xenoverse2_cheat_func(xenoverse2_change_tp_medals,kwargs))
 
 async def _base_rayman_legend_cheats(ftp: aioftp.Client, mount_dir: str, save_name: str,/,**kwargs):
     the_real_cheat = kwargs.pop('the_real_cheat')
@@ -2270,12 +2413,13 @@ async def rayman_legends_change_lums(dec_save: Path,/,*,lums: int):
 rayman_legends = cheats_base_command.group(name="rayman_legends", description="Cheats for Rayman Legends")
 @rayman_legends.subcommand(sub_cmd_name="change_lums", sub_cmd_description="Change the Lums of your save")
 @interactions.slash_option('save_files','The save files to change Lums of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('lums','The amount of Lums you want',interactions.OptionType.INTEGER,True,**UINT32_MAX_MIN_VALUES)
 @filename_p_opt
 @verify_checksum_opt
-async def do_rayman_legends_change_lums(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,make_rayman_legend_cheat_func(rayman_legends_change_lums,kwargs))
+async def do_rayman_legends_change_lums(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,make_rayman_legend_cheat_func(rayman_legends_change_lums,kwargs))
 
 async def rayman_legends_change_jump_count(dec_save: Path,/,*,jump_count: int):
     """
@@ -2291,12 +2435,13 @@ async def rayman_legends_change_jump_count(dec_save: Path,/,*,jump_count: int):
 
 @rayman_legends.subcommand(sub_cmd_name="change_jump_count", sub_cmd_description="Change the jump count of your save")
 @interactions.slash_option('save_files','The save files to change jump count of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('jump_count','The jump count you want',interactions.OptionType.INTEGER,True)
 @filename_p_opt
 @verify_checksum_opt
-async def do_rayman_legends_change_jump_count(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,make_rayman_legend_cheat_func(rayman_legends_change_jump_count,kwargs))
+async def do_rayman_legends_change_jump_count(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,make_rayman_legend_cheat_func(rayman_legends_change_jump_count,kwargs))
 ###########################0 some base folder things idk
 async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,clean_encrypted_file: CleanEncryptedSaveOption, decrypted_save_file: Path = None, decrypted_save_folder: Path = None, unpack_first_root_folder: bool = False):
     """
@@ -2321,6 +2466,7 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     await ftp.upload(decrypted_save_file / 'savedata0',mount_last_name,write_into=True)
 @interactions.slash_command(name="raw_encrypt_folder", description=f"use /advanced_mode_import instead (max 1 save per command) only jb PS4 decrypted save")
 @interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('decrypted_save_file','A link to a folder or zip of your decrypted savedata0 folder',interactions.OptionType.STRING,True)
 @interactions.slash_option(
@@ -2334,16 +2480,17 @@ async def upload_savedata0_folder(ftp: aioftp.Client, mount_dir: str, save_name:
     ]
     )
 @allow_mulit_enc_opt
-async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_encrypt(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
         ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = False
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 @interactions.slash_command(name="raw_encrypt_folder_type_2", description=f"use /advanced_mode_import instead (max 1 save per command) only jb PS4 decrypted save")
 @interactions.slash_option('save_files','The save file orginally decrypted',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('decrypted_save_folder','A link to a folder or zip containing your decrypted',interactions.OptionType.STRING,True)
 @interactions.slash_option(
@@ -2367,13 +2514,13 @@ async def do_encrypt(ctx: interactions.SlashContext,save_files: str,account_id: 
     ]
     )
 @allow_mulit_enc_opt
-async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     if not kwargs.pop('allow_mulit_enc',None):
         ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption(kwargs.get('clean_encrypted_file',0))
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 @interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrypted minecraft save")
 @account_id_opt
@@ -2411,7 +2558,7 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS
     kwargs['unpack_first_root_folder'] = True
     kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
-    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,0,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 
 @interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
@@ -2523,8 +2670,33 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         with open(tp_param_sfo,'rb+') as f:
             f.seek(0x9F8-8)
             f.write(struct.pack('<q',new_blocks_size))
-        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
+        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),0,account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
 
+async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -> NoReturn:
+    await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
+    async with TemporaryDirectory() as tp:
+        tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
+        tp_keystone = Path(tp,'a')
+        
+        await ftp.download('param.sfo',tp_param_sfo,write_into=True)
+        found_game_ids = []
+        with open(tp_param_sfo,'rb+') as f:
+            for seek in (0x61C,0x62C,0xA9C):
+                f.seek(seek)
+                found_game_ids.append(f.read(9).decode('ascii'))
+        if found_game_ids.count(found_game_ids[0]) != len(found_game_ids):
+            raise ValueError('Missmatching title ids in save')
+        
+        await ftp.download('keystone',tp_keystone,write_into=True)
+        if tp_keystone.stat().st_size != 96:
+            raise ValueError('Invalid keystone found in save')
+
+
+        raise ExpectedError(f'{found_game_ids[0]!r}: {non_format_susceptible_byte_repr(tp_keystone.read_bytes())}')
+@interactions.slash_command(name="get_keystones", description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
+@interactions.slash_option('save_files','The save files you want the keystones of',interactions.OptionType.STRING,True)
+async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str):
+    await base_do_cheats(ctx,save_files,0,'1',CheatFunc(get_keystone_key_from_save,{}))
 
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
@@ -2563,10 +2735,11 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
     return CheatFuncResult(savename,gameid)
 @interactions.slash_command(name="re_region", description=f"Re region your save files!")
 @interactions.slash_option('save_files','The save files to be re regioned',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('gameid','The gameid of the region you want, in format CUSAxxxxx',interactions.OptionType.STRING,True,max_length=9,min_length=9)
-async def do_re_region(ctx: interactions.SlashContext,save_files: str,account_id: str, gameid: str):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(re_region,{'gameid':gameid.upper()}))
+async def do_re_region(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, gameid: str):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(re_region,{'gameid':gameid.upper()}))
 
 async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_image_overlay: Path, option: ChangeSaveIconOption):
     """
@@ -2594,6 +2767,7 @@ async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         await ftp.upload(og_icon0_path,'icon0.png',write_into=True)
 @interactions.slash_command(name="change_icon",description=f"Add a picture to customise your modded save!")
 @interactions.slash_option('save_files','The save files to change the icon of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('dl_link_image_overlay','The link to an image overlay you want, check out file2url!',interactions.OptionType.STRING,True)
 @interactions.slash_option(
@@ -2608,9 +2782,9 @@ async def change_save_icon(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         interactions.SlashCommandChoice(name="Ignore aspect ratio and use bilnear for resizing", value=4),
     ]
     )
-async def do_change_save_icon(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+async def do_change_save_icon(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
     kwargs['option'] = ChangeSaveIconOption(kwargs['option'])
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_icon,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(change_save_icon,kwargs))
 
 async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_name: bytes) -> None:
     """
@@ -2633,10 +2807,11 @@ async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
 
 @interactions.slash_command(name="change_save_name", description=f"Customise the title of your modded save")
 @interactions.slash_option('save_files','The save files to change the name of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('psstring_new_name','the name you want, put hex code for symbols (eg this is a checkmark -> EFA1BE)',interactions.OptionType.STRING,True,min_length=1,max_length=0x80*3)
-async def do_change_save_name(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_name,kwargs))
+async def do_change_save_name(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(change_save_name,kwargs))
 
 
 async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,psstring_new_desc: bytes) -> None:
@@ -2661,10 +2836,11 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
 
 @interactions.slash_command(name="change_save_desc", description=f"Customise the description of your modded save")
 @interactions.slash_option('save_files','The save files to change the description of',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('psstring_new_desc','the description you want, put hex code for symbols (eg this is a TV -> EFA1B1)',interactions.OptionType.STRING,True,min_length=1,max_length=0x79*6)
-async def do_change_save_desc(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(change_save_desc,kwargs))
+async def do_change_save_desc(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs):
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(change_save_desc,kwargs))
 ############################03 Custom imports
 
 async def rayman_legends_upload_fix_checksum(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,dl_link_single: Path, filename_p: str | None = None):
@@ -2844,6 +3020,7 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
 
 @interactions.slash_command(name="advanced_mode_import",description=f"This is Save Wizard Advanced Mode! Easily Import/encrypt your exported/decrypted save!")
 @interactions.slash_option('save_files','The save file to import the decrypted save to',interactions.OptionType.STRING,True)
+@save_files_folder_structure_opt
 @account_id_opt
 @interactions.slash_option('dl_link_single','The file link you wanna import YOU SHOULD GET THIS FROM SAVEWIZARD OR advanced_mode_export',interactions.OptionType.STRING,True)
 @interactions.slash_option(name='game',
@@ -2855,12 +3032,12 @@ game_enc_functions = { # Relying on the dict ordering here, "Game not here (migh
     ])
 @filename_p_opt
 @allow_mulit_enc_opt
-async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
+async def do_upload_single_file_any_game(ctx: interactions.SlashContext,save_files: str,folder_structure: int,account_id: str, **kwargs): # TODO allow custom args for differnt enc functions
     if not kwargs.pop('allow_mulit_enc',None):
         ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
 
     import_func = game_enc_functions[kwargs.pop('game')]
-    await base_do_cheats(ctx,save_files,account_id,CheatFunc(import_func,kwargs))
+    await base_do_cheats(ctx,save_files,folder_structure,account_id,CheatFunc(import_func,kwargs))
 ############################04 Cool bot features
 _did_first_boot = True
 @interactions.listen()
@@ -4013,7 +4190,7 @@ async def base_saved_ting_autocomplete(ctx: interactions.AutocompleteContext,thi
         return await ctx.send(choices=[{'name':'Please start typing a built in save from /see_built_in_sabes','value':'Please start typing a built in save from /see_built_in_sabes'}])
     string_option_input = string_option_input.casefold()
     
-    print(string_option_input)
+    
     
     return await ctx.send(choices=[dict(name=x[1], value=x[0]) for x in thing if string_option_input in x[1].casefold()][:25])
 
@@ -4064,13 +4241,13 @@ def _make_quick_functions():
             
             if option['name'].startswith('dl_link') or option['name'] in ('decrypted_save_file','decrypted_save_folder','global_image_link'):
                 is_viable = True
-                if len(BUILT_IN_DL_LINKS) > DISCORD_CHOICE_LIMIT:
+                if len(BUILT_IN_DL_LINKS) > 0: # Force always use autocorrect to allow users to copy and paste urls too
                     auto_complete_things_dl_links.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
                 else:
                     option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_DL_LINKS]
-            if option['name'] == 'save_files':
+            if option['name'] == 'save\x5ffiles':
                 is_viable = True
-                if len(BUILT_IN_SAVE_LINKS) > DISCORD_CHOICE_LIMIT:
+                if len(BUILT_IN_SAVE_LINKS) > 0: # Force always use autocorrect to allow users to copy and paste urls too
                     auto_complete_things_enc_saves.append((f'@replacewithrealfuncname.autocomplete({option["name"]!r})\n',option["name"]))
                 else:
                     option['choices'] += [dict(name=x[1],value=x[0]) for x in BUILT_IN_SAVE_LINKS]
