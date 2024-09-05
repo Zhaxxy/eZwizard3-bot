@@ -414,9 +414,11 @@ async def get_amnt_free_save_strs() -> int:
 
 mounted_saves_at_once = asyncio.Semaphore(12) # 3 i sadly got an unmount error, and with 2 too
 
+
 class PS4AccountID:
     __slots__ = ('_account_id',)
     def __init__(self, account_id: str):
+        account_id = account_id.split(' ')[0]
         if len(account_id) != 16:
             raise ValueError('Invalid account id, length is not 16')
         int(account_id,16)
@@ -448,12 +450,13 @@ class PS4AccountID:
         return self._account_id
 
     @classmethod
-    def from_bytes(cls,account_id_bytes: bytes):
+    def from_bytes(cls,account_id_bytes: bytes) -> 'PS4AccountID':
         return cls(account_id_bytes[::-1].hex())
 
     @classmethod
-    def from_account_id_number(cls, account_id_int: str | int):
+    def from_account_id_number(cls, account_id_int: str | int) -> 'PS4AccountID':
         return cls(f'{int(account_id_int):016x}')
+
 
 def remove_pc_user_from_path(the_path: object,/) -> object:
     if not isinstance(the_path,(Path,AsyncPath)):
