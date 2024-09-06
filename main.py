@@ -59,6 +59,7 @@ CANT_USE_BOT_IN_DMS = 'Sorry, but the owner of this instance has disabled comman
 CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only bot admins can use the bot atm'
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
+LBP3_EU_BIGFART = 'https://drive.google.com/drive/folders/1fmUMCZlvj5011njMi6Xl-uP8WvIfRyuN?usp=sharing'
 
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
@@ -640,7 +641,19 @@ def account_id_from_str(account_id: str, author_id: str,ctx: interactions.SlashC
             return 'You dont have any account id saved to the database!, try running the `/my_account_id` again'
     elif account_id == '1':
         return PS4AccountID('0000000000000000')
+    
+    if account_id[0] not in '0123456789':
+        if not is_psn_name(account_id):
+            return f'Not a valid psn name {account_id}, check it again!'
+ 
+        try:
+            user = psnawp.user(online_id=account_id)
+        except PSNAWPNotFound:
+            return f'Could not find psn name {account_id}, perhaps you mispelled it?'
 
+        account_id = PS4AccountID.from_account_id_number(user.account_id).account_id
+
+    
     try:
         my_account_id = PS4AccountID(account_id)
         try:
@@ -1681,7 +1694,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
         await free_save_str(save_dir_ftp)
 
 
-async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_structure: int,account_id: str, cheat: CheatFunc):
+async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_structure: int,account_id: str, cheat: CheatFunc | list[CheatFunc]):
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
@@ -1700,7 +1713,9 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
         except KeyError:
             await log_user_error(ctx,f'You dont have any url saved for {save_files}, try running the file2url command again!')
             return
-
+    
+    
+    await log_message(ctx,'Checking account_id')
     account_id: str | PS4AccountID = account_id_from_str(account_id,ctx.author_id,ctx)
     if isinstance(account_id,str):
         await log_user_error(ctx,account_id)
@@ -1758,7 +1773,13 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
             enc_tp.mkdir()
             savedata0_folder = Path(tp,'savedata0_folder')
             savedata0_folder.mkdir()
-            my_cheats_chain = get_cheat_chain(ctx.author_id) + [cheat]
+            if isinstance(cheat,list):
+                my_cheats_chain = get_cheat_chain(ctx.author_id) + cheat
+                cheat = cheat[1] # this acts as a protection, you should not be giving single length lists
+            else:
+                my_cheats_chain = get_cheat_chain(ctx.author_id) + [cheat]
+                
+            
             
             if not await pre_process_cheat_args(ctx,my_cheats_chain,chet_files_custom,savedata0_folder):
                 return
@@ -3008,6 +3029,25 @@ async def upload_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_n
     
     await ftp.upload(dl_link_single,ftp_save[0],write_into=True)
 
+@interactions.slash_command(name="import_littlebigplanet_bigfart",description=f"Import any LittleBigPlanet bigfart to PS4 (just not from Vita)")
+@account_id_opt
+@interactions.slash_option('dl_link_bigfart','A download link to your bigfart',interactions.OptionType.STRING,True)
+@interactions.slash_option(
+    name="gameid",
+    description="The region you want of the save",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.SlashCommandChoice(name="CUSA00063 (EU)", value='CUSA00063'),
+        interactions.SlashCommandChoice(name="CUSA00473 (US)", value='CUSA00473'),
+        interactions.SlashCommandChoice(name="CUSA00693 (AS asia)", value='CUSA00693'),
+        interactions.SlashCommandChoice(name="CUSA00762 (GB UK)", value='CUSA00762'),
+        interactions.SlashCommandChoice(name="CUSA00810 (US LATAM)", value='CUSA00810'),
+    ]
+    )
+async def do_import_littlebigplanet_bigfart(ctx: interactions.SlashContext, account_id: str, dl_link_bigfart: str, gameid: str):
+    await base_do_cheats(ctx,LBP3_EU_BIGFART,1,account_id,[CheatFunc(import_bigfart,{'dl_link_single':dl_link_bigfart}),CheatFunc(re_region,{'gameid':gameid})])
+    
 game_enc_functions = { # Relying on the dict ordering here, "Game not here (might not work)" should be at bottom
     'Dying Light 2 Stay Human': upload_dl2_sav_gz_decompressed,
     'Grand Theft Auto V': upload_red_dead_redemption_2_or_gta_v_save,
