@@ -1079,7 +1079,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         ps4_saves = get_valid_saves_out_names_only(raw_files.values())
         
         if not ps4_saves:
-            return f'Could not find any saves in the folder {link}, maybe you forgot to upload the whole CUSAxxxxx folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
+            return f'Could not find any saves in the folder {link}, (if it has archives, give the archive link instead of folder) maybe you forgot to upload the whole CUSAxxxxx folder? your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
         total_ps4_saves_size = sum(x.bin_file.size + x.white_file.size for x in ps4_saves)
 
         try:
