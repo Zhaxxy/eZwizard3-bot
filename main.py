@@ -2139,8 +2139,8 @@ async def do_multi_export(ctx: interactions.SlashContext,save_files: str,unzip_i
 ###########################0 Custom cheats
 cheats_base_command = interactions.SlashCommand(name="cheats", description="Commands for custom cheats for some games")
 
-async def do_nothing(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
-DUMMY_CHEAT_FUNC = CheatFunc(do_nothing,{})
+async def do_resign_dummy_cheat(ftp: aioftp.Client, mount_dir: str, save_name: str): """Resigned Saves"""
+DUMMY_CHEAT_FUNC = CheatFunc(do_resign_dummy_cheat,{})
 @interactions.slash_command(name="resign", description=f"Resign save files to an account id (max {MAX_RESIGNS_PER_ONCE} saves per command)")
 @interactions.slash_option('save_files','The save files to resign too',interactions.OptionType.STRING,True)
 @save_files_folder_structure_opt
