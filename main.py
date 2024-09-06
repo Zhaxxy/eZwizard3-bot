@@ -64,7 +64,7 @@ LBP3_EU_BIGFART = 'https://drive.google.com/drive/folders/1fmUMCZlvj5011njMi6Xl-
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 DISCORD_CHOICE_LIMIT = 25
-ATTACHMENT_MAX_FILE_SIZE = 26_214_400-1 # 25mib
+ATTACHMENT_MAX_FILE_SIZE = 25_000_000-1 # 25mb, the actual limit is 25mib but this includes metadata which is hard to calculate, so im hoping this will give it enough slack for metadata
 DISCORD_BOT_STATUS_MAX_LENGTH = 128 - len('...')
 ZIP_LOOSE_FILES_MAX_AMT = 14567+1
 MAX_RESIGNS_PER_ONCE = 99
@@ -1475,10 +1475,23 @@ def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: P
             zp.write(file,file.relative_to(parent_dir))
 
 
-async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str):
+async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str,*,unzip_if_only_one_file: int = 0):
     global amnt_used_this_session
     await log_message(ctx,f'Zipping up modified {link_for_pretty} saves (2 more steps left)')
-    await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
+
+    found_1_file = False
+    if unzip_if_only_one_file:
+        for x in results.rglob('*'):
+            if x.is_file():
+                if found_1_file:
+                    found_1_file = False
+                    break
+                found_1_file = x
+            
+    if found_1_file:
+        new_zip_name = found_1_file
+    else:
+        await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
     
     real_file_size = new_zip_name.stat().st_size
     if real_file_size > ATTACHMENT_MAX_FILE_SIZE:
@@ -1504,14 +1517,25 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         await log_user_success(ctx,f'Here is a google drive link to your {custom_msg.strip()}\n{google_drive_uploaded_user_zip_download_link}\nPlease download this asap as it can be deleted at any time ({pretty_bytes(real_file_size)} file)')
     else:
         # await shutil.move(new_zip_name,new_zip_name.name)
-        await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord zip attachment (last step!) ({pretty_bytes(real_file_size)} file)')
-        await log_user_success(ctx,f'Here is a discord zip attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
+        await log_message(ctx,f'Uploading modified {link_for_pretty} saves as a discord {"file" if found_1_file else "zip"} attachment (last step!) ({pretty_bytes(real_file_size)} file)')
+        await log_user_success(ctx,f'Here is a discord {"file" if found_1_file else "zip"} attachment to your {custom_msg.strip()}\nPlease download this asap as it can be deleted at any time',file=str(new_zip_name))
         # os.remove(new_zip_name.name)
     amnt_used_this_session += 1
     if not is_in_test_mode():
         add_1_total_amnt_used()
 
 ############################00 Real commands stuff
+def unzip_if_only_one_file_opt(func):
+    return interactions.slash_option(
+    name="unzip_if_only_one_file",
+    description="Do you want the bot to give unzipped decrpyted save?",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[ 
+        interactions.SlashCommandChoice(name="Yes, unzip if its possible", value=1),
+        interactions.SlashCommandChoice(name="No, always keep it zipped", value=0),
+    ]
+    )(func)
 def save_files_folder_structure_opt(func):
     return interactions.slash_option(
     name="folder_structure",
@@ -1626,7 +1650,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                 cheat.kwargs[arg_name] = link.replace('\\','/')
     return True
 
-async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fun: DecFunc | None = None):
+async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fun: DecFunc | None = None,*,unzip_if_only_one_file: int = 0):
     ctx = await set_up_ctx(ctx)
     await ps4_life_check(ctx)
     
@@ -1688,7 +1712,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
             your_saves_msg = 'savedata0 decrypted save (Please use /advanced_mode_export command instead)'
             if decrypt_fun:
                your_saves_msg = (decrypt_fun.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({decrypt_fun.func.__name__})').strip()
-            await send_result_as_zip(ctx,save_files,dec_tp,dec_tp,Path(tp,my_token + '.zip'),your_saves_msg)
+            await send_result_as_zip(ctx,save_files,dec_tp,dec_tp,Path(tp,my_token + '.zip'),your_saves_msg,unzip_if_only_one_file=unzip_if_only_one_file)
             return
     finally:
         await free_save_str(save_dir_ftp)
@@ -2100,6 +2124,7 @@ game_dec_functions = { # Relying on the dict ordering here, "Game not here (migh
 
 @interactions.slash_command(name='advanced_mode_export',description="Export/decrypt your saves!")
 @dec_enc_save_files
+@unzip_if_only_one_file_opt
 @interactions.slash_option(name='game',
     description='The game you want to export/decrypt saves of',
     opt_type=interactions.OptionType.STRING,
@@ -2108,9 +2133,9 @@ game_dec_functions = { # Relying on the dict ordering here, "Game not here (migh
         interactions.SlashCommandChoice(name=gamenamey, value=gamenamey) for gamenamey in game_dec_functions.keys()
     ])
 @filename_p_opt
-async def do_multi_export(ctx: interactions.SlashContext,save_files: str,**kwargs): # TODO allow custom args for differnt dec functions, like verify_checksum
+async def do_multi_export(ctx: interactions.SlashContext,save_files: str,unzip_if_only_one_file: int,**kwargs): # TODO allow custom args for differnt dec functions, like verify_checksum
     export_func = game_dec_functions[kwargs.pop('game')]
-    await base_do_dec(ctx,save_files,DecFunc(export_func,kwargs))
+    await base_do_dec(ctx,save_files,DecFunc(export_func,kwargs),unzip_if_only_one_file=unzip_if_only_one_file)
 ###########################0 Custom cheats
 cheats_base_command = interactions.SlashCommand(name="cheats", description="Commands for custom cheats for some games")
 
