@@ -299,7 +299,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
     
     
-    is_big_message = True#len(error_msg) > 2000-1-3
+    is_big_message = len(error_msg) > 2000-1-3
     async with TemporaryDirectory() if is_big_message else nullcontext() as message_tp:
         if is_big_message:
             message_txt_path = Path(message_tp,'message.txt')
