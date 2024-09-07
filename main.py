@@ -166,6 +166,8 @@ PARAM_SFO_SPECIAL_STRINGS = (
     'EFA1B2', 'EF A1 B2', # Add Game
 )
 
+PARAM_SFO_SPECIAL_STRINGS_AS_BYTES = frozenset(bytes.fromhex(x) for x in PARAM_SFO_SPECIAL_STRINGS)
+
 HUH = "Connection terminated. I'm sorry to interrupt you Elizabeth, if you still even remember that name. But I'm afraid you've been misinformed. You are not here to receive a gift, nor have you been called here by the individual you assume. Although you have indeed been called. You have all been called here. Into a labyrinth of sounds and smells, misdirection and misfortune. A labyrinth with no exit, a maze with no prize. You don't even realize that you are trapped. Your lust for blood has driven you in endless circles, chasing the cries of children in some unseen chamber, always seeming so near, yet somehow out of reach. But you will never find them, none of you will. This is where your story ends. And to you, my brave volunter, who somehow found this job listing not intended for you. Although there was a way out planned for you, I have a feeling that's not what you want. I have a feeling that you are right where you want to be. I am remaining as well, I am nearby. This place will not be remembered, and the memory of everything that started this can finally begin to fade away. As the agony of every tragedy should. And to you monsters trapped in the corridors: Be still and give up your spirits, they don't belong to you. For most of you, I believe there is peace and perhaps more waiting for you after the smoke clears. Although, for one of you, the darkest pit of Hell has opened to swallow you whole, so don't keep the devil waiting, old friend. My daughter, if you can hear me, I knew you would return as well. It's in your nature to protect the innocent. I'm sorry that on that day, the day you were shut out and left to die, no one was there to lift you up into their arms the way you lifted others into yours. And then, what became of you. I should have known you wouldn't be content to disappear, not my daughter. I couldn't save you then, so let me save you now. It's time to rest. For you, and for those you have carried in your arms. This ends for all of us. End communication."
 
 
@@ -256,17 +258,20 @@ async def log_message(ctx: interactions.SlashContext, msg: str,*,_do_print: bool
         msg = getattr(ctx,attr_name) + new_line_chars + msg
 
     
-    
-    for msg_chunk in chunker(msg,2000-1-3):
-        if ctx.expired:
-            await channel.send(msg_chunk)
-        else:
-            await ctx.edit(content=msg_chunk)
+    if len(msg) > 2000-1-3:
+        msg = msg[:2000-1-3] + '...'
+
+    if ctx.expired:
+        await channel.send(msg)
+    else:
+        await ctx.edit(content=msg)
+
 
 async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     """
     Use this when you know its gonna wait for a while, MAKE SURE YOU USE `asyncio.create_task` and cancel the task as soon as long task is done
     """
+    msg = msg[:2000-len(', over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)')]
     await log_message(ctx, msg)
     
     tick = 0
@@ -281,6 +286,7 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     
     
 async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
+    files = []
     # if error_msg == 'Theres too many people using the bot at the moment, please wait for a spot to free up':
         # # await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
         # return
@@ -293,25 +299,28 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
     
     
-    full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
-    
-    first_time = True
-    for msg_chunk in chunker(full_msg,2000-1-3):
+    is_big_message = len(error_msg) > 2000-1-3
+    async with TemporaryDirectory() if is_big_message else nullcontext() as message_tp:
+        if is_big_message:
+            message_txt_path = Path(message_tp,'message.txt')
+            message_txt_path.write_text(error_msg,encoding="utf-8")
+            files.append(str(message_txt_path))
+            error_msg = 'Error in message.txt file'
+            
+        full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
         
+
         if ctx.expired:
-            await channel.send(msg_chunk,ephemeral=False)
+            await channel.send(full_msg,ephemeral=False,files=files)
         else:
-            if first_time:
-                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
-            await ctx.send(msg_chunk,ephemeral=False) 
-            if first_time:
-                await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
-        first_time = False
-        
+            placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
+            await ctx.send(full_msg,ephemeral=False,files=files) 
+            await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
 
     await update_status()
 
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
+    files = [file] if file else []
     print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
     channel = ctx.channel or ctx.author
     
@@ -321,22 +330,21 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
         success_msg = getattr(ctx,attr_name) + new_line_chars + success_msg
 
     
-    full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
-    
-    first_time = True
-    triple_backtick_start = False
-    for msg_chunk in chunker(full_msg,2000-1-3):
-        if not first_time:
-            file = None
+    is_big_message = len(success_msg) > 2000-1-3
+    async with TemporaryDirectory() if is_big_message else nullcontext() as message_tp:
+        if is_big_message:
+            message_txt_path = Path(message_tp,'message.txt')
+            message_txt_path.write_text(success_msg,encoding="utf-8")
+            files.append(str(message_txt_path))
+            success_msg = 'Success message in message.txt file'
+        full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
+        
         if ctx.expired:
-            await channel.send(msg_chunk,ephemeral=False, file=file)
+            await channel.send(full_msg,ephemeral=False, files=files)
         else:
-            if first_time:
-                placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
-            await ctx.send(msg_chunk,ephemeral=False, file=file) 
-            if first_time:
-                await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
-        first_time = False
+            placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
+            await ctx.send(full_msg,ephemeral=False, files=files) 
+            await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
 
     await update_status()
 
@@ -2788,6 +2796,75 @@ async def do_get_saves_icon_image(ctx: interactions.SlashContext,save_files: str
 async def my_command_function(ctx: interactions.SlashContext):
     await ctx.send("Hello World")
 
+async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -> NoReturn:
+    info_message = f'Save file name: {save_name}'
+    await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
+    shrug_emoji = '🤷'.encode('utf-8') # TODO make custom emojis for each save special character
+    async with TemporaryDirectory() as tp:
+        tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
+        
+        desc_before_find = save_name.encode('ascii').ljust(0x24, b'\x00')
+        
+        await ftp.download('param.sfo',tp_param_sfo,write_into=True)
+        found_game_ids = []
+        with open(tp_param_sfo,'rb+') as f:
+            data = f.read()
+            f.seek(0)
+            
+            for seek in (0x61C,0x62C,0xA9C):
+                f.seek(seek)
+                found_game_ids.append((f.read(9).decode('ascii'),seek))
+            if not all(x[0] == found_game_ids[0][0] for x in found_game_ids):
+                info_message += '\nMissmatching title ids in save, is a bad save'
+                for title_id,seek in found_game_ids:
+                    info_message += f'\nTitle id at 0x{seek:X}: {title_id}'
+            else:
+                info_message += f'\nTitle id: {found_game_ids[0][0]}'
+            
+            
+
+            obs_index = data.index(b'obs\x00')
+            f.seek(obs_index + len(b'obs\x00'))
+            assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
+            f.seek(-1, 1)
+            save_description = f.read(0x80).rstrip(b'\x00')
+            if save_description:
+                for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
+                    save_description = save_description.replace(x,shrug_emoji)
+                info_message += f'\nName: {save_description.decode("utf-8")}'
+
+            desc_before_find_index = data.index(desc_before_find)
+            f.seek(desc_before_find_index + len(desc_before_find))
+            save_description = f.read(0x80).rstrip(b'\x00')
+            if save_description:
+                for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
+                    save_description = save_description.replace(x,shrug_emoji)
+                info_message += f'\nDescription: {save_description.decode("utf-8")}'
+            
+            f.seek(0x15c)
+            old_account_id = PS4AccountID.from_bytes(f.read(8))
+            #26_214_400//32768
+            info_message += f'\nOld Account ID: {old_account_id.account_id}{" (starts with a letter, likley invalid account id)" if old_account_id.account_id[0] in "abcdef" else ""}'
+            f.seek(desc_before_find_index - 8)
+            da_blocks, = struct.unpack('<q',f.read(8))
+            
+            info_message += f'\nMax Decrypted Save Size: {pretty_bytes(da_blocks*32768)} ({da_blocks} Blocks) (The real limit will always be smaller then this, dont get close to it!)' # give 3MB for breathing space, idk the exact amount needed
+            
+    info_message = info_message.replace('```',r'\x60\x60\x60') # to prevent discord fucking up formatting
+    
+    raise ExpectedError(info_message)
+    
+@interactions.slash_command(
+    name="saves_info",
+    description="Get some common infos about saves",
+    # group_name="group",
+    # group_description="My command group",
+    sub_cmd_name="info_from_param_sfo",
+    sub_cmd_description=f"Print some info of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)",
+)
+@interactions.slash_option('save_files','The save files you want info of',interactions.OptionType.STRING,True)
+async def do_param_sfo_info(ctx: interactions.SlashContext,save_files: str):
+    await base_do_cheats(ctx,save_files,0,'1',CheatFunc(param_sfo_info,{}))
 ############################02
 
 
@@ -2894,7 +2971,7 @@ async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
             assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
             f.seek(-1, 1)
             assert len(psstring_new_name) < 0x80, f'{psstring_new_name} is too long!'
-            f.write(psstring_new_name)
+            f.write(psstring_new_name.ljust(0x80,b'\x00'))
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
@@ -2923,7 +3000,7 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
             # assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
             # f.seek(-1, 1)
             assert len(psstring_new_desc) < 0x80, f'{psstring_new_desc} is too long!'
-            f.write(psstring_new_desc)
+            f.write(psstring_new_desc.ljust(0x80,b'\x00'))
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
