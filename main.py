@@ -1933,7 +1933,6 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
                             white_file = white_file.rename(white_file.parent / savename)
 
                         bin_file = bin_file.rename(bin_file.parent / (savename + '.bin'))
-                        print(f'{white_file = }')
                     if gameid:
                         new_gameid_folder = white_file.parent.parent / gameid
                         new_gameid_folder.mkdir(exist_ok=True)
@@ -2719,6 +2718,8 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             f.write(struct.pack('<q',new_blocks_size))
         await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),0,account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
 
+
+############################02 saves info
 async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -> NoReturn:
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
     async with TemporaryDirectory() as tp:
@@ -2740,10 +2741,55 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
 
 
         raise ExpectedError(f'{found_game_ids[0]!r}: {non_format_susceptible_byte_repr(tp_keystone.read_bytes())}')
-@interactions.slash_command(name="get_keystones", description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)")
+@interactions.slash_command(
+    name="saves_info",
+    description="Get some common infos about saves",
+    # group_name="group",
+    # group_description="My command group",
+    sub_cmd_name="keystone",
+    sub_cmd_description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)",
+)
 @interactions.slash_option('save_files','The save files you want the keystones of',interactions.OptionType.STRING,True)
 async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str):
     await base_do_cheats(ctx,save_files,0,'1',CheatFunc(get_keystone_key_from_save,{}))
+
+
+async def download_icon0_pngs(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/):
+    """
+    Save Icon
+    """
+    await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
+    icon0_path: str | None = None
+    for path, info in (await ftp.list()): # TODO see if i can just check if a file exists
+        if info["type"] != "file":
+            continue
+        if path.name.casefold() == 'icon0.png':
+            icon0_path = path.as_posix()
+    
+    if not icon0_path:
+        (decrypted_save_ouput / 'no_image_found.txt').write_text('No image found for this save')
+        return
+    
+    await ftp.download(icon0_path,decrypted_save_ouput)
+@interactions.slash_command(
+    name="saves_info",
+    description="Get some common infos about saves",
+    # group_name="group",
+    # group_description="My command group",
+    sub_cmd_name="icon_image",
+    sub_cmd_description=f"Get the icon0.png image from your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)",
+)
+@interactions.slash_option('save_files','The save files you want the icon0.png images of',interactions.OptionType.STRING,True)
+@unzip_if_only_one_file_opt
+async def do_get_saves_icon_image(ctx: interactions.SlashContext,save_files: str,unzip_if_only_one_file: int):
+    await base_do_dec(ctx,save_files,DecFunc(download_icon0_pngs,{}),unzip_if_only_one_file=unzip_if_only_one_file)
+
+@interactions.slash_command(name="my_command", description="My first command :)")
+async def my_command_function(ctx: interactions.SlashContext):
+    await ctx.send("Hello World")
+
+############################02
+
 
 async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gameid: str) -> CheatFuncResult:
     """
@@ -3470,7 +3516,6 @@ async def do_global_image_link(ctx: interactions.SlashContext, global_image_link
                 await log_user_error(ctx,f'You dont have any url saved for {global_image_link}, try running the file2url command again!')
                 return False
         global_image_link = get_dl_link_if_desc(global_image_link)
-        print(f'{global_image_link = }')
         await log_message(ctx,f'Downloading {global_image_link}')
         async with TemporaryDirectory() as tp:
             result = await download_direct_link(ctx,global_image_link,tp,max_size=DL_FILE_TOTAL_LIMIT)
@@ -3555,6 +3600,10 @@ def _make_quick_functions():
             option.pop('description_localizations') # theese seems to be some internal thing, slash_option doesnt accept them
             option.pop('name_localizations') # ^
             option['opt_type'] = option.pop('type')
+            
+            
+            if 'saves_info' == str(global_var_value.name):
+                break
             
             if option['name'].startswith('dl_link') or option['name'] in ('decrypted_save_file','decrypted_save_folder','global_image_link'):
                 is_viable = True
