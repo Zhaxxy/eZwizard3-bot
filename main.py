@@ -3591,20 +3591,20 @@ def _make_quick_functions():
         options = thing_dict.get('options')
         if not options:
             continue
+
+        if 'saves_info' == str(global_var_value.name):
+            continue
+
         decor_options: str | list = []
         auto_complete_things_dl_links: str | list = []
         auto_complete_things_enc_saves: str | list = []
-        
+
         is_viable = False
         for option in options:
             option.pop('description_localizations') # theese seems to be some internal thing, slash_option doesnt accept them
             option.pop('name_localizations') # ^
             option['opt_type'] = option.pop('type')
-            
-            
-            if 'saves_info' == str(global_var_value.name):
-                break
-            
+                        
             if option['name'].startswith('dl_link') or option['name'] in ('decrypted_save_file','decrypted_save_folder','global_image_link'):
                 is_viable = True
                 if len(BUILT_IN_DL_LINKS) > 0: # Force always use autocorrect to allow users to copy and paste urls too
