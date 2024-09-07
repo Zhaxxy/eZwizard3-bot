@@ -299,7 +299,7 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
         error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
     
     
-    is_big_message = len(error_msg) > 2000-1-3
+    is_big_message = True#len(error_msg) > 2000-1-3
     async with TemporaryDirectory() if is_big_message else nullcontext() as message_tp:
         if is_big_message:
             message_txt_path = Path(message_tp,'message.txt')
@@ -477,7 +477,7 @@ class CheatFunc(NamedTuple):
     kwargs: dict[str,Any]
 
     def pretty(self) -> str:
-        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})```"
+        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})\n```\n"
 
 class CheatFuncResult(NamedTuple):
     savename: str | None
@@ -489,7 +489,7 @@ class DecFunc(NamedTuple):
     kwargs: dict[str,Any]
 
     def pretty(self) -> str:
-        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})```"
+        return f"```py\nawait {self.func.__name__}({', '.join(f'{a}={remove_pc_user_from_path(b)!r}' for a,b in self.kwargs.items())})\n```\n"
 
     @property
     def __doc__(self) -> str | None:
@@ -606,13 +606,13 @@ def set_user_verbose_mode(author_id: str, verbose_mode: bool):
 def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, message_2: str) -> str:
     if is_user_verbose_mode(ctx_author_id):
         leader = ''
-        error_msg = f'```{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}```'
+        error_msg = f'```\n{format_exc().replace("Traceback (most recent call last):",get_a_stupid_silly_random_string_not_unique()+" (most recent call last):")}\n```\n'
     else:
         leader = '**Want more verbose or detailed error messages? use the /set_verbose_mode command**\n'
-        error_msg = f'```{sys.exc_info()[1]}```'
+        error_msg = f'```\n{sys.exc_info()[1]}\n```\n'
     
-    if error_msg == '```' + '```':
-        error_msg = f'```{sys.exc_info()[0].__name__}```'
+    if error_msg == '```\n' + '\n```\n':
+        error_msg = f'```\n{sys.exc_info()[0].__name__}\n```\n'
     
     return leader + f'{message_1} reasom:\n{error_msg}\n {message_2}'
 
@@ -1862,7 +1862,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
                 results_big.append(results_small)
             
             if got_expected_errors:
-                save_msgs = ''.join(f'{x[1]}:\n```{x[0]}```\n' for x in results_big)
+                save_msgs = ''.join(f'{x[1]}:\n```\n{x[0]}\n```\n' for x in results_big)
                 await log_user_success(ctx,f'Got your messages\n\n{save_msgs}')
                 return
                 
