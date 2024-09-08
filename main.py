@@ -748,7 +748,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
     
     async with TemporaryDirectory() if found_zips else nullcontext() as temp_store_zips:
         for i,zip_file in enumerate(found_zips):
-            await log_message(ctx,f'Extracting subzip {zip_file} from {link}')
+            await log_message(ctx,f'Extracting subzip {zip_file.path} from {link}')
             
             here_the_zip = Path(temp_store_zips,f'z{i}')
             real_zip_path = here_the_zip / zip_file.path.name
@@ -760,7 +760,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             
             current_total_size -= zip_file.size
             
-            await log_message(ctx,f'Checking if subzip {zip_file} from {link} is valid')
+            await log_message(ctx,f'Checking if subzip {zip_file.path} from {link} is valid')
             try:
                 zip_info = await get_archive_info(here_the_zip)
             except Exception as e:
@@ -777,7 +777,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             
             ps4_saves += [(bin_file,(white_file,real_zip_path,zip_file.path)) for bin_file,white_file in ps4_saves_2]
             
-
+        
         if not ps4_saves:
             nested_archives_middle_text = ' we also only support one level of nested archives.' if found_zips_2 else ''
             return f'Could not find any saves in {link}, maybe you forgot to pack the whole CUSAxxxxx folder?{nested_archives_middle_text} your save has 2 files, a file and another file with same name but with `.bin` extension, also it needs to be in a folder with its name being a title id, eg CUSA12345. Otherwise I won\'t be able to find it!'
@@ -802,7 +802,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
                 current_white_file_archive_path = archive_name
 
             if len(bin_file.parts) == 1:
-                bin_parent_pretty = Path(current_white_file_archive_path.stem.split(' ')[0].upper())
+                bin_parent_pretty = Path('LOOSE_',current_white_file_archive_path.stem.split(' ')[0].upper())
             else:
                 bin_parent_pretty = bin_file.parent
 
@@ -1561,12 +1561,11 @@ def unzip_if_only_one_file_opt(func):
 def save_files_folder_structure_opt(func):
     return interactions.slash_option(
     name="folder_structure",
-    description="How do you want the saves to be laid out in the finished zip?",
+    description="in progress, removal of this option",
     required=True,
     opt_type=interactions.OptionType.INTEGER,
     choices=[ 
-        interactions.SlashCommandChoice(name="Just the one PS4 folder, put duplicate saves in a other_saves folder (recommend option)", value=1),
-        interactions.SlashCommandChoice(name="Put each save in its own folder (usefull for save sets) (old behaviour)", value=0),
+        interactions.SlashCommandChoice(name="Just select me, this option will be removed soon!", value=1),
     ]
     )(func)
 def dec_enc_save_files(func):
@@ -1977,6 +1976,11 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,folder_
             if folder_structure == 1:
                 await log_message(ctx,f'Putting all saves in one PS4 folder in {save_files}')
                 def long_lambda():
+                    found_files = [x.parts[-2:] for x in enc_tp.rglob('*') if x.is_file()]
+                    
+                    if len(found_files) > len(set(found_files)):
+                        return
+                    
                     enc_tp_other_saves = (enc_tp / 'other_saves')
                     enc_tp_other_saves.mkdir()
                     for x in enc_tp.iterdir():
