@@ -1244,6 +1244,7 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                     results.append(result) if result else None
                 except Exception as e:
                     if isinstance(e,ExpectedError):
+                        pretty_save_dir = pretty_save_dir.as_posix().replace('PS4/SAVEDATA/0000000000000000/','')
                         show_error_type = '' if type(e) == ExpectedError else f'{type(e).__name__}: ' 
                         return HasExpectedError(f'{show_error_type}{e}',pretty_save_dir)
                     return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}','')
