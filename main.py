@@ -1147,6 +1147,8 @@ async def upload_encrypted_to_ps4(ctx: interactions.SlashContext, bin_file: Path
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file.relative_to(parent_dir)
+    pretty_save_dir = Path(*pretty_save_dir.parts[:-5],'...',*pretty_save_dir.parts[-2:])
+    
     # await log_message(ctx,'Ensuring base save exists on PS4 before uploading')
     # async with MountSave(ps4,mem,int(CONFIG['user_id'],16),BASE_TITLE_ID,save_dir_ftp) as mp:
         # pass
@@ -1169,6 +1171,8 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
     ftp_bin = f'{save_dir_ftp}.bin'
     ftp_white = f'sdimg_{save_dir_ftp}'
     pretty_save_dir = white_file_out.relative_to(parent_dir)
+    pretty_save_dir = Path(*pretty_save_dir.parts[:-5],'...',*pretty_save_dir.parts[-2:])
+    
     tick_tock_task = asyncio.create_task(log_message_tick_tock(ctx,'Connecting to PS4 ftp to download encrypted save (this may take a while if mutiple slots are in use)'))
     async with mounted_saves_at_once:
         tick_tock_task.cancel()
@@ -1244,7 +1248,6 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                     results.append(result) if result else None
                 except Exception as e:
                     if isinstance(e,ExpectedError):
-                        pretty_save_dir = pretty_save_dir.as_posix().replace('PS4/SAVEDATA/0000000000000000/','')
                         show_error_type = '' if type(e) == ExpectedError else f'{type(e).__name__}: ' 
                         return HasExpectedError(f'{show_error_type}{e}',pretty_save_dir)
                     return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply cheat {chet.pretty()}to {pretty_save_dir}','')
@@ -1305,6 +1308,8 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
     if isinstance(special_thing,str):
         special_thing = None
     pretty_save_dir = white_file.relative_to(parent_dir)
+    pretty_save_dir = Path(*pretty_save_dir.parts[:-5],'...',*pretty_save_dir.parts[-2:])
+    
     mount_save_title_id = BASE_TITLE_ID if isinstance(save_dir_ftp,str) else save_dir_ftp[1]
     
     if special_thing == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
@@ -1475,7 +1480,8 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                     return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided. If you did mcworld2ps4 try setting mc_encrypted_save_size higher'
 async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None = None) -> str | None:
     pretty_save_dir = white_file.relative_to(parent_dir)
-
+    pretty_save_dir = Path(*pretty_save_dir.parts[:-5],'...',*pretty_save_dir.parts[-2:])
+    
     # await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
     if decrypt_fun:
         await log_message(ctx,f'Attemping custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
