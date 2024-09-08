@@ -695,9 +695,11 @@ async def ps4_life_check(ctx: interactions.SlashContext | None = None):
         assert_never('bot should be ended')
     
 
-def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/) -> tuple[list[tuple[Path,Path]], list[SevenZipFile]]:
+def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/,archive_name: str | Path) -> tuple[list[tuple[Path,Path]], list[SevenZipFile]]:
     ps4_saves: list[tuple[Path,Path]] = []
     found_zips: list[SevenZipFile] = [] # we are only doing one level of recusion, this is because its common practise to put single CUSAxxxxx zips inside of one large zip
+    
+    archive_name_is_title_id = is_ps4_title_id(archive_name.stem.split(' ')[0].upper())
     
     for zip_file in ps4_saves_thing.files.values():
         if '__MACOSX' in zip_file.path.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
@@ -709,7 +711,9 @@ def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/) -> tuple[list[t
             
         if zip_file.path.suffix != '.bin': continue
         if not zip_file.is_file: continue
-        if not is_ps4_title_id(zip_file.path.parent.name): continue
+        if not is_ps4_title_id(zip_file.path.parent.name): 
+            if not (len(zip_file.path.parts) == 1 and archive_name_is_title_id):
+                continue
         
         white_file = zip_file.path.with_suffix('')
         if not ps4_saves_thing.files.get(white_file): continue
@@ -736,7 +740,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
     await log_message(ctx,f'Looking for saves in {link}')
     
     try:
-        ps4_saves,found_zips = get_only_ps4_saves_from_zip(zip_info)
+        ps4_saves,found_zips = get_only_ps4_saves_from_zip(zip_info,archive_name)
     except InvalidBinFile as e:
         return str(e)
     
@@ -767,7 +771,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
                 return f'The decompressed {link} is too big ({pretty_bytes(current_total_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
             try:
-                ps4_saves_2,found_zips_2 = get_only_ps4_saves_from_zip(zip_info)
+                ps4_saves_2,found_zips_2 = get_only_ps4_saves_from_zip(zip_info,archive_name)
             except InvalidBinFile as e:
                 return str(e)
             
@@ -790,17 +794,20 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
             return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
         
-        for bin_file,white_file in ps4_saves:
+        for bin_file,white_file in ps4_saves:                
             if isinstance(white_file,tuple):
                 white_file,current_white_file_archive_path,pretty_zip_file_path = white_file
-                
-                pretty_dir_name = make_folder_name_safe(pretty_zip_file_path / bin_file.parent)
             else:
-                pretty_zip_file_path = ''
+                pretty_zip_file_path = Path('')
                 current_white_file_archive_path = archive_name
-                pretty_dir_name = make_folder_name_safe(bin_file.parent)
-            
-            new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_file.parent.name))
+
+            if len(bin_file.parts) == 1:
+                bin_parent_pretty = Path(current_white_file_archive_path.stem.split(' ')[0].upper())
+            else:
+                bin_parent_pretty = bin_file.parent
+
+            pretty_dir_name = make_folder_name_safe(pretty_zip_file_path / bin_parent_pretty)
+            new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_parent_pretty.name))
             new_path.mkdir(exist_ok=True,parents=True) # TODO look into parents=True
             await log_message(ctx,f'Extracting {white_file} from {link} + {pretty_zip_file_path}')
             try:
