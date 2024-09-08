@@ -794,7 +794,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
         if len(ps4_saves) > MAX_RESIGNS_PER_ONCE:
             return f'The archive {link} has too many saves {len(ps4_saves)}, the max is {MAX_RESIGNS_PER_ONCE} remove {len(ps4_saves) - MAX_RESIGNS_PER_ONCE} saves and try again'
         
-        for bin_file,white_file in ps4_saves:                
+        for bin_file,white_file in ps4_saves:
             if isinstance(white_file,tuple):
                 white_file,current_white_file_archive_path,pretty_zip_file_path = white_file
             else:
