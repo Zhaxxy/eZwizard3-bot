@@ -802,7 +802,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
                 current_white_file_archive_path = archive_name
 
             if len(bin_file.parts) == 1:
-                bin_parent_pretty = Path('LOOSE_',current_white_file_archive_path.stem.split(' ')[0].upper())
+                bin_parent_pretty = Path('LOOSE',current_white_file_archive_path.stem.split(' ')[0].upper())
             else:
                 bin_parent_pretty = bin_file.parent
 
@@ -2877,7 +2877,7 @@ async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -
     description="Get some common infos about saves",
     # group_name="group",
     # group_description="My command group",
-    sub_cmd_name="info_from_param_sfo",
+    sub_cmd_name="from_param_sfo",
     sub_cmd_description=f"Print some info of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)",
 )
 @interactions.slash_option('save_files','The save files you want info of',interactions.OptionType.STRING,True)
