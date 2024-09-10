@@ -3024,7 +3024,7 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         with open(tp_param_sfo,'rb+') as f:
             data = f.read()
             desc_before_find_index = data.index(desc_before_find)
-            f.seek(desc_before_find_index + len(desc_before_find))
+            f.seek(desc_before_find_index + 0x24)
             # assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
             # f.seek(-1, 1)
             assert len(psstring_new_desc) < 0x80, f'{psstring_new_desc} is too long!'
