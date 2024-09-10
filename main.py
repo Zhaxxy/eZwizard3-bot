@@ -1367,7 +1367,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 
                 if new_name:
                     pretty_save_dir = new_name
-                    # desc_before_find = white_file.name.encode('ascii').ljust(0x24, b'\x00')
+                    # desc_before_find = white_file.name.encode('ascii').ljust(0x20, b'\x00')
                     desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                     with open(savedata0hehe / 'sce_sys/param.sfo','rb+') as f:
                         data = f.read()
@@ -1376,7 +1376,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                         f.write(new_name.encode('utf-8'))
                         
                         f.seek(desc_before_find_index)
-                        f.write(white_file.name.encode('ascii').ljust(0x24, b'\x00'))
+                        f.write(white_file.name.encode('ascii').ljust(0x20, b'\x00'))
                 
                 await log_message(ctx,f'Checking for any resource/behaviour packs not added to json files')
                 
@@ -2748,12 +2748,12 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
 
 
 ############################02 saves info
-async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -> NoReturn:
+async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,ignore_errors_in_saves: bool) -> NoReturn:
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
     async with TemporaryDirectory() as tp:
         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
         tp_keystone = Path(tp,'a')
-        
+
         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
         found_game_ids = []
         with open(tp_param_sfo,'rb+') as f:
@@ -2761,7 +2761,9 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
                 f.seek(seek)
                 found_game_ids.append(f.read(9).decode('ascii'))
         if found_game_ids.count(found_game_ids[0]) != len(found_game_ids):
-            raise ValueError('Missmatching title ids in save')
+            if not ignore_errors_in_saves:
+                raise ValueError('Missmatching title ids in save')
+
         
         await ftp.download('keystone',tp_keystone,write_into=True)
         if tp_keystone.stat().st_size != 96:
@@ -2778,8 +2780,14 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
     sub_cmd_description=f"Print the keystones of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)",
 )
 @interactions.slash_option('save_files','The save files you want the keystones of',interactions.OptionType.STRING,True)
-async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str):
-    await base_do_cheats(ctx,save_files,0,'1',CheatFunc(get_keystone_key_from_save,{}))
+@interactions.slash_option('ignore_errors_in_saves','Do you want to ignore any errors of the saves?',interactions.OptionType.INTEGER,True,
+choices=[
+    interactions.SlashCommandChoice(name="No, fail if theres any errors", value=0),
+    interactions.SlashCommandChoice(name="Yes, ignore all errors of the saves", value=1),
+]
+)
+async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str,ignore_errors_in_saves: int):
+    await base_do_cheats(ctx,save_files,0,'1',CheatFunc(get_keystone_key_from_save,{'ignore_errors_in_saves':bool(ignore_errors_in_saves)}))
 
 
 async def download_icon0_pngs(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/):
@@ -2823,7 +2831,7 @@ async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -
     async with TemporaryDirectory() as tp:
         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
         
-        desc_before_find = save_name.encode('ascii').ljust(0x24, b'\x00')
+        desc_before_find = save_name.encode('ascii').ljust(0x20, b'\x00')
         
         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
         found_game_ids = []
@@ -2854,7 +2862,7 @@ async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -
                 info_message += f'\nName: {save_description.decode("utf-8")}'
 
             desc_before_find_index = data.index(desc_before_find)
-            f.seek(desc_before_find_index + len(desc_before_find))
+            f.seek(desc_before_find_index + 0x24)
             save_description = f.read(0x80).rstrip(b'\x00')
             if save_description:
                 for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
@@ -3008,7 +3016,7 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
     """
     save with new name in menu
     """
-    desc_before_find = save_name.encode('ascii').ljust(0x24, b'\x00')
+    desc_before_find = save_name.encode('ascii').ljust(0x20, b'\x00')
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
     async with TemporaryDirectory() as tp:
         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
