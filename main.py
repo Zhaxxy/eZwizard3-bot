@@ -775,7 +775,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             try:
                 ps4_saves_2,found_zips_2 = get_only_ps4_saves_from_zip(zip_info,archive_name)
             except InvalidBinFile as e:
-                return str(e) + link
+                return str(e) + f'{link} + {zip_file.path}'
             
             ps4_saves += [(bin_file,(white_file,real_zip_path,zip_file.path)) for bin_file,white_file in ps4_saves_2]
             
@@ -811,7 +811,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             pretty_dir_name = make_folder_name_safe(pretty_zip_file_path / bin_parent_pretty)
             new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_parent_pretty.name))
             new_path.mkdir(exist_ok=True,parents=True) # TODO look into parents=True
-            await log_message(ctx,f'Extracting {white_file} from {link} + {pretty_zip_file_path}')
+            await log_message(ctx,f'Extracting {white_file} from {link}{" + "+str(pretty_zip_file_path) if pretty_zip_file_path.parts else ""}')
             try:
                 await extract_single_file(current_white_file_archive_path,white_file,new_path)
                 await extract_single_file(current_white_file_archive_path,bin_file,new_path)
