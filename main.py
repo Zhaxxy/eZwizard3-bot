@@ -1989,6 +1989,8 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     
                     (new_ps4_path / x.parent.name).mkdir(exist_ok=True)
                     new_save_file_path = new_ps4_path / x.parent.name / x.name
+                    if new_save_file_path.is_file():
+                        continue
                     x.rename(new_save_file_path)
             
             await asyncio.get_running_loop().run_in_executor(None,long_lambda)
@@ -2611,7 +2613,7 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS
     kwargs['unpack_first_root_folder'] = True
     kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
-    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,0,account_id,CheatFunc(upload_savedata0_folder,kwargs))
+    await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
 
 @interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
@@ -2723,7 +2725,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         with open(tp_param_sfo,'rb+') as f:
             f.seek(0x9F8-8)
             f.write(struct.pack('<q',new_blocks_size))
-        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),0,account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
+        await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
 
 
 ############################02 saves info
@@ -2766,7 +2768,7 @@ choices=[
 ]
 )
 async def do_get_keystone_key_from_save(ctx: interactions.SlashContext,save_files: str,ignore_errors_in_saves: int):
-    await base_do_cheats(ctx,save_files,0,'1',CheatFunc(get_keystone_key_from_save,{'ignore_errors_in_saves':bool(ignore_errors_in_saves)}))
+    await base_do_cheats(ctx,save_files,'1',CheatFunc(get_keystone_key_from_save,{'ignore_errors_in_saves':bool(ignore_errors_in_saves)}))
 
 
 async def download_icon0_pngs(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/):
@@ -2871,7 +2873,7 @@ async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -
 )
 @interactions.slash_option('save_files','The save files you want info of',interactions.OptionType.STRING,True)
 async def do_param_sfo_info(ctx: interactions.SlashContext,save_files: str):
-    await base_do_cheats(ctx,save_files,0,'1',CheatFunc(param_sfo_info,{}))
+    await base_do_cheats(ctx,save_files,'1',CheatFunc(param_sfo_info,{}))
 ############################02
 
 
@@ -3197,7 +3199,7 @@ async def upload_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_n
     ]
     )
 async def do_import_littlebigplanet_bigfart(ctx: interactions.SlashContext, account_id: str, dl_link_bigfart: str, gameid: str):
-    await base_do_cheats(ctx,LBP3_EU_BIGFART,1,account_id,[CheatFunc(import_bigfart,{'dl_link_single':dl_link_bigfart}),CheatFunc(re_region,{'gameid':gameid})])
+    await base_do_cheats(ctx,LBP3_EU_BIGFART,account_id,[CheatFunc(import_bigfart,{'dl_link_single':dl_link_bigfart}),CheatFunc(re_region,{'gameid':gameid})])
     
 game_enc_functions = { # Relying on the dict ordering here, "Game not here (might not work)" should be at bottom
     'Dying Light 2 Stay Human': upload_dl2_sav_gz_decompressed,
