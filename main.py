@@ -1989,8 +1989,6 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                     
                     (new_ps4_path / x.parent.name).mkdir(exist_ok=True)
                     new_save_file_path = new_ps4_path / x.parent.name / x.name
-                    if new_save_file_path.is_file():
-                        continue
                     x.rename(new_save_file_path)
             
             await asyncio.get_running_loop().run_in_executor(None,long_lambda)
