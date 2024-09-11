@@ -720,7 +720,7 @@ def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/,archive_name: st
         white_file = zip_file.path.with_suffix('')
         if not ps4_saves_thing.files.get(white_file): continue
         if zip_file.size != 96:
-            raise InvalidBinFile(f'Invalid bin file {zip_file.path} found in {link}')
+            raise InvalidBinFile(f'Invalid bin file {zip_file.path} found in ')
 
         ps4_saves.append((zip_file.path,white_file))
     return ps4_saves,found_zips
@@ -744,7 +744,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
     try:
         ps4_saves,found_zips = get_only_ps4_saves_from_zip(zip_info,archive_name)
     except InvalidBinFile as e:
-        return str(e)
+        return str(e) + link
     
     found_zips_2 = [] # Just to not raise NameError later on
     
@@ -775,7 +775,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
             try:
                 ps4_saves_2,found_zips_2 = get_only_ps4_saves_from_zip(zip_info,archive_name)
             except InvalidBinFile as e:
-                return str(e)
+                return str(e) + link
             
             ps4_saves += [(bin_file,(white_file,real_zip_path,zip_file.path)) for bin_file,white_file in ps4_saves_2]
             
