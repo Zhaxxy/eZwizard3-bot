@@ -1426,7 +1426,7 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 await fix_packs('world_resource_packs.json','resource_packs','resource')
                 cheats.append(CheatFunc(re_region,{'gameid':chet.kwargs.pop('gameid')}))
 
-    await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)} to {pretty_save_dir}')
+    await log_message(ctx,f'Attempting to apply cheats {"".join(chet.pretty() for chet in cheats)}to {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_apply_cheats_on_ps4(account_id,bin_file,white_file,parent_dir,cheats,save_dir_ftp,pretty_save_dir,mount_save_title_id,ctx.author_id,special_thing))
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
@@ -1486,7 +1486,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
     
     # await log_message(ctx,f'Attempting to mount {pretty_save_dir}')
     if decrypt_fun:
-        await log_message(ctx,f'Attemping custom decryption {decrypt_fun.pretty()} for {pretty_save_dir}')
+        await log_message(ctx,f'Attemping custom decryption {decrypt_fun.pretty()}for {pretty_save_dir}')
     else:
         await log_message(ctx,f'Attemping to download savedata0 folder from decrypted {pretty_save_dir}')
     custon_decss = lambda: asyncio.run(_decrypt_saves_on_ps4(bin_file, white_file, parent_dir, decrypted_save_ouput, save_dir_ftp, decrypt_fun, pretty_save_dir,ctx.author_id))
