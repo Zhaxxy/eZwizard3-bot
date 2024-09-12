@@ -2840,7 +2840,7 @@ async def do_get_saves_icon_image(ctx: interactions.SlashContext,save_files: str
 async def my_command_function(ctx: interactions.SlashContext):
     await ctx.send("Hello World")
 
-async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -> NoReturn:
+async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/,show_save_tree: bool) -> NoReturn:
     info_message = f'Save file name: {save_name}'
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
     shrug_emoji = '🤷'.encode('utf-8') # TODO make custom emojis for each save special character
@@ -2895,7 +2895,14 @@ async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -
             info_message += f'\nMax Decrypted Save Size: {pretty_bytes(da_blocks*32768)} ({da_blocks} Blocks) (The real limit will always be smaller then this, dont get close to it!)' # give 3MB for breathing space, idk the exact amount needed
             
     info_message = info_message.replace('```',r'\x60\x60\x60') # to prevent discord fucking up formatting
-    
+
+    if show_save_tree:
+        await ftp.change_directory(mount_dir)
+        files = [(path,info) for path, info in (await ftp.list(recursive=True))]
+        
+        info_message += '\n\nDirectory Tree\n'
+        info_message += '\n'.join(f'{"/" if e[1]["type"] != "file" else ""}' + str(e[0]) for e in files)
+
     raise ExpectedError(info_message)
     
 @interactions.slash_command(
@@ -2907,8 +2914,9 @@ async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/) -
     sub_cmd_description=f"Print some info of your saves! (max {MAX_RESIGNS_PER_ONCE} saves per command)",
 )
 @interactions.slash_option('save_files','The save files you want info of',interactions.OptionType.STRING,True)
-async def do_param_sfo_info(ctx: interactions.SlashContext,save_files: str):
-    await base_do_cheats(ctx,save_files,'1',CheatFunc(param_sfo_info,{}))
+@interactions.slash_option('show_save_tree','Do you want to see each decrypted file in the save?',interactions.OptionType.BOOLEAN,True)
+async def do_param_sfo_info(ctx: interactions.SlashContext,save_files: str,show_save_tree: bool):
+    await base_do_cheats(ctx,save_files,'1',CheatFunc(param_sfo_info,{'show_save_tree':show_save_tree}))
 ############################02
 
 
