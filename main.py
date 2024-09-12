@@ -32,6 +32,7 @@ import aioftp
 from ps4debug import PS4Debug
 from PIL import Image
 from lbptoolspy import far4_tools,install_mods_to_bigfart # put modules you need at the bottom of list for custom cheats, in correct block
+from lbptoolspy.binary_files import LBP3_PS4_L0_FILE_TEMPLATE
 
 from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words, non_format_susceptible_byte_repr
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile,SevenZipInfo, extract_full_archive, filename_is_not_an_archive
@@ -60,6 +61,7 @@ CANT_USE_BOT_IN_TEST_MODE = 'Sorry, but the bot is currently in test mode, only 
 WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSITENCE IS NEEDED!!!!!!!!'
 
 LBP3_EU_BIGFART = 'https://drive.google.com/drive/folders/1fmUMCZlvj5011njMi6Xl-uP8WvIfRyuN?usp=sharing'
+LBP3_EU_LEVEL_BACKUP = 'https://drive.google.com/drive/folders/1wCBA0sZumgBRr3cDJm5BADRA9mfq4NpR?usp=sharing'
 
 FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
@@ -87,6 +89,8 @@ PS4_SAVE_KEYSTONES = {
     'CUSA12555': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c\xc3\xc4\xea\x6a\x09\x09\x5f\x03\x6c\x2b\xcc\x61\x3b\x3f\x99\x6a\x35\xff\xbd\xb8\xf3\x59\x35\xbf\x86\x27\x92\x18\x53\x9b\xbe\x73\x52\xda\x5f\x95\x13\x53\x73\x16\xf2\x2c\x9b\xe5\xeb\x02\x58\x75\x4e\x5e\x02\x30\x9c\x38\xad\x58\x57\xc1\x25\xc9\xf9\xa1\x49',
     'CUSA00419': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc06\x2c\x14\x08\x7b\xb0Zv\x8a\x5e\x9e\xcf\x89\xd3\xdf\x94\xcb\x23u\xe1\xd0\xae\xab\x105i\x229\x93\x97\x1d\x84\x8b\xd3\xb8\x20\x8bg\xa0\xc3\xcb\xfd\xa7S\xdf7\xa22\x7d\x17F\x3b\xe7\xb4\xc9\x88\x8a\x06Z\x11\xa52K',
     'CUSA00411': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x22\x81\xd0\xe5WwZ\xe2u\xbcn\x2a\xd6\x14\xc8\x8b\xf2\xd6\xc9\xf0\xcd\xbe\x11\x20c\xc9\x88Bh\x02\xa9\xc8y\x3f\x94r\xc9\x29\xdeA\xe4m\xd0\x5c\x07\x1d\x0a\x97\xd7\x9f\xc7\xc2\x95L\xb6\x5e\xaf\xa1N\xaf\x10Q\x97B',
+    'CUSA08966': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xd9aT\x7b\x1fq\x80\x7b\xdah\xa5Q\xf4\x29\x2e\xd6\xc7\x8ar\xcf\xfd\xa7\xaaB\x8e\xc0cI\xc1\x94\xbcO\x85\xa6\xf4\x1f\x040\x2c\xaf\x02\xc2\xa3\x0b\x1by\x27\xf8\x86V\x0c\xdb\x2c\x3d\xfa\xdb\x1f\x01\xe4W\x9f\x01\x2e\xbe',
+    'CUSA09175': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xd9aT\x7b\x1fq\x80\x7b\xdah\xa5Q\xf4\x29\x2e\xd6\xc7\x8ar\xcf\xfd\xa7\xaaB\x8e\xc0cI\xc1\x94\xbcO\x85\xa6\xf4\x1f\x040\x2c\xaf\x02\xc2\xa3\x0b\x1by\x27\xf8\x86V\x0c\xdb\x2c\x3d\xfa\xdb\x1f\x01\xe4W\x9f\x01\x2e\xbe',
 }
 
 XENOVERSE_TITLE_IDS = frozenset(('CUSA12394', 'CUSA05088', 'CUSA12330', 'CUSA04904', 'CUSA10051', 'CUSA12358', 'CUSA06202', 'CUSA05774', 'CUSA05350', 'CUSA12390', 'CUSA06208', 'CUSA05085'))
@@ -1549,6 +1553,20 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
         add_1_total_amnt_used()
 
 ############################00 Real commands stuff
+def lbp3_reregion_opt(func):
+    return interactions.slash_option(
+    name="gameid",
+    description="The region you want of the save",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.SlashCommandChoice(name="CUSA00063 (EU)", value='CUSA00063'),
+        interactions.SlashCommandChoice(name="CUSA00473 (US)", value='CUSA00473'),
+        interactions.SlashCommandChoice(name="CUSA00693 (AS asia)", value='CUSA00693'),
+        interactions.SlashCommandChoice(name="CUSA00762 (GB UK)", value='CUSA00762'),
+        interactions.SlashCommandChoice(name="CUSA00810 (US LATAM)", value='CUSA00810'),
+    ]
+    )(func)
 def unzip_if_only_one_file_opt(func):
     return interactions.slash_option(
     name="unzip_if_only_one_file",
@@ -1609,7 +1627,17 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
     await log_message(ctx,f'Looking for any `dl_link`s or `savedata0`s to download')
     for cheat in cheat_chain:
         for arg_name,link in cheat.kwargs.items():
+            if isinstance(link,interactions.Attachment):
+                await log_message(ctx,f'Downloading attachment {arg_name}')
+                result = await download_direct_link(ctx,link.url,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT)
+                if isinstance(result,str):
+                    await log_user_error(ctx,result)
+                    return False
+                cheat.kwargs[arg_name] = result
+                link = result
             if arg_name.startswith('dl_link'):
+                if isinstance(link,Path):
+                    continue
                 if is_str_int(link) and int(link) > 1:
                     try:
                         link = get_saved_url(ctx.author_id,int(link))
@@ -1623,13 +1651,7 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = result
-            if isinstance(link,interactions.Attachment):
-                await log_message(ctx,f'Downloading attachment {arg_name}')
-                result = await download_direct_link(ctx,link.url,chet_files_custom,max_size=DL_FILE_TOTAL_LIMIT)
-                if isinstance(result,str):
-                    await log_user_error(ctx,result)
-                    return False
-                cheat.kwargs[arg_name] = result
+                link = result
             if arg_name in ('decrypted_save_file','decrypted_save_folder'):
                 if isinstance(link,Path):
                     continue
@@ -1646,10 +1668,13 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     await log_user_error(ctx,result)
                     return False
                 cheat.kwargs[arg_name] = savedata0_folder
+                link = savedata0_folder
             if arg_name == 'gameid' and (not is_ps4_title_id(link)):
                 await log_user_error(ctx,f'Invalid gameid {link}')
                 return False
             if arg_name.startswith('psstring'):
+                if not isinstance(link,str):
+                    continue
                 link = link.encode('utf-8')
                 for specparemcodelol in PARAM_SFO_SPECIAL_STRINGS:
                     link = link.replace(specparemcodelol.encode('ascii'),bytes.fromhex(specparemcodelol))
@@ -1660,7 +1685,8 @@ async def pre_process_cheat_args(ctx: interactions.SlashContext,cheat_chain: Seq
                     
                 cheat.kwargs[arg_name] = link
             if arg_name.endswith('_p'):
-                cheat.kwargs[arg_name] = link.replace('\\','/')
+                link = link.replace('\\','/')
+                cheat.kwargs[arg_name] = link
     return True
 
 async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fun: DecFunc | None = None,*,unzip_if_only_one_file: int = 0):
@@ -2163,10 +2189,36 @@ DUMMY_CHEAT_FUNC = CheatFunc(do_resign_dummy_cheat,{})
 async def do_resign(ctx: interactions.SlashContext,save_files: str,account_id: str):
     await base_do_cheats(ctx,save_files,account_id,DUMMY_CHEAT_FUNC)
 
+def ignore_plans_opt(func):
+    return interactions.slash_option(
+    name = 'ignore_plans',
+    description='Do you want to ignore .plan files in the mods? default is No',
+    required=False,
+    choices=[
+        interactions.SlashCommandChoice(name='Yes (only levels (.bins) will get installed)', value=1),
+        interactions.SlashCommandChoice(name='No (Everything gets installed (like costumes, objects etc))', value=0)
+    ],
+    opt_type=interactions.OptionType.INTEGER
+    )(func)
+
+def _dl_link_mod_file_options(func, count: int):
+    for i in range(1,count+1):
+        func = interactions.slash_option(
+            name = f'dl_link_mod_file{i}',
+            description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
+            required=False,
+            opt_type=interactions.OptionType.STRING
+        )(func)
+    return func
+
+def dl_link_mod_file_11_options(func):
+    return _dl_link_mod_file_options(func,11)
+
 async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,ignore_plans = False, **mod_files: Path):
     """
     LittleBigPlanet .mod files encrypted
     """
+    l0_file = mod_files.pop('l0_file',None)
     await ftp.change_directory(mount_dir)
     files = [(path,info) for path, info in (await ftp.list(recursive=True)) if info['type'] == 'file' and path.parts[0] != 'sce_sys']
     try:
@@ -2174,19 +2226,25 @@ async def install_mods_for_lbp3_ps4(ftp: aioftp.Client, mount_dir: str, save_nam
     except ValueError:
         raise ValueError('Too many files in the save, likley not a lbp3 big save or level backup') from None
     
-    if ftp_save[0].name.startswith('bigfart'):
+    if ftp_save[0].name.startswith('bigfart') and (not l0_file):
         is_l0 = False
     elif ftp_save[0].name == ('L0'):
         is_l0 = True
     else:
-        raise ValueError(f'Invalid bigfart or level backup file {ftp_save[0].name}')
-        
-    async with TemporaryDirectory() as tp:
-        sa = Path(tp,'bigfart_or_l0_level_backup')
-        await ftp.download(ftp_save[0],sa,write_into=True)
-        
-        def _do_the_install_lbp3_ps4_mods_lcoal(): install_mods_to_bigfart(sa,mod_files.values(),install_plans = not ignore_plans, is_ps4_level_backup = is_l0)
-        await asyncio.get_running_loop().run_in_executor(None, _do_the_install_lbp3_ps4_mods_lcoal)
+        if l0_file:
+            raise ValueError(f'Invalid level backup file {ftp_save[0].name}')
+        else:
+            raise ValueError(f'Invalid bigfart or level backup file {ftp_save[0].name}')
+
+    async with TemporaryDirectory() if (not l0_file) else nullcontext() as tp:
+        if not l0_file:
+            sa = Path(tp,'bigfart_or_l0_level_backup')
+            await ftp.download(ftp_save[0],sa,write_into=True)
+            def _do_the_install_lbp3_ps4_mods_lcoal(): install_mods_to_bigfart(sa,tuple(mod_files.values()),install_plans = not ignore_plans, is_ps4_level_backup = is_l0)
+            await asyncio.get_running_loop().run_in_executor(None, _do_the_install_lbp3_ps4_mods_lcoal)
+        else:
+            sa = l0_file
+
         await ftp.upload(sa,ftp_save[0],write_into=True)
 
 
@@ -2194,77 +2252,66 @@ littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", descript
 @littlebigplanet_3.subcommand(sub_cmd_name="install_mods", sub_cmd_description="Install .mod files to a level backup or LBPxSAVE (bigfart)")
 @interactions.slash_option('save_files','The level backup or profile backup to install the mods too',interactions.OptionType.STRING,True)
 @account_id_opt
-@interactions.slash_option(
-    name = 'ignore_plans',
-    description='Do you want to ignore .plan files in the mods? default is False',
-    required=False,
-    opt_type=interactions.OptionType.BOOLEAN
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file1',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file2',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file3',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file4',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file5',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file6',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file7',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file8',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file9',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name = 'dl_link_mod_file10',
-    description='A mod file to install to a level backup or LBPxSAVE (bigfart), from toolkit/workbench',
-    required=False,
-    opt_type=interactions.OptionType.STRING
-)
+@ignore_plans_opt
+@dl_link_mod_file_11_options
 async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
+    kwargs['ignore_plans'] = bool(kwargs['ignore_plans'])
     if not any(key.startswith('dl_link_mod_file') for key in kwargs.keys()):
         ctx = await set_up_ctx(ctx)
         return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(install_mods_for_lbp3_ps4,kwargs))
+
+@littlebigplanet_3.subcommand(sub_cmd_name="mods2levelbackup", sub_cmd_description="Convert .mod files into a level backup with them in prize bubbles")
+@account_id_opt
+@lbp3_reregion_opt
+@ignore_plans_opt
+@dl_link_mod_file_11_options
+async def do_mods2levelbackup(ctx: interactions.SlashContext,account_id: str,gameid: str,ignore_plans: int = 0,**mod_files):
+    ignore_plans = bool(ignore_plans)
+    if not mod_files:
+        return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
+    await base_do_cheats(ctx,LBP3_EU_LEVEL_BACKUP,account_id,[CheatFunc(install_mods_for_lbp3_ps4,{**mod_files,'ignore_plans':ignore_plans}),CheatFunc(re_region,{'gameid':gameid})])
+    return # TODO finish off the below implmentation, need to have it set up a savedata0 with icon and param.sfo, similar to lbp_level_archive2ps4
+    ctx = await set_up_ctx(ctx)
+    if not mod_files:
+        return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
+    
+    async with TemporaryDirectory() as tp:
+        chet_files_custom = Path(tp,'chet_files_custom')
+        chet_files_custom.mkdir()
+        
+        sa = Path(tp,'l0')
+        sa.write_bytes(LBP3_PS4_L0_FILE_TEMPLATE)
+        for key,value in mod_files.items():
+            await log_message(ctx,f'Checking {value}')
+            if is_str_int(value) and int(value) > 1:
+                try:
+                    value = get_saved_url(ctx.author_id,int(value))
+                except KeyError:
+                    await log_user_error(ctx,f'You dont have any url saved for {value}, try running the file2url command again!')
+                    return 
+            value = get_dl_link_if_desc(value)
+            await log_message(ctx,f'Downloading {value}')
+            result = await download_direct_link(ctx,value,chet_files_custom,max_size=LBP3_PS4_L0_FILE_MAX_SIZE,validation=filename_is_not_an_archive)
+            if isinstance(result,str):
+                await log_user_error(ctx,result)
+                return 
+            mod_files[key] = result
+        
+        def _do_the_install_lbp3_ps4_mods_lcoal(): install_mods_to_bigfart(sa,tuple(mod_files.values()),install_plans = not ignore_plans, is_ps4_level_backup = True)
+        try:
+            await asyncio.get_running_loop().run_in_executor(None,_do_the_install_lbp3_ps4_mods_lcoal)
+        except Exception:
+            msg = make_error_message_if_verbose_or_not(ctx.author_id,f'Could not install modfiles','')
+            await log_user_error(ctx,msg)
+            return 
+        
+        if sa.stat().st_size > LBP3_PS4_L0_FILE_MAX_SIZE:
+            await log_user_error(ctx,f'All the mods combined is too big ({pretty_bytes(l0_size)}), the max lbp3 ps4 level backup can only be {pretty_bytes(LBP3_PS4_L0_FILE_MAX_SIZE)} (try removing some mods)')
+            return
+        
+        Lbp3BackupThing(gameid,f'{gameid}x00LEVEL',level_name,level_desc,is_adventure,new_blocks_size)
+
 
 async def strider_change_difficulty(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,difficulty: str):
     """
@@ -2619,19 +2666,7 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
 @interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
 @account_id_opt
 @interactions.slash_option('slotid_from_drydb','The slot id from dry.db of the level you want, you can search for it on https://maticzpl.xyz/lbpfind',interactions.OptionType.INTEGER,True,min_value=56,max_value=100515565)
-@interactions.slash_option(
-    name="gameid",
-    description="The region you want of the save",
-    required=True,
-    opt_type=interactions.OptionType.STRING,
-    choices=[
-        interactions.SlashCommandChoice(name="CUSA00063 (EU)", value='CUSA00063'),
-        interactions.SlashCommandChoice(name="CUSA00473 (US)", value='CUSA00473'),
-        interactions.SlashCommandChoice(name="CUSA00693 (AS asia)", value='CUSA00693'),
-        interactions.SlashCommandChoice(name="CUSA00762 (GB UK)", value='CUSA00762'),
-        interactions.SlashCommandChoice(name="CUSA00810 (US LATAM)", value='CUSA00810'),
-    ]
-    )
+@lbp3_reregion_opt
 async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: str, **kwargs):
     ctx = await set_up_ctx(ctx)
     if account_id == '1':
@@ -3185,19 +3220,7 @@ async def upload_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_n
 @interactions.slash_command(name="import_littlebigplanet_bigfart",description=f"Import any LittleBigPlanet bigfart to PS4 (just not from Vita)")
 @account_id_opt
 @interactions.slash_option('dl_link_bigfart','A download link to your bigfart',interactions.OptionType.STRING,True)
-@interactions.slash_option(
-    name="gameid",
-    description="The region you want of the save",
-    required=True,
-    opt_type=interactions.OptionType.STRING,
-    choices=[
-        interactions.SlashCommandChoice(name="CUSA00063 (EU)", value='CUSA00063'),
-        interactions.SlashCommandChoice(name="CUSA00473 (US)", value='CUSA00473'),
-        interactions.SlashCommandChoice(name="CUSA00693 (AS asia)", value='CUSA00693'),
-        interactions.SlashCommandChoice(name="CUSA00762 (GB UK)", value='CUSA00762'),
-        interactions.SlashCommandChoice(name="CUSA00810 (US LATAM)", value='CUSA00810'),
-    ]
-    )
+@lbp3_reregion_opt
 async def do_import_littlebigplanet_bigfart(ctx: interactions.SlashContext, account_id: str, dl_link_bigfart: str, gameid: str):
     await base_do_cheats(ctx,LBP3_EU_BIGFART,account_id,[CheatFunc(import_bigfart,{'dl_link_single':dl_link_bigfart}),CheatFunc(re_region,{'gameid':gameid})])
     
@@ -3675,7 +3698,10 @@ def _make_quick_functions():
 
         if 'saves_info' == str(global_var_value.name):
             continue
-
+        
+        if str(global_var_value.group_name) == 'littlebigplanet_3' and str(global_var_value.to_dict().get("name")) == 'install_mods':
+            continue
+        
         decor_options: str | list = []
         auto_complete_things_dl_links: str | list = []
         auto_complete_things_enc_saves: str | list = []
