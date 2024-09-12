@@ -34,7 +34,7 @@ from PIL import Image
 from lbptoolspy import far4_tools,install_mods_to_bigfart # put modules you need at the bottom of list for custom cheats, in correct block
 from lbptoolspy.binary_files import LBP3_PS4_L0_FILE_TEMPLATE
 
-from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words, non_format_susceptible_byte_repr
+from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words, non_format_susceptible_byte_repr, hex_dump
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile,SevenZipInfo, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
@@ -1450,7 +1450,10 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                     await ftp.change_directory(new_mount_dir)
                     try:
                         await decrypt_fun.func(ftp,new_mount_dir,white_file.name,decrypted_save_ouput,**decrypt_fun.kwargs)
-                    except Exception:
+                    except Exception as e:
+                        if isinstance(e,ExpectedError):
+                            show_error_type = '' if type(e) == ExpectedError else f'{type(e).__name__}: ' 
+                            return HasExpectedError(f'{show_error_type}{e}',pretty_save_dir)
                         return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not custom decrypt your save {pretty_save_dir}.','')
             else:
                 # await log_message(ctx,f'Downloading savedata0 folder from decrypted {pretty_save_dir}')
@@ -1734,6 +1737,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
             if download_ps4_saves_result:
                 await log_user_error(ctx,download_ps4_saves_result)
                 return
+            has_expcted_errs = []
             for bin_file, white_file in list_ps4_saves(enc_tp):
                 await upload_encrypted_to_ps4(ctx,bin_file,white_file,enc_tp,save_dir_ftp)
                 pretty_folder_thing = white_file.relative_to(enc_tp).parts[0] + white_file.name
@@ -1744,10 +1748,20 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                     tick_tock_task.cancel()
                     a = await decrypt_saves_on_ps4(ctx,bin_file,white_file,enc_tp,new_dec,save_dir_ftp,decrypt_fun)
                 if a:
+                    if isinstance(a,HasExpectedError):
+                        has_expcted_errs.append(a)
+                        continue
+                    
                     await log_user_error(ctx,a)
                     if a == WARNING_COULD_NOT_UNMOUNT_MSG:
                         breakpoint()
                     return
+            
+            if has_expcted_errs:
+                save_msgs = ''.join(f'{x[1]}:\n```\n{x[0]}\n```\n' for x in has_expcted_errs)
+                await log_user_success(ctx,f'Got your messages\n\n{save_msgs}')
+                return
+            
             your_saves_msg = 'savedata0 decrypted save (Please use /advanced_mode_export command instead)'
             if decrypt_fun:
                your_saves_msg = (decrypt_fun.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({decrypt_fun.func.__name__})').strip()
@@ -2045,7 +2059,7 @@ async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
     # await base_do_dec(ctx,save_files)
 # ctx.ezwizard3_special_ctx_attr_special_save_files_thing
 
-async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None, just_show_hex_dump: bool = False, hex_dump_size: int = 512, hex_dump_seek: int = 0):
     """
     Exported dl2 file
     """
@@ -2072,9 +2086,10 @@ async def export_dl2_save(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_
         with open(downloaded_ftp_save.with_suffix('.gz'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
             await shutil.copyfileobj(f_in, f_out)
     os.replace(downloaded_ftp_save.with_suffix('.gz'),downloaded_ftp_save)
+    do_hex_dump_thingy(decrypted_save_ouput / ftp_save[0],just_show_hex_dump,hex_dump_size,hex_dump_seek)
 
 
-async def export_xenoverse_2_sdata000_dat_file(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None,verify_checksum: bool = True):
+async def export_xenoverse_2_sdata000_dat_file(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None, just_show_hex_dump: bool = False, hex_dump_size: int = 512, hex_dump_seek: int = 0,verify_checksum: bool = True):
     """
     Exported xenoverse 2 SDATAXXX.DAT file
     """
@@ -2101,10 +2116,12 @@ async def export_xenoverse_2_sdata000_dat_file(ftp: aioftp.Client, mount_dir: st
         with open(downloaded_ftp_save.with_suffix('.bin'), 'wb') as f_out: # its not a gz file but i dont care i just want it to work
             decrypt_xenoverse2_ps4(f_in,f_out,check_hash=verify_checksum)
     os.replace(downloaded_ftp_save.with_suffix('.bin'),downloaded_ftp_save)
+    do_hex_dump_thingy(decrypted_save_ouput / ftp_save[0],just_show_hex_dump,hex_dump_size,hex_dump_seek)
+
 # @interactions.slash_option(name='verify_checksum',description='If set to true, then the command will fail if save has bad checksum (corrupted), default is True',required=False,opt_type=interactions.OptionType.BOOLEAN)
 
 
-async def export_red_dead_redemption_2_or_gta_v_file(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+async def export_red_dead_redemption_2_or_gta_v_file(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None, just_show_hex_dump: bool = False, hex_dump_size: int = 512, hex_dump_seek: int = 0):
     """
     Exported Red Dead Redemption 2 or Grand Theft Auto V savedata
     """
@@ -2131,9 +2148,9 @@ async def export_red_dead_redemption_2_or_gta_v_file(ftp: aioftp.Client, mount_d
         decrypted_rdr2_data = auto_encrypt_decrypt(f)
     with open(downloaded_ftp_save,'wb') as f:
         f.write(decrypted_rdr2_data)
+    do_hex_dump_thingy(decrypted_save_ouput / ftp_save[0],just_show_hex_dump,hex_dump_size,hex_dump_seek)
 
-
-async def export_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None):
+async def export_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_name_for_dec_func: str, decrypted_save_ouput: Path,/,*,filename_p: str | None = None, just_show_hex_dump: bool = False, hex_dump_size: int = 512, hex_dump_seek: int = 0):
     """
     Exported file (if it dont work please report to Zhaxxy what game it is)
     """
@@ -2153,7 +2170,7 @@ async def export_single_file_any_game(ftp: aioftp.Client, mount_dir: str, save_n
             raise ValueError(f'we could not find the {filename_p} file, we found \n{chr(10).join(str(e[0]) for e in files)}\n\ntry putting one of these in the filename_p option') from None
     
     await ftp.download(ftp_save[0],decrypted_save_ouput)
-
+    do_hex_dump_thingy(decrypted_save_ouput / ftp_save[0],just_show_hex_dump,hex_dump_size,hex_dump_seek)
 
 game_dec_functions = { # Relying on the dict ordering here, "Game not here (might not work)" should be at bottom
     'Dying Light 2 Stay Human': export_dl2_save,
@@ -2163,6 +2180,18 @@ game_dec_functions = { # Relying on the dict ordering here, "Game not here (migh
     'Game not here (might not work)': export_single_file_any_game,
 }
 
+def do_hex_dump_thingy(my_save: Path,just_show_hex_dump: bool, hex_dump_size: int, hex_dump_seek: int):
+    assert hex_dump_size <= 512
+    if not just_show_hex_dump:
+        return
+    with open(my_save,'rb+') as f:
+        if hex_dump_seek < 0:
+            whence = 2
+        else:
+            whence = 0 
+        f.seek(hex_dump_seek,whence)
+        start_offset = f.tell()
+        raise ExpectedError(hex_dump(f.read(hex_dump_size),start_offset=start_offset))
 
 @interactions.slash_command(name='advanced_mode_export',description="Export/decrypt your saves!")
 @dec_enc_save_files
@@ -2175,6 +2204,9 @@ game_dec_functions = { # Relying on the dict ordering here, "Game not here (migh
         interactions.SlashCommandChoice(name=gamenamey, value=gamenamey) for gamenamey in game_dec_functions.keys()
     ])
 @filename_p_opt
+@interactions.slash_option('just_show_hex_dump','Dont give file, just show a hex dump',interactions.OptionType.BOOLEAN,False)
+@interactions.slash_option('hex_dump_size','The size of the hex dump, if just_show_hex_dump is True',interactions.OptionType.INTEGER,False,max_value=512,min_value=0)
+@interactions.slash_option('hex_dump_seek','Where to seek in file',interactions.OptionType.INTEGER,False)
 async def do_multi_export(ctx: interactions.SlashContext,save_files: str,unzip_if_only_one_file: int,**kwargs): # TODO allow custom args for differnt dec functions, like verify_checksum
     export_func = game_dec_functions[kwargs.pop('game')]
     await base_do_dec(ctx,save_files,DecFunc(export_func,kwargs),unzip_if_only_one_file=unzip_if_only_one_file)
@@ -2901,7 +2933,7 @@ async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/,sh
         files = [(path,info) for path, info in (await ftp.list(recursive=True))]
         
         info_message += '\n\nDirectory Tree\n'
-        info_message += '\n'.join(f'{"/" if e[1]["type"] != "file" else ""}' + str(e[0]) for e in files)
+        info_message += '\n'.join(f'{"/" if e[1]["type"] != "file" else ""}' + str(e[0]) + f'{"" if e[1]["type"] != "file" else " // " + pretty_bytes(int(e[1]["size"]))}' for e in files)
 
     raise ExpectedError(info_message)
     

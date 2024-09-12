@@ -105,6 +105,40 @@ def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 
+def hex_dump(data: bytes,/,start_offset: int = 0,invalid_char: str = '■',null_byte_char: str = '○') -> str:
+    line_chunks = 16
+    result = []
+    offset = start_offset
+    for chunk in chunker(data,line_chunks):
+        result.append(f'{offset:08X}  ')
+
+        
+        for i in chunk:
+            result.append(f'{i:02X} ')
+
+        if len(chunk) < line_chunks:
+            result.append('   '*(line_chunks - len(chunk)))
+
+            
+        result.append('|')
+        
+        for i in chunk:
+            if not i:
+                result.append(null_byte_char)
+            elif not chr(i).isprintable():
+                result.append(invalid_char)
+            else:
+                result.append(chr(i))
+        if len(chunk) < line_chunks:
+            result.append(' '*(line_chunks - len(chunk)))
+        result.append('|')
+        result.append('\n')
+        
+        offset += line_chunks
+        
+    return ''.join(result).replace('```','▲▲▲')
+
+
 def extract_drive_file_id(link: str,/) -> str:
     if link.startswith('https://drive.google.com/file/d/'):
         return link.split('https://drive.google.com/file/d/')[-1].split('?')[0].split('/')[0]
