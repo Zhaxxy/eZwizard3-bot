@@ -391,6 +391,10 @@ class SpecialSaveFiles(Enum):
     LBP3_LEVEL_BACKUP = 2
     LBP3_ADV_BACKUP = 3
 
+class Lbp3BackupThingTypes(Enum):
+    DRY_DB_ARCHIVE_BACKUP = 0
+    MOD_INSTALLER = 1
+
 class Lbp3BackupThing(NamedTuple):
     title_id: str
     start_of_file_name: str
@@ -398,6 +402,7 @@ class Lbp3BackupThing(NamedTuple):
     level_desc: str
     is_adventure: bool
     new_blocks_size: int
+    backup_type: Lbp3BackupThingTypes = Lbp3BackupThingTypes.DRY_DB_ARCHIVE_BACKUP
     
 class SaveMountPointResourceError(Exception):
     """
@@ -1518,7 +1523,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
     res = await asyncio.get_running_loop().run_in_executor(None,custon_decss)
     return res
 
-def _zipping_time(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg):
+def _zipping_time(results: Path, parent_dir: Path, new_zip_name: Path):
     with zipfile.ZipFile(new_zip_name,'w') as zp:
         for file in results.rglob('*'):
             zp.write(file,file.relative_to(parent_dir))
@@ -1540,7 +1545,7 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
     if found_1_file:
         new_zip_name = found_1_file
     else:
-        await asyncio.to_thread(_zipping_time,ctx,link_for_pretty,results,parent_dir,new_zip_name,custom_msg)
+        await asyncio.to_thread(_zipping_time,results,parent_dir,new_zip_name)
     
     real_file_size = new_zip_name.stat().st_size
     if real_file_size > ATTACHMENT_MAX_FILE_SIZE:
@@ -2054,8 +2059,18 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                 
             await log_message(ctx,f'Deleting empty folders in {save_files}')
             await asyncio.get_running_loop().run_in_executor(None,lambda: delete_empty_folders(enc_tp))
-
-            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),(cheat.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({cheat.func.__name__})').strip())
+            
+            custom_msg = (cheat.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({cheat.func.__name__})').strip()
+            
+            if isinstance(save_files,Lbp3BackupThing):
+                if save_files.backup_type == Lbp3BackupThingTypes.DRY_DB_ARCHIVE_BACKUP:
+                    custom_msg = 'Level backup from the level archive'
+                elif save_files.backup_type == Lbp3BackupThingTypes.MOD_INSTALLER:
+                    custom_msg = 'LittleBigPlanet .mod files encrypted'
+            elif save_files == SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD:
+                custom_msg = 'Encrypted minecraft .mcworld file'
+            
+            await send_result_as_zip(ctx,save_files,enc_tp,enc_tp,Path(tp,my_token + '.zip'),custom_msg)
             return
     finally:
         await free_save_str(save_dir_ftp)
