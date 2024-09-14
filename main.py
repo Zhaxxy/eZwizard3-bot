@@ -252,12 +252,26 @@ async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.
     return ctx
 
 
-async def log_message(ctx: interactions.SlashContext, msg: str,*,_do_print: bool = True):
+async def pretty_pingers_do(ctx: interactions.SlashContext,pingers: None | Sequence[int],do_channel_send: bool,_do_print: bool) -> str:
+    if pingers:
+        pretty_pingers = ' '.join(f'<@{id}>' for id in pingers)
+        if _do_print:
+            print(pretty_pingers)
+        if do_channel_send:
+            channel = ctx.channel or ctx.author
+            pignlet = await channel.send(pretty_pingers)
+            await asyncio.sleep(1.5)
+        return pretty_pingers + '\n'
+    return ''
+    
+async def log_message(ctx: interactions.SlashContext, msg: str,*,pingers: None | Sequence[int] = None,_do_print: bool = True):
     if _do_print:
         print(msg)
 
     channel = ctx.channel or ctx.author
-
+    
+    msg = await pretty_pingers_do(ctx,pingers,True,_do_print) + msg
+        
     noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
     for attr_name in noitce_msgs:
         new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
@@ -291,14 +305,16 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
         tick += 10
     
     
-async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
+async def log_user_error(ctx: interactions.SlashContext, error_msg: str,*,pingers: None | Sequence[int] = None):
     files = []
     # if error_msg == 'Theres too many people using the bot at the moment, please wait for a spot to free up':
         # # await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
         # return
     print(f'user bad ##################\n{error_msg}')
     channel = ctx.channel or ctx.author
-    
+
+    error_msg = await pretty_pingers_do(ctx,pingers,False,True) + error_msg
+
     noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
     for attr_name in noitce_msgs:
         new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
@@ -325,10 +341,12 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str):
 
     await update_status()
 
-async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None):
+async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None,*,pingers: None | Sequence[int] = None):
     files = [file] if file else []
     print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
     channel = ctx.channel or ctx.author
+    
+    success_msg = await pretty_pingers_do(ctx,pingers,False,True) + success_msg
     
     noitce_msgs = [attr_name for attr_name in dir(ctx) if attr_name.startswith('ezwizard3_special_ctx_attr_noticemsg_')]
     for attr_name in noitce_msgs:
@@ -1531,15 +1549,14 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
             google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
         except Exception as e:
             if 'storageQuotaExceeded' in str(e):
-                pingers = ' '.join(f'<@{id}>' for id in CONFIG['bot_admins'])
-                await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask {pingers} to clear some space')
+                await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask ^^^ to clear some space',pingers=CONFIG['bot_admins'])
                 await asyncio.sleep(2*60)
                 await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!) ({pretty_bytes(real_file_size)} file)')
                 try:
                     google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
                 except Exception as e2:
                     if 'storageQuotaExceeded' in str(e2):
-                        await log_user_error(ctx,f'You were too late, owners gdrive is full! ask {pingers} to clear some space')
+                        await log_user_error(ctx,f'You were too late, owners gdrive is full! ask ^^^ to clear some space',pingers=CONFIG['bot_admins'])
                         return
                     else:
                         raise
@@ -3836,17 +3853,7 @@ async def main() -> int:
     user = psnawp.user(online_id='Zhaxxy')
     print('npsso cookie works!')
     
-    print('Checking if zaprit.fish is up')
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get('https://zaprit.fish/dl_archive/1902012') as response:
-                if response.status == 200:
-                    ZAPRIT_FISH_IS_UP = True
-                    print('zaprit.fish is up and working!')
-                else:
-                    print(f'Did not get 200 when trying zaprit.fish/dl_archive, got {response.status}, lbp_level_archive2ps4 wont work')
-        except Exception as e:
-            print(f'Error when connecting to zaprit.fish, got {e}, lbp_level_archive2ps4 wont work')
+    ZAPRIT_FISH_IS_UP = True
     
     print('doing some git stuff')
     try:
