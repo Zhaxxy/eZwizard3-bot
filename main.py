@@ -2319,7 +2319,6 @@ littlebigplanet_3 = cheats_base_command.group(name="littlebigplanet_3", descript
 @ignore_plans_opt
 @dl_link_mod_file_11_options
 async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,account_id: str, **kwargs):
-    kwargs['ignore_plans'] = bool(kwargs['ignore_plans'])
     if not any(key.startswith('dl_link_mod_file') for key in kwargs.keys()):
         ctx = await set_up_ctx(ctx)
         return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
