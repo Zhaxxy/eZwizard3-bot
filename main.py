@@ -215,7 +215,7 @@ def is_user_bot_admin(ctx_author_id: str,/) -> bool:
 _token_getter = asyncio.Lock()
 async def get_time_as_string_token() -> str:
     async with _token_getter:
-        return datetime.now().strftime("%d_%m_%Y__%H_%M_%S")
+        return datetime.utcnow().strftime("%d_%m_%Y__%H_%M_%S")
 
 
 def delete_empty_folders(root: Path):
@@ -752,6 +752,47 @@ def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/,archive_name: st
         ps4_saves.append((zip_file.path,white_file))
     return ps4_saves,found_zips
 
+async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_or_folder: Path, max_size=FILE_SIZE_TOTAL_LIMIT):
+    raise NotImplementedError('not finshed')
+    if archive_or_folder.is_file():
+        await log_message(ctx,f'Checking {link} if valid archive')
+        try:
+            zip_info = await get_archive_info(archive_name)
+        except Exception as e:
+            return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
+        
+        current_total_size = zip_info.total_uncompressed_size
+        
+        if current_total_size > max_size:
+            return f'The decompressed {link} is too big ({pretty_bytes(current_total_size)}), the max is {pretty_bytes(max_size)}' # if its a folder, im assuming the size was already checked
+        
+        await log_message(ctx,f'Extracting {link}')
+        await extract_full_archive(archive_or_folder,output_folder,'x')
+    
+    
+    found_an_archive = False
+    found_a_savedata0_folder = False
+    
+    await log_message(ctx,f'Looking for `sce_sys` folders in {link}')
+    for x in output_folder.rglob('*'):
+        if '__MACOSX' in x.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
+        if x.name.startswith('._'): continue
+        if not x.is_dir():
+            if not filename_valid_extension(x.name):
+                found_an_archive = True
+            continue
+        if x.name == 'savedata0' and (x.parts.count('savedata0') == 1):
+            found_a_savedata0_folder = True
+        
+        if x.name == 'sce_sys' and (x.parts.count('sce_sys') == 1):
+            pretty_dir = x.relative_to(output_folder)
+            pretty_dir = str(pretty_dir.parent if pretty_dir.parent.parts else 'LOOSE')
+            
+            await log_message(ctx,f'Checking if param.sfo in {pretty_dir} is valid')
+            param_sfo = x / 'param.sfo'
+            if not param_sfo.is_file():
+                consider_using_option = 'raw_encrypt_folder' if x.parent.name == 'savedata0' else 'raw_encrypt_folder_type_2'
+                return f'No param.sfo found in {pretty_dir} + {link}, consider using /{consider_using_option} instead'
 
 
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
@@ -772,6 +813,8 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
         ps4_saves,found_zips = get_only_ps4_saves_from_zip(zip_info,archive_name)
     except InvalidBinFile as e:
         return str(e) + link
+    
+    
     
     found_zips_2 = [] # Just to not raise NameError later on
     
@@ -837,7 +880,7 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
 
             pretty_dir_name = make_folder_name_safe(pretty_zip_file_path / bin_parent_pretty)
             new_path = Path(output_folder,pretty_dir_name,make_ps4_path(account_id,bin_parent_pretty.name))
-            new_path.mkdir(exist_ok=True,parents=True) # TODO look into parents=True
+            new_path.mkdir(exist_ok=True,parents=True)
             await log_message(ctx,f'Extracting {white_file} from {link}{" + "+str(pretty_zip_file_path) if pretty_zip_file_path.parts else ""}')
             try:
                 await extract_single_file(current_white_file_archive_path,white_file,new_path)
@@ -1011,7 +1054,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
         if test[0] > FILE_SIZE_TOTAL_LIMIT:
             return f'The decrypted save {link} is too big ({pretty_bytes(test[0])}), maybe you uploaded a wrong file to it? max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
         if test[1] > ZIP_LOOSE_FILES_MAX_AMT:
-            return f'The decrypted save {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
+            return f'The decrypted save {link} has too many loose files ({test[1]}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files (uploading as a zip instead, will not have such limitations)'
 
         await log_message(ctx,f'Downloading {link} savedata0 folder')
         Path(output_folder,'savedata0').mkdir(parents=True,exist_ok=True)# TODO maybe i dont gotta do this, but i am
@@ -1055,8 +1098,6 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
     if a.total_uncompressed_size > FILE_SIZE_TOTAL_LIMIT:
         return f'The decompressed {link} is too big ({pretty_bytes(a.total_uncompressed_size)}), the max is {pretty_bytes(FILE_SIZE_TOTAL_LIMIT)}'
 
-    if len(a.files) > ZIP_LOOSE_FILES_MAX_AMT:
-        return f'The decompressed {link} has too many loose files ({len(a.files)}), max is {ZIP_LOOSE_FILES_MAX_AMT} loose files'
     if not allow_any_folder:
         await log_message(ctx,f'Looking for decrypted saves in {link}')
         seen_savedata0_folders: set[SevenZipFile] = {
