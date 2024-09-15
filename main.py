@@ -1242,7 +1242,37 @@ async def delete_base_save_just_ftp(title_id: str, dir_name: str):
         await ftp.change_directory(f'{BASE_SAVEDATA_FOLDER}/{title_id}')
         await ftp.remove(f'sdimg_{dir_name}')
         await ftp.remove(f'{dir_name}.bin')
-        
+
+async def emergency_unmount(savedatax: str, ps4: PS4Debug, mp, pretty_save_dir: Path) -> str | None:
+    if savedatax:
+        async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+            new_mount_dir = (MOUNTED_POINT / savedatax).as_posix()
+            try:
+                await ftp.change_directory(new_mount_dir) # check if we are still mounted
+            except Exception:
+                pass#print(f'{type(e).__name__}: {e}')
+            else:
+                await ftp.change_directory('/')
+                await ftp.change_directory(MOUNTED_POINT.as_posix())
+                try:
+                    await ftp.remove(savedatax)
+                except Exception:
+                    pass
+                await ftp.change_directory(savedatax)
+                await ftp.upload(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys')
+                umount_p = await unmount_save(ps4,mem,mp)
+                if umount_p:
+                    try:
+                        await ftp.change_directory('/')
+                        await ftp.change_directory(new_mount_dir) # check if we are still mounted
+                    except Exception: pass
+                    else:
+                        # await log_user_error(ctx,WARNING_COULD_NOT_UNMOUNT_MSG)
+                        # breakpoint()
+                        return WARNING_COULD_NOT_UNMOUNT_MSG
+                return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided. If you did mcworld2ps4 try setting mc_encrypted_save_size higher'
+
+
 async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], pretty_save_dir: Path, mount_save_title_id: str, ctx_author_id: str, special_thing: SpecialSaveFiles | None) -> str | tuple[list | PS4AccountID | str] | tuple[ExpectedError,str]:
     ps4 = PS4Debug(CONFIG['ps4_ip'])
     try:
@@ -1307,32 +1337,9 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                         return make_error_message_if_verbose_or_not(ctx_author_id,f'Could not apply global watermark to {pretty_save_dir}','')
             return return_payload
     finally:
-        if savedatax:
-            async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-                try:
-                    await ftp.change_directory(new_mount_dir) # check if we are still mounted
-                except Exception:
-                    pass#print(f'{type(e).__name__}: {e}')
-                else:
-                    await ftp.change_directory('/')
-                    await ftp.change_directory(MOUNTED_POINT.as_posix())
-                    try:
-                        await ftp.remove(savedatax)
-                    except Exception:
-                        pass
-                    await ftp.change_directory(savedatax)
-                    await ftp.upload(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys')
-                    umount_p = await unmount_save(ps4,mem,mp)
-                    if umount_p:
-                        try:
-                            await ftp.change_directory('/')
-                            await ftp.change_directory(new_mount_dir) # check if we are still mounted
-                        except Exception: pass
-                        else:
-                            # await log_user_error(ctx,WARNING_COULD_NOT_UNMOUNT_MSG)
-                            # breakpoint()
-                            return WARNING_COULD_NOT_UNMOUNT_MSG
-                    return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided. If you did mcworld2ps4 try setting mc_encrypted_save_size higher'
+        if emergency_res_unmount := await emergency_unmount(savedatax,ps4,mp,pretty_save_dir):
+            return emergency_res_unmount
+        
 async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4AccountID, bin_file: Path, white_file: Path, parent_dir: Path, cheats: Sequence[CheatFunc], save_dir_ftp: str | tuple[str,str], special_thing: SpecialSaveFiles | str | None) -> str | tuple[list | PS4AccountID] | ExpectedError:
     if isinstance(special_thing,str):
         special_thing = None
@@ -1484,32 +1491,8 @@ async def _decrypt_saves_on_ps4(bin_file: Path, white_file: Path, parent_dir: Pa
                     await ftp.change_directory(MOUNTED_POINT.as_posix())
                     await ftp.download(savedatax,decrypted_save_ouput / 'savedata0',write_into=True)
     finally:
-        if savedatax:
-            async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
-                try:
-                    await ftp.change_directory(new_mount_dir) # check if we are still mounted
-                except Exception:
-                    pass#print(f'{type(e).__name__}: {e}')
-                else:
-                    await ftp.change_directory('/')
-                    await ftp.change_directory(MOUNTED_POINT.as_posix())
-                    try:
-                        await ftp.remove(savedatax)
-                    except Exception:
-                        pass
-                    await ftp.change_directory(savedatax)
-                    await ftp.upload(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys')
-                    umount_p = await unmount_save(ps4,mem,mp)
-                    if umount_p:
-                        try:
-                            await ftp.change_directory('/')
-                            await ftp.change_directory(new_mount_dir) # check if we are still mounted
-                        except Exception: pass
-                        else:
-                            # await log_user_error(ctx,WARNING_COULD_NOT_UNMOUNT_MSG)
-                            # breakpoint()
-                            return WARNING_COULD_NOT_UNMOUNT_MSG
-                    return f'Could not unmount {pretty_save_dir} likley corrupted param.sfo or something went wrong with the bot, best to report it with the save you provided. If you did mcworld2ps4 try setting mc_encrypted_save_size higher'
+        if emergency_res_unmount := await emergency_unmount(savedatax,ps4,mp,pretty_save_dir):
+            return emergency_res_unmount
 async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, white_file: Path, parent_dir: Path,decrypted_save_ouput: Path, save_dir_ftp: str,decrypt_fun: DecFunc | None = None) -> str | None:
     pretty_save_dir = white_file.relative_to(parent_dir)
     pretty_save_dir = Path(*pretty_save_dir.parts[:-5],'...',*pretty_save_dir.parts[-2:])
