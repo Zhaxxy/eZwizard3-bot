@@ -1,8 +1,9 @@
+import dataclasses
 import asyncio
 from contextlib import nullcontext
 import sys
 import re
-from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, NoReturn, assert_never
+from typing import NamedTuple, Callable, Generator, Any, Sequence, Coroutine, NoReturn, assert_never, BinaryIO
 from enum import Enum
 from pathlib import Path
 from traceback import format_exc
@@ -10,6 +11,7 @@ from io import BytesIO
 import time
 import zipfile
 import os
+import math
 from stat import S_IWRITE
 from datetime import datetime
 from zlib import crc32 # put modules you need at the bottom of list for custom cheats, in correct block
@@ -198,6 +200,230 @@ class InvalidBinFile(Exception):
 
 #     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
 #         await shutil.rmtree(self.new_path)
+
+
+class PS4AccountID:
+    __slots__ = ('_account_id',)
+    def __init__(self, account_id: str):
+        account_id = account_id.split(' ')[0]
+        if len(account_id) != 16:
+            raise ValueError('Invalid account id, length is not 16')
+        int(account_id,16)
+        account_id = account_id.casefold()
+        
+        if account_id[0] in 'abcdef':
+            raise ValueError('Invalid account id, does not start with a number')
+        self._account_id = account_id.casefold()
+    
+    def __repr__(self) -> str:
+        return f'{type(self).__name__}({self.account_id!r})'
+    
+    def __bytes__(self) -> bytes:
+        return bytes.fromhex(self.account_id)[::-1]
+
+    def __hash__(self) -> int:
+        return hash(self.account_id)
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value,PS4AccountID):
+            return NotImplemented
+        return self.account_id == value.account_id
+    
+    def __bool__(self) -> bool:
+        return self.account_id != '0000000000000000'
+
+    @property
+    def to_2_uints32(self) -> tuple[bytes,bytes]:
+        return bytes.fromhex(self.account_id[8:16])[::-1],bytes.fromhex(self.account_id[:8])[::-1]
+    
+    @property
+    def account_id(self) -> str:
+        return self._account_id
+
+    @classmethod
+    def from_bytes(cls,account_id_bytes: bytes) -> 'PS4AccountID':
+        return cls(account_id_bytes[::-1].hex())
+
+    @classmethod
+    def from_account_id_number(cls, account_id_int: str | int) -> 'PS4AccountID':
+        return cls(f'{int(account_id_int):016x}')
+
+
+PARAM_SFO_REGION_SEEKS = (0xA9C,0x61C,0x62C)
+
+@dataclasses.dataclass(slots = True)
+class PS4SaveParamSfo:
+    dir_name: str
+    title_id: str
+    menu_name: bytes
+    menu_description: bytes
+    account_id: PS4AccountID
+    blocks_count: int
+    
+    _param_sfo_data: bytes
+    miss_matching_title_ids: Sequence[tuple[str,int]] | None
+    
+    def __bytes__(self) -> bytes:
+        return self._param_sfo_data
+    
+    def __str__(self) -> str:
+        info_message = f'Save file name: {self.dir_name}'
+        shrug_emoji = '🤷'.encode('utf-8') # TODO make custom emojis for each save special character
+        if self.miss_matching_title_ids:
+            info_message += '\nMissmatching title ids in save, is a bad save'
+            for title_id,seek in self.miss_matching_title_ids:
+                info_message += f'\nTitle id at 0x{seek:X}: {title_id}'
+        else:
+            info_message += f'\nTitle id: {self.title_id}'
+        
+        save_description = self.menu_name
+        for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
+            save_description = save_description.replace(x,shrug_emoji)
+        info_message += f'\nName: {save_description.decode("utf-8")}'
+        
+        if self.menu_description:
+            save_description = self.menu_description
+            for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
+                save_description = save_description.replace(x,shrug_emoji)
+            info_message += f'\nDescription: {save_description.decode("utf-8")}'
+        
+        info_message += f'\nOld Account ID: {self.account_id.account_id}'
+        
+        info_message += f'\nMax Decrypted Save Size: {pretty_bytes(self.blocks_count_in_bytes)} ({self.blocks_count} Blocks) (The real limit will always be smaller then this, dont get close to it!)'
+        
+        return info_message
+    
+    def __repr__(self) -> str:
+        return str(self)
+    
+    @classmethod
+    def from_buffer(cls,f: BinaryIO,/) -> 'PS4SaveParamSfo':
+        f.seek(0,2)
+        if f.tell() > 5_000_000:
+            raise ValueError('param.sfo is too big')
+        f.seek(0)
+        data = f.read() # for indexing
+        
+        found_game_ids = []
+        for seek in PARAM_SFO_REGION_SEEKS:
+            f.seek(seek)
+            found_game_ids.append((f.read(9).decode('ascii'),seek))
+        title_id = found_game_ids[0][0]
+        miss_matching_title_ids: Sequence[tuple[str,int]] | None = None
+        if not all(x[0] == found_game_ids[0][0] for x in found_game_ids):
+            miss_matching_title_ids = tuple(found_game_ids)
+        
+        obs_index = data.index(b'obs\x00')
+        f.seek(obs_index + len(b'obs\x00'))
+        if f.read(1) == b'\x00':
+            raise ValueError('found a null byte, no existing save name?')
+        f.seek(-1, 1)
+        
+        menu_name = f.read(0x80).rstrip(b'\x00')
+        
+        menu_name_checker = menu_name
+        for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
+            menu_name_checker = menu_name_checker.replace(x,b'')
+        menu_name_checker.decode('utf-8') # using as an error check
+        
+        
+        f.seek(0x9F8)
+        dir_name = b''.join(iter(lambda: f.read(1),b'\x00')).decode('ascii')
+        
+        if len(dir_name) >= 0x20:
+            raise ValueError(f'{dir_name = } is too big, so invalid param.sfo')
+        
+        f.seek(0x9F8 + 0x24)
+        save_description = f.read(0x80).rstrip(b'\x00')
+        if save_description:
+            save_description_checker = save_description
+            for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
+                save_description_checker = save_description_checker.replace(x,b'')
+            save_description_checker.decode("utf-8") # using as an error check
+        f.seek(0x15c)
+        account_id = PS4AccountID.from_bytes(f.read(8))
+        f.seek(0x9F8 - 8)
+        blocks_count, = struct.unpack('<q',f.read(8))
+        
+        return cls(dir_name,title_id,menu_name,save_description,account_id,blocks_count,data,miss_matching_title_ids)
+    
+    @staticmethod
+    def _is_valid_ps_title_id(title_id: str) -> bool:
+        """
+        Checks if the title_id is capable of being mounted
+        """
+        return len(title_id) == 9 and all(x in '0123456789' for x in title_id[-5:])
+    
+    @staticmethod
+    def blocks_count_to_bytes(blocks_count: int) -> int:
+        return blocks_count*32768
+    
+    @staticmethod
+    def bytes_to_blocks_count(bytes_count: int) -> int:
+        return math.ceil(bytes_count/32768)
+        
+    @property
+    def blocks_count_in_bytes(self) -> int:
+        return self.blocks_count*32768
+    
+    def with_new_account_id(self, new_account_id: PS4AccountID) -> None:
+        data = BytesIO(self._param_sfo_data)
+        
+        data.seek(0x15c)
+        if new_account_id: # you're welcome @b.a.t.a.n.g (569531198490279957)
+            data.write(bytes(new_account_id))
+        self._param_sfo_data = data.getvalue()
+        
+    def with_new_region(self, title_id: str, seeks: Sequence[int] = PARAM_SFO_REGION_SEEKS) -> None:
+        if not self._is_valid_ps_title_id(title_id):
+            raise ValueError(f'Invalid title id {title_id}')
+        data = BytesIO(self._param_sfo_data)
+        
+        for seek in seeks:
+            data.seek(seek)
+            data.write(title_id.encode('ascii'))
+        self._param_sfo_data = data.getvalue()
+    
+    def _with_new_special_ps_string(self, new_string: bytes,offset: int, max_length: int = 0x80) -> None:
+        f = BytesIO(self._param_sfo_data)
+        
+        if new_string: # TODO check if you can change description even if none exist
+            save_description_checker = new_string
+            for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
+                save_description_checker = save_description_checker.replace(x,b'')
+            save_description_checker.decode("utf-8") # using as an error check
+        if len(new_string) >= max_length:
+            raise ValueError(f'Description {new_string!r} is too big, max is {max_length-1} bytes long')
+        f.seek(offset)
+        f.write(new_string.ljust(max_length,b'\x00'))
+        self._param_sfo_data = f.getvalue()
+        
+    def with_new_description(self, menu_description: bytes) -> None:
+        self._with_new_special_ps_string(menu_description,0x9F8 + 0x24)
+
+    def with_new_name(self, menu_name: bytes) -> None:
+        new_offset = self._param_sfo_data.index(b'obs\x00') + len(b'obs\x00')
+        self._with_new_special_ps_string(menu_name,new_offset)
+
+    def with_new_dir_name(self, dir_name: str) -> None:
+        if len(dir_name) >= 0x20:
+            raise ValueError(f'Save dir name {dir_name} is too big, max is 0x1F characters')
+        data = BytesIO(self._param_sfo_data)
+        
+        data.seek(0x9F8)
+        data.write(dir_name.encode('ascii').ljust(0x20,b'\x00'))
+        self._param_sfo_data = data.getvalue()
+
+    def with_new_blocks_count(self, blocks_count: int) -> None:
+        if blocks_count > 32768:
+            raise ValueError(f'Blocks count {blocks_count} is too big, perhaps you passed in a bytes count and did not convert it?')
+        if blocks_count < 96:
+            raise ValueError(f'Blocks count {blocks_count} is too small, (smallest is 96 blocks or 3mib)')
+        data = BytesIO(self._param_sfo_data)
+        
+        data.seek(0x9F8 - 8)
+        data.write(struct.pack('<Q',blocks_count))
+        self._param_sfo_data = data.getvalue()
 
 
 def is_in_test_mode() -> bool:
@@ -450,50 +676,8 @@ async def free_save_str(save_str: str,/) -> None:
 async def get_amnt_free_save_strs() -> int:
     return await _save_mount_points.get_free_resources_count()
 
+
 mounted_saves_at_once = asyncio.Semaphore(12) # 3 i sadly got an unmount error, and with 2 too
-
-
-class PS4AccountID:
-    __slots__ = ('_account_id',)
-    def __init__(self, account_id: str):
-        account_id = account_id.split(' ')[0]
-        if len(account_id) != 16:
-            raise ValueError('Invalid account id, length is not 16')
-        int(account_id,16)
-        self._account_id = account_id.casefold()
-    
-    def __repr__(self) -> str:
-        return f'{type(self).__name__}({self.account_id!r})'
-    
-    def __bytes__(self) -> bytes:
-        return bytes.fromhex(self.account_id)[::-1]
-
-    def __hash__(self) -> int:
-        return hash(self.account_id)
-
-    def __eq__(self, value: object) -> bool:
-        if not isinstance(value,PS4AccountID):
-            return NotImplemented
-        return self.account_id == value.account_id
-    
-    def __bool__(self) -> bool:
-        return self.account_id != '0000000000000000'
-
-    @property
-    def to_2_uints32(self) -> tuple[bytes,bytes]:
-        return bytes.fromhex(self.account_id[8:16])[::-1],bytes.fromhex(self.account_id[:8])[::-1]
-    
-    @property
-    def account_id(self) -> str:
-        return self._account_id
-
-    @classmethod
-    def from_bytes(cls,account_id_bytes: bytes) -> 'PS4AccountID':
-        return cls(account_id_bytes[::-1].hex())
-
-    @classmethod
-    def from_account_id_number(cls, account_id_int: str | int) -> 'PS4AccountID':
-        return cls(f'{int(account_id_int):016x}')
 
 
 def remove_pc_user_from_path(the_path: object,/) -> object:
@@ -1251,25 +1435,20 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
         await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
 
-async def resign_mounted_save(ctx: interactions.SlashContext | None, ftp: aioftp.Client,new_mount_dir:str, account_id: PS4AccountID) -> PS4AccountID:
+async def resign_mounted_save(ftp: aioftp.Client,new_mount_dir:str, account_id: PS4AccountID) -> PS4AccountID:
     old_account_id = PS4AccountID('0000000000000000')
-    try:
-        await ftp.change_directory(Path(new_mount_dir,'sce_sys').as_posix())
-        async with TemporaryDirectory() as tp:
-            tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
-            await ftp.download('param.sfo',tp_param_sfo,write_into=True)
-            with open(tp_param_sfo,'rb+') as f:
-                f.seek(0x15c)
-                old_account_id = PS4AccountID.from_bytes(f.read(8))
-                f.seek(0x15c)
-                if account_id: # you're welcome @b.a.t.a.n.g (569531198490279957)
-                    f.write(bytes(account_id))
-            await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
-    except Exception as e:
-        if ctx:
-            await log_message(ctx,f'Something went wrong when resigning the save, {type(e).__name__}: {e}, ignoring!')
-    finally:
-        return old_account_id
+    await ftp.change_directory(Path(new_mount_dir,'sce_sys').as_posix())
+    async with TemporaryDirectory() as tp:
+        tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
+        await ftp.download('param.sfo',tp_param_sfo,write_into=True)
+        with open(tp_param_sfo,'rb+') as f:
+            my_param = PS4SaveParamSfo.from_buffer(f)
+        old_account_id = my_param.account_id
+        my_param.with_new_account_id(account_id)
+        tp_param_sfo.write_bytes(bytes(my_param))
+            
+        await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
+    return old_account_id
 
 
 async def clean_base_mc_save(title_id: str, dir_name: str, blocks: int):
@@ -1331,10 +1510,9 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
                         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
                         with open(tp_param_sfo,'rb') as f:
-                            f.seek(0x9F8)
-                            real_name = b''.join(iter(lambda: f.read(1),b'\x00')).decode('ascii')
-                except Exception:
-                    return f'Bad save {pretty_save_dir} missing param.sfo or broken param.sfo'
+                            real_name = PS4SaveParamSfo.from_buffer(f).dir_name
+                except Exception as e:
+                    return f'Bad save {pretty_save_dir} ({e}) missing param.sfo or broken param.sfo'
             
             results = []
             for index, chet in enumerate(cheats):
@@ -1355,8 +1533,11 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
                 await ftp.change_directory(new_mount_dir) 
                 # await log_message(ctx,f'Resigning {pretty_save_dir} to {account_id.account_id}')
-                account_id_old = await resign_mounted_save(None,ftp,new_mount_dir,account_id)
-            
+                try:
+                    account_id_old = await resign_mounted_save(ftp,new_mount_dir,account_id)
+                except Exception:
+                    return make_error_message_if_verbose_or_not(ctx_author_id,f'Bad save {pretty_save_dir}','bad or missing param.sfo')
+                
             return_payload = results,account_id_old,real_name
             
             async with setting_global_image_lock:
@@ -1407,10 +1588,9 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 da_blocks = chet.kwargs.pop('mc_encrypted_save_size')
                 desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                 with open(savedata0hehe / 'sce_sys/param.sfo','rb+') as f:
-                    data = f.read()
-                    desc_before_find_index = data.index(desc_before_find)
-                    f.seek(desc_before_find_index - 8)
-                    f.write(struct.pack('<q',da_blocks))
+                    my_param = PS4SaveParamSfo.from_buffer(f)
+                my_param.with_new_blocks_count(da_blocks)
+                (savedata0hehe / 'sce_sys/param.sfo').write_bytes(bytes(my_param))
                     
                 world_icon_jpeg_file = None
                 
@@ -1436,22 +1616,18 @@ async def apply_cheats_on_ps4(ctx: interactions.SlashContext,account_id: PS4Acco
                 new_name = None
                 try:
                     with open(savedata0hehe / 'levelname.txt','r') as f:
-                        new_name = f.read(0x80-1)
+                        new_name = f.read(0x80-1).encode('utf-8')
                 except Exception:
                     pass
                 
                 if new_name:
                     pretty_save_dir = new_name
-                    # desc_before_find = white_file.name.encode('ascii').ljust(0x20, b'\x00')
-                    desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                    
                     with open(savedata0hehe / 'sce_sys/param.sfo','rb+') as f:
-                        data = f.read()
-                        desc_before_find_index = data.index(desc_before_find)
-                        f.seek(desc_before_find_index + len(desc_before_find))
-                        f.write(new_name.encode('utf-8'))
-                        
-                        f.seek(desc_before_find_index)
-                        f.write(white_file.name.encode('ascii').ljust(0x20, b'\x00'))
+                        my_param = PS4SaveParamSfo.from_buffer(f)
+                    my_param.with_new_description(new_name)
+                    my_param.with_new_dir_name(white_file.name)
+                    (savedata0hehe / 'sce_sys/param.sfo').write_bytes(bytes(my_param))
                 
                 await log_message(ctx,f'Checking for any resource/behaviour packs not added to json files')
                 
@@ -1881,11 +2057,9 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             await log_message(ctx,f'Setting level filename to {mc_filename}')
             temp_savedata0 = cheat.kwargs['decrypted_save_file']
             with open(temp_savedata0 / 'savedata0/sce_sys/param.sfo','rb+') as f:
-                desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                data = f.read()
-                desc_before_find_index = data.index(desc_before_find)
-                f.seek(desc_before_find_index)
-                f.write(mc_filename.encode('ascii'))
+                my_param = PS4SaveParamSfo.from_buffer(f)
+            my_param.with_new_dir_name(mc_filename)
+            (temp_savedata0 / 'savedata0/sce_sys/param.sfo').write_bytes(bytes(my_param))
                 
         else:
             real_save_dir_ftp = save_dir_ftp
@@ -2040,12 +2214,13 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
                         bin_file = bin_file.rename(new_gameid_folder / bin_file.name)
             
             if not account_id:
+                account_id = old_account_id
                 have_not_done_at_least_1_account_id_change = False
                 await log_message(ctx,f'Refreshing {save_files} internal list 2/2')
                 done_ps4_saves = list(list_ps4_saves(enc_tp))
                 for bin_file, white_file in done_ps4_saves:
                     try:
-                        white_file.parent.parent.rename(white_file.parent.parent.parent / old_account_id.account_id)
+                        white_file.parent.parent.rename(white_file.parent.parent.parent / account_id.account_id)
                     except FileNotFoundError:
                         if not have_not_done_at_least_1_account_id_change:
                             raise
@@ -2807,33 +2982,16 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
             await shutil.move(result,savedata0_folder / 'sce_sys/icon0.png')
             
         base_name = f'{gameid}x00ADV' if is_adventure else f'{gameid}x00LEVEL'
-        seeks = (0x61C,0x62C,0xA9C)
+        
         tp_param_sfo = savedata0_folder / 'sce_sys/param.sfo'
-        with open(tp_param_sfo,'rb+') as f:
-            for seek in seeks:
-                f.seek(seek)
-                f.write(gameid.encode('ascii'))
-        psstring_new_name = f'lbp3PS4: {level_name}'.encode('utf-8')[:0x79]
-        with open(tp_param_sfo,'rb+') as f:
-            data = f.read()
-            obs_index = data.index(b'obs\x00')
-            f.seek(obs_index + len(b'obs\x00'))
-            assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
-            f.seek(-1, 1)
-            assert len(psstring_new_name) < 0x80, f'{psstring_new_name} is too long!'
-            f.write(psstring_new_name)
-        psstring_new_desc = f'{level_desc}'.encode('utf-8')[:0x79]
-        desc_before_find = b'BedrockWorldben@P5456\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        with open(tp_param_sfo,'rb+') as f:
-            data = f.read()
-            desc_before_find_index = data.index(desc_before_find)
-            f.seek(desc_before_find_index + len(desc_before_find))
-            # assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
-            # f.seek(-1, 1)
-            assert len(psstring_new_desc) < 0x80, f'{psstring_new_desc} is too long!'
-            f.write(psstring_new_desc)
+        with open(tp_param_sfo,'rb') as f:
+            my_param = PS4SaveParamSfo.from_buffer(f)
         
-        
+        my_param.with_new_region(gameid)
+        my_param.with_new_name(f'lbp3PS4: {level_name}'.encode('utf-8'))
+        my_param.with_new_description(level_desc.encode('utf-8'))
+
+
         await log_message(ctx,f'Getting decrypted save size for slot `{slotid_from_drydb}`')
         
         # new_blocks_size = sum((x.stat()).st_size for x in savedata0_folder.rglob('*'))
@@ -2842,11 +3000,11 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         async for x in async_savedata0_folder.rglob('*'):
             new_blocks_size += (await x.stat()).st_size
 
-
-        new_blocks_size = (new_blocks_size//32768) + (3_145_728//32768) # min save is 3mb
-        with open(tp_param_sfo,'rb+') as f:
-            f.seek(0x9F8-8)
-            f.write(struct.pack('<q',new_blocks_size))
+        new_blocks_size = my_param.bytes_to_blocks_count(new_blocks_size + 3_145_728) # min save is 3mibb
+        my_param.with_new_blocks_count(new_blocks_size)
+        
+        tp_param_sfo.write_bytes(bytes(my_param))
+        
         await base_do_cheats(ctx,Lbp3BackupThing(gameid,base_name,level_name,level_desc,is_adventure,new_blocks_size),account_id,CheatFunc(upload_savedata0_folder,{'decrypted_save_file':savedata0_folder.parent,'clean_encrypted_file':CleanEncryptedSaveOption.DELETE_ALL_INCLUDING_SCE_SYS}))
 
 
@@ -2858,12 +3016,11 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
         tp_keystone = Path(tp,'a')
 
         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
-        found_game_ids = []
-        with open(tp_param_sfo,'rb+') as f:
-            for seek in (0x61C,0x62C,0xA9C):
-                f.seek(seek)
-                found_game_ids.append(f.read(9).decode('ascii'))
-        if found_game_ids.count(found_game_ids[0]) != len(found_game_ids):
+        
+        with open(tp_param_sfo,'rb') as f:
+            my_param = PS4SaveParamSfo.from_buffer(f)
+            
+        if my_param.miss_matching_title_ids:
             if not ignore_errors_in_saves:
                 raise ValueError('Missmatching title ids in save')
 
@@ -2873,7 +3030,7 @@ async def get_keystone_key_from_save(ftp: aioftp.Client, mount_dir: str, save_na
             raise ValueError('Invalid keystone found in save')
 
 
-        raise ExpectedError(f'{found_game_ids[0]!r}: {non_format_susceptible_byte_repr(tp_keystone.read_bytes())},')
+        raise ExpectedError(f'{my_param.title_id!r}: {non_format_susceptible_byte_repr(tp_keystone.read_bytes())},')
 @interactions.slash_command(
     name="saves_info",
     description="Get some common infos about saves",
@@ -2927,71 +3084,23 @@ async def do_get_saves_icon_image(ctx: interactions.SlashContext,save_files: str
 async def my_command_function(ctx: interactions.SlashContext):
     await ctx.send("Hello World")
 
+
 async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/,show_save_tree: bool) -> NoReturn:
-    info_message = f'Save file name: {save_name}'
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
-    shrug_emoji = '🤷'.encode('utf-8') # TODO make custom emojis for each save special character
     async with TemporaryDirectory() as tp:
         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
-        
-        desc_before_find = save_name.encode('ascii').ljust(0x20, b'\x00')
-        
         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
-        found_game_ids = []
         with open(tp_param_sfo,'rb+') as f:
-            data = f.read()
-            f.seek(0)
-            
-            for seek in (0x61C,0x62C,0xA9C):
-                f.seek(seek)
-                found_game_ids.append((f.read(9).decode('ascii'),seek))
-            if not all(x[0] == found_game_ids[0][0] for x in found_game_ids):
-                info_message += '\nMissmatching title ids in save, is a bad save'
-                for title_id,seek in found_game_ids:
-                    info_message += f'\nTitle id at 0x{seek:X}: {title_id}'
-            else:
-                info_message += f'\nTitle id: {found_game_ids[0][0]}'
-            
-            
-
-            obs_index = data.index(b'obs\x00')
-            f.seek(obs_index + len(b'obs\x00'))
-            assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
-            f.seek(-1, 1)
-            save_description = f.read(0x80).rstrip(b'\x00')
-            if save_description:
-                for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
-                    save_description = save_description.replace(x,shrug_emoji)
-                info_message += f'\nName: {save_description.decode("utf-8")}'
-
-            desc_before_find_index = data.index(desc_before_find)
-            f.seek(desc_before_find_index + 0x24)
-            save_description = f.read(0x80).rstrip(b'\x00')
-            if save_description:
-                for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
-                    save_description = save_description.replace(x,shrug_emoji)
-                info_message += f'\nDescription: {save_description.decode("utf-8")}'
-            
-            f.seek(0x15c)
-            old_account_id = PS4AccountID.from_bytes(f.read(8))
-            #26_214_400//32768
-            info_message += f'\nOld Account ID: {old_account_id.account_id}{" (starts with a letter, likley invalid account id)" if old_account_id.account_id[0] in "abcdef" else ""}'
-            f.seek(desc_before_find_index - 8)
-            da_blocks, = struct.unpack('<q',f.read(8))
-            
-            info_message += f'\nMax Decrypted Save Size: {pretty_bytes(da_blocks*32768)} ({da_blocks} Blocks) (The real limit will always be smaller then this, dont get close to it!)' # give 3MB for breathing space, idk the exact amount needed
-            
-    info_message = info_message.replace('```',r'\x60\x60\x60') # to prevent discord fucking up formatting
+            info_message = str(PS4SaveParamSfo.from_buffer(f))
 
     if show_save_tree:
         await ftp.change_directory(mount_dir)
         files = [(path,info) for path, info in (await ftp.list(recursive=True))]
-        
         info_message += '\n\nDirectory Tree\n'
         info_message += '\n'.join(f'{"/" if e[1]["type"] != "file" else ""}' + str(e[0]) + f'{"" if e[1]["type"] != "file" else " // " + pretty_bytes(int(e[1]["size"]))}' for e in files)
-
-    raise ExpectedError(info_message)
     
+    raise ExpectedError(info_message.replace('```',r'\x60\x60\x60')) # to prevent discord fucking up formatting
+
 @interactions.slash_command(
     name="saves_info",
     description="Get some common infos about saves",
@@ -3017,16 +3126,17 @@ async def re_region(ftp: aioftp.Client, mount_dir: str, save_name: str,/,*,gamei
         # seeks = (0x61C,0xA9C,0x9F8)
     # else:
     found_titleids = tuple(m.start() + 0x9F8 for m in CUSA_TITLE_ID.finditer(save_name))
-    seeks = (0x61C,0x62C,0xA9C) + found_titleids
+    seeks = PARAM_SFO_REGION_SEEKS + found_titleids
     
     await ftp.change_directory(Path(mount_dir,'sce_sys').as_posix())
     async with TemporaryDirectory() as tp:
         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
         with open(tp_param_sfo,'rb+') as f:
-            for seek in seeks:
-                f.seek(seek)
-                f.write(gameid.encode('ascii'))
+            my_param = PS4SaveParamSfo.from_buffer(f)
+        my_param.with_new_region(gameid,seeks)
+        tp_param_sfo.write_bytes(bytes(my_param))
+        
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
         if new_param := PS4_SAVE_KEYSTONES.get(gameid):
@@ -3102,13 +3212,10 @@ async def change_save_name(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
         with open(tp_param_sfo,'rb+') as f:
-            data = f.read()
-            obs_index = data.index(b'obs\x00')
-            f.seek(obs_index + len(b'obs\x00'))
-            assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
-            f.seek(-1, 1)
-            assert len(psstring_new_name) < 0x80, f'{psstring_new_name} is too long!'
-            f.write(psstring_new_name.ljust(0x80,b'\x00'))
+            my_param = PS4SaveParamSfo.from_buffer(f)
+        my_param.with_new_name(psstring_new_name)
+        tp_param_sfo.write_bytes(bytes(my_param))
+            
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
@@ -3130,13 +3237,9 @@ async def change_save_desc(ftp: aioftp.Client, mount_dir: str, save_name: str,/,
         tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
         await ftp.download('param.sfo',tp_param_sfo,write_into=True)
         with open(tp_param_sfo,'rb+') as f:
-            data = f.read()
-            desc_before_find_index = data.index(desc_before_find)
-            f.seek(desc_before_find_index + 0x24)
-            # assert f.read(1) != b'\x00', 'found a null byte, no existing save name?'
-            # f.seek(-1, 1)
-            assert len(psstring_new_desc) < 0x80, f'{psstring_new_desc} is too long!'
-            f.write(psstring_new_desc.ljust(0x80,b'\x00'))
+            my_param = PS4SaveParamSfo.from_buffer(f)
+        my_param.with_new_description(psstring_new_desc)
+        tp_param_sfo.write_bytes(bytes(my_param))
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
 
 
