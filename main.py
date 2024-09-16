@@ -44,6 +44,8 @@ from savemount_py.firmware_getter_from_libc_ps4 import get_fw_version
 from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
 from custom_crc import custom_crc
 from dry_db_stuff import ps3_level_backup_to_l0_ps4
+from bot_admin_helpers import is_in_test_mode, is_in_fast_boot_mode
+from title_id_lookup_commands import dm_all_at_once
 try:
     from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
     from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
@@ -424,14 +426,6 @@ class PS4SaveParamSfo:
         data.seek(0x9F8 - 8)
         data.write(struct.pack('<Q',blocks_count))
         self._param_sfo_data = data.getvalue()
-
-
-def is_in_test_mode() -> bool:
-    return '-t' in (x.casefold() for x in sys.argv[1:])
-
-
-def is_in_fast_boot_mode() -> bool:
-    return '-r' in (x.casefold() for x in sys.argv[1:])
 
 
 def is_user_bot_admin(ctx_author_id: str,/) -> bool:
@@ -3467,6 +3461,9 @@ async def ready():
     if _did_first_boot:
         print(f'took {time.perf_counter() - _boot_start:.1f} seconds to boot')
     _did_first_boot = False
+    print('Trying to dm the people')
+    await dm_all_at_once(bot)
+    print('Done trying to dm the people')
 
 update_status_start = time.perf_counter()
 amnt_used_this_session = 0
@@ -3609,7 +3606,7 @@ async def see_cheat_chain(ctx: interactions.SlashContext):
 async def ping_test(ctx: interactions.SlashContext):
     await ctx.defer()
     await ps4_life_check(ctx)
-    cool_ping_msg = f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms'
+    cool_ping_msg = f'<@{ctx.author_id}> Pong! bot latency is {ctx.bot.latency * 1000:.2f}ms\n**Want to get DMed by the bot when it goes online? If so, run the `/dm_me_when_online` command**'
     
     if (not CONFIG['allow_bot_usage_in_dms']) and (not ctx.channel):
         cool_ping_msg = f'{cool_ping_msg} but {CANT_USE_BOT_IN_DMS}'

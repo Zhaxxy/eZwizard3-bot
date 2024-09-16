@@ -1,10 +1,21 @@
-from typing import Sequence
+import asyncio
+from threading import Lock
+from typing import Sequence, Generator
 import re
+import logging
+import sqlite3
 
-from interactions import Extension, slash_command, SlashContext, slash_option, SlashCommandChoice, OptionType, AutocompleteContext, Embed
+from interactions import Extension, slash_command, SlashContext, slash_option, SlashCommandChoice, OptionType, AutocompleteContext, Embed, Client
 from rapidfuzz import fuzz, utils
 
 from data_files import KNOWN_TITLE_IDS, KNOWN_REGIONS, REGION_EMOJIS
+try:
+    from bot_admin_helpers import is_in_test_mode, is_in_fast_boot_mode
+except ModuleNotFoundError:
+    logging.warn('Could not find `bot_admin_helpers` to check if bot is in test mode, so dm when bot online has been disabled')
+    DM_PEOPLE_WHEN_ONLINE = False
+else:
+    DM_PEOPLE_WHEN_ONLINE = True
 
 ERROR_SIDE_EMBED_COLOUR = 0xFF0000
 NORMAL_EMBED_COLOUR = 0x00FF00
@@ -51,6 +62,93 @@ def title_id_not_found_embed_gen(title_id: str) -> Embed:
     )
 
 
+_ALREADY_INIT_DM_ME_WHEN_ONLINE_USERS_DATABASE = False
+def init_dm_me_when_online_users_database() -> None:
+    global _ALREADY_INIT_DM_ME_WHEN_ONLINE_USERS_DATABASE
+    if _ALREADY_INIT_DM_ME_WHEN_ONLINE_USERS_DATABASE:
+        return
+    try:
+        conn = sqlite3.connect('dm_me_when_online_users.db')
+        cur = conn.cursor()
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS dm_me_when_online_users (
+                id INTEGER PRIMARY KEY
+            )
+        ''')
+        conn.commit()
+        _ALREADY_INIT_DM_ME_WHEN_ONLINE_USERS_DATABASE = True
+    finally:
+        conn.close()
+
+DM_ME_WHEN_ONLINE_DB_LOCK = Lock()
+
+def add_user_to_dm_when_online_list(author_id: int):
+    with DM_ME_WHEN_ONLINE_DB_LOCK:
+        try:
+            conn = sqlite3.connect('dm_me_when_online_users.db')
+            cur = conn.cursor()
+
+            cur.execute('INSERT INTO dm_me_when_online_users (id) VALUES (?)',(author_id,))
+            conn.commit()
+        finally:
+            conn.close()
+# TODO, look into using threading to be safe
+def is_user_in_dm_when_online_list(author_id: int) -> bool:
+    with DM_ME_WHEN_ONLINE_DB_LOCK:
+        try:
+            conn = sqlite3.connect('dm_me_when_online_users.db')
+            cur = conn.cursor()
+
+            cur.execute('SELECT id FROM dm_me_when_online_users WHERE id = ?', (author_id,))
+            return cur.fetchone() is not None
+        finally:
+            conn.close()
+
+def remove_user_to_dm_when_online_list(author_id: int):
+    with DM_ME_WHEN_ONLINE_DB_LOCK:
+        try:
+            conn = sqlite3.connect('dm_me_when_online_users.db')
+            cur = conn.cursor()
+
+            cur.execute('DELETE FROM dm_me_when_online_users WHERE id = ?',(author_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+def fetch_all_dmers_wanters() -> Generator[int,None,None]:
+    with DM_ME_WHEN_ONLINE_DB_LOCK:
+        try:
+            conn = sqlite3.connect('dm_me_when_online_users.db')
+            cur = conn.cursor()
+
+            cur.execute('SELECT id FROM dm_me_when_online_users')
+            for x in cur.fetchall():
+                yield x[0]
+        finally:
+            conn.close()
+
+
+async def dm_all_at_once(bot: Client) -> None:
+    if is_in_test_mode():
+        return
+    if not DM_PEOPLE_WHEN_ONLINE:
+        return
+    init_dm_me_when_online_users_database()
+    for author_id in fetch_all_dmers_wanters():
+        author = await bot.fetch_user(author_id)
+        if not author:
+            pass#logging.debug(f'Could not find {author_id} for dming, skipping')
+            continue
+        
+        try:
+            await author.send(f'<@{author_id}> I am online, use me quick! (if you dont want to get any DMs from this bot anymore, run `/dm_me_when_online` again)')
+        except Exception as e:
+            pass#logging.debug(f'Could not dm {author_id}, got error {e}, skipping')
+        
+        pass#logging.debug(f'Dmed {author_id} succsfully!')
+        
+        
 class TitleIdLookupCommands(Extension):
     @slash_command(name = 'game_lookup', description = 'Find all title ids based on game name')
     @slash_option(name='game_name',
@@ -118,3 +216,16 @@ class TitleIdLookupCommands(Extension):
             return await ctx.send(embed=title_id_not_found_embed_gen(title_id))
         
         return await ctx.send(embed = title_id_embed_gen(title_id,*game_name_and_region))
+    if DM_PEOPLE_WHEN_ONLINE:
+        @slash_command(name = 'dm_me_when_online', description = 'Toggle on and off if you want to get dmed when the bot is online')
+        async def find_game_based_on_title_id(self,ctx: AutocompleteContext):
+            if not is_user_in_dm_when_online_list(int(ctx.author_id)):
+                try:
+                    await ctx.author.send('Test')
+                except Exception:
+                    await ctx.send('Could not dm you, maybe you have dms disabled?')
+                add_user_to_dm_when_online_list(int(ctx.author_id))
+                await ctx.send('You will now get dmed by me, when I next go online! (run this command again to disable this)')
+            else:
+                remove_user_to_dm_when_online_list(int(ctx.author_id))
+                await ctx.send('No longer, shall you get DMs by me! (run this command again to enable this)')
