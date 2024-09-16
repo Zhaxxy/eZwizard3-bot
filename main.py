@@ -324,8 +324,6 @@ class PS4SaveParamSfo:
         menu_name = f.read(0x80).rstrip(b'\x00')
         
         menu_name_checker = menu_name
-        for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
-            menu_name_checker = menu_name_checker.replace(x,b'')
         menu_name_checker.decode('utf-8') # using as an error check
         
         
@@ -339,8 +337,6 @@ class PS4SaveParamSfo:
         save_description = f.read(0x80).rstrip(b'\x00')
         if save_description:
             save_description_checker = save_description
-            for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
-                save_description_checker = save_description_checker.replace(x,b'')
             save_description_checker.decode("utf-8") # using as an error check
         f.seek(0x15c)
         account_id = PS4AccountID.from_bytes(f.read(8))
@@ -390,12 +386,18 @@ class PS4SaveParamSfo:
         f = BytesIO(self._param_sfo_data)
         
         if new_string: # TODO check if you can change description even if none exist
-            save_description_checker = new_string
-            for x in PARAM_SFO_SPECIAL_STRINGS_AS_BYTES:
-                save_description_checker = save_description_checker.replace(x,b'')
-            save_description_checker.decode("utf-8") # using as an error check
-        if len(new_string) >= max_length:
-            raise ValueError(f'Description {new_string!r} is too big, max is {max_length-1} bytes long')
+            new_string.decode("utf-8") # using as an error check
+            if len(new_string) >= max_length:
+                new_string = new_string[:max_length-1]
+            
+                while True:
+                    try:
+                        new_string.decode("utf-8")
+                    except Exception:
+                        new_string = new_string[:-1]
+                        continue
+                    break
+
         f.seek(offset)
         f.write(new_string.ljust(max_length,b'\x00'))
         self._param_sfo_data = f.getvalue()
@@ -405,6 +407,8 @@ class PS4SaveParamSfo:
 
     def with_new_name(self, menu_name: bytes) -> None:
         new_offset = self._param_sfo_data.index(b'obs\x00') + len(b'obs\x00')
+        if not menu_name:
+            raise ValueError('You need to provided a save ps4 menu name')
         self._with_new_special_ps_string(menu_name,new_offset)
 
     def with_new_dir_name(self, dir_name: str) -> None:
