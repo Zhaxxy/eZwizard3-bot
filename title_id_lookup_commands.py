@@ -1,5 +1,4 @@
 import asyncio
-from threading import Lock
 from typing import Sequence, Generator
 import re
 import logging
@@ -81,52 +80,48 @@ def init_dm_me_when_online_users_database() -> None:
     finally:
         conn.close()
 
-DM_ME_WHEN_ONLINE_DB_LOCK = Lock()
+DM_ME_WHEN_ONLINE_DB_LOCK = asyncio.Lock()
 
 def add_user_to_dm_when_online_list(author_id: int):
-    with DM_ME_WHEN_ONLINE_DB_LOCK:
-        try:
-            conn = sqlite3.connect('dm_me_when_online_users.db')
-            cur = conn.cursor()
+    try:
+        conn = sqlite3.connect('dm_me_when_online_users.db')
+        cur = conn.cursor()
 
-            cur.execute('INSERT INTO dm_me_when_online_users (id) VALUES (?)',(author_id,))
-            conn.commit()
-        finally:
-            conn.close()
+        cur.execute('INSERT INTO dm_me_when_online_users (id) VALUES (?)',(author_id,))
+        conn.commit()
+    finally:
+        conn.close()
 # TODO, look into using threading to be safe
 def is_user_in_dm_when_online_list(author_id: int) -> bool:
-    with DM_ME_WHEN_ONLINE_DB_LOCK:
-        try:
-            conn = sqlite3.connect('dm_me_when_online_users.db')
-            cur = conn.cursor()
+    try:
+        conn = sqlite3.connect('dm_me_when_online_users.db')
+        cur = conn.cursor()
 
-            cur.execute('SELECT id FROM dm_me_when_online_users WHERE id = ?', (author_id,))
-            return cur.fetchone() is not None
-        finally:
-            conn.close()
+        cur.execute('SELECT id FROM dm_me_when_online_users WHERE id = ?', (author_id,))
+        return cur.fetchone() is not None
+    finally:
+        conn.close()
 
 def remove_user_to_dm_when_online_list(author_id: int):
-    with DM_ME_WHEN_ONLINE_DB_LOCK:
-        try:
-            conn = sqlite3.connect('dm_me_when_online_users.db')
-            cur = conn.cursor()
+    try:
+        conn = sqlite3.connect('dm_me_when_online_users.db')
+        cur = conn.cursor()
 
-            cur.execute('DELETE FROM dm_me_when_online_users WHERE id = ?',(author_id,))
-            conn.commit()
-        finally:
-            conn.close()
+        cur.execute('DELETE FROM dm_me_when_online_users WHERE id = ?',(author_id,))
+        conn.commit()
+    finally:
+        conn.close()
 
 def fetch_all_dmers_wanters() -> Generator[int,None,None]:
-    with DM_ME_WHEN_ONLINE_DB_LOCK:
-        try:
-            conn = sqlite3.connect('dm_me_when_online_users.db')
-            cur = conn.cursor()
+    try:
+        conn = sqlite3.connect('dm_me_when_online_users.db')
+        cur = conn.cursor()
 
-            cur.execute('SELECT id FROM dm_me_when_online_users')
-            for x in cur.fetchall():
-                yield x[0]
-        finally:
-            conn.close()
+        cur.execute('SELECT id FROM dm_me_when_online_users')
+        for x in cur.fetchall():
+            yield x[0]
+    finally:
+        conn.close()
 
 
 async def dm_all_at_once(bot: Client) -> None:
@@ -219,13 +214,15 @@ class TitleIdLookupCommands(Extension):
     if DM_PEOPLE_WHEN_ONLINE:
         @slash_command(name = 'dm_me_when_online', description = 'Toggle on and off if you want to get dmed when the bot is online')
         async def find_game_based_on_title_id(self,ctx: AutocompleteContext):
-            if not is_user_in_dm_when_online_list(int(ctx.author_id)):
-                try:
-                    await ctx.author.send('Test')
-                except Exception:
-                    await ctx.send('Could not dm you, maybe you have dms disabled?')
-                add_user_to_dm_when_online_list(int(ctx.author_id))
-                await ctx.send('You will now get dmed by me, when I next go online! (run this command again to disable this)')
-            else:
-                remove_user_to_dm_when_online_list(int(ctx.author_id))
-                await ctx.send('No longer, shall you get DMs by me! (run this command again to enable this)')
+            await ctx.defer()
+            async with DM_ME_WHEN_ONLINE_DB_LOCK:
+                if not is_user_in_dm_when_online_list(int(ctx.author_id)):
+                    try:
+                        await ctx.author.send('Test')
+                    except Exception:
+                        await ctx.send('Could not dm you, maybe you have dms disabled?')
+                    add_user_to_dm_when_online_list(int(ctx.author_id))
+                    await ctx.send('You will now get dmed by me, when I next go online! (run this command again to disable this)')
+                else:
+                    remove_user_to_dm_when_online_list(int(ctx.author_id))
+                    await ctx.send('No longer, shall you get DMs by me! (run this command again to enable this)')
