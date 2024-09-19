@@ -213,7 +213,7 @@ class TitleIdLookupCommands(Extension):
         return await ctx.send(embed = title_id_embed_gen(title_id,*game_name_and_region))
     if DM_PEOPLE_WHEN_ONLINE:
         @slash_command(name = 'dm_me_when_online', description = 'Toggle on and off if you want to get dmed when the bot is online')
-        async def find_game_based_on_title_id(self,ctx: AutocompleteContext):
+        async def do_dm_me_when_online(self,ctx: AutocompleteContext):
             await ctx.defer()
             async with DM_ME_WHEN_ONLINE_DB_LOCK:
                 if not is_user_in_dm_when_online_list(int(ctx.author_id)):
