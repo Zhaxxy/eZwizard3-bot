@@ -16,6 +16,14 @@ except ModuleNotFoundError:
 else:
     DM_PEOPLE_WHEN_ONLINE = True
 
+try:
+    from title_id_lookup_commands_admins import BOT_ADMINS
+except ModuleNotFoundError:
+    logging.warn('Could not find `title_id_lookup_commands_admins` to check for bot_admins, so /admin_server_list wont work')
+    BOT_ADMINS = ()
+
+
+
 ERROR_SIDE_EMBED_COLOUR = 0xFF0000
 NORMAL_EMBED_COLOUR = 0x00FF00
 
@@ -42,6 +50,13 @@ NO_GAMES_FOUND_EMBED = Embed(
         footer = 'Perhaps try being more broad with the region, such as searching by Europe instead of Germany',
         color = ERROR_SIDE_EMBED_COLOUR
     )
+
+
+def chunker(seq, size):
+    """
+    https://stackoverflow.com/questions/434287/how-to-iterate-over-a-list-in-chunks
+    """
+    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 
 def title_id_embed_gen(title_id: str, game_name: str, regions: Sequence[str]) -> Embed:
@@ -123,7 +138,9 @@ def fetch_all_dmers_wanters() -> Generator[int,None,None]:
     finally:
         conn.close()
 
-
+def _is_admin(author_id: int) -> bool:
+    return author_id in BOT_ADMINS
+    
 async def dm_all_at_once(bot: Client) -> None:
     if is_in_test_mode():
         return
@@ -142,8 +159,8 @@ async def dm_all_at_once(bot: Client) -> None:
             pass#logging.debug(f'Could not dm {author_id}, got error {e}, skipping')
         
         pass#logging.debug(f'Dmed {author_id} succsfully!')
-        
-        
+
+
 class TitleIdLookupCommands(Extension):
     @slash_command(name = 'game_lookup', description = 'Find all title ids based on game name')
     @slash_option(name='game_name',
@@ -226,3 +243,54 @@ class TitleIdLookupCommands(Extension):
                 else:
                     remove_user_to_dm_when_online_list(int(ctx.author_id))
                     await ctx.send('No longer, shall you get DMs by me! (run this command again to enable this)')
+
+    # Made by smok (and chatgpt lol), and some edits by Zhaxxy
+    @slash_command(
+        name='admin_server_list', 
+        description="Displays a list of all servers the bot is in. Admin only."
+    )
+    async def admin_server_list(self, ctx: SlashContext):
+        if not _is_admin(ctx.author.id):
+            await ctx.send(f"**Yo!**\n*You don't need to know this information..*", ephemeral=False)
+            return
+
+        guilds = ctx.bot.guilds
+        guild_list = [f"• {guild.name} (ID: {guild.id})" for guild in guilds]
+        guild_count = len(guilds)
+        
+        for sub_guild_list in chunker(guild_list,10):
+            embed = Embed(
+                title="📡 Lista de Servidores!",
+                description=(
+                    f"• **Numero de Servidores:** `{guild_count}`\n"
+                    + "\n".join(sub_guild_list) + "\n\n"
+                    f"To remove a server, use `/remove_server <guild_id>`."
+                ),
+                color=0x0083ff  # Customize the color if needed
+            )
+
+            await ctx.send(embed=embed, ephemeral=False)
+
+
+    # Command to remove a server from the bot by typing the guild ID
+    @slash_command(
+        name='remove_server', 
+        description="Removes the bot from the specified server. Admin only."
+    )
+    @slash_option("guild_id", description="The ID of the server to remove", opt_type=OptionType.STRING, required=True)
+    async def remove_server(self, ctx: SlashContext, guild_id: str):
+        if not _is_admin(ctx.author.id):
+            await ctx.send("You do not have permission to use this command.", ephemeral=False)
+            return
+        try:
+            guild_id = int(guild_id)
+        except ValueError:
+            guild = None
+        else:
+            guild = ctx.bot.get_guild(guild_id)
+        
+        if guild:
+            await guild.leave()
+            await ctx.send(f"Successfully removed the bot from **{guild.name}** (ID: {guild_id}).", ephemeral=False)
+        else:
+            await ctx.send(f"Could not find a server with ID: {guild_id}.", ephemeral=False)
