@@ -13,7 +13,7 @@ import zipfile
 import os
 import math
 from stat import S_IWRITE
-from datetime import datetime
+import datetime
 from zlib import crc32 # put modules you need at the bottom of list for custom cheats, in correct block
 import struct
 import gzip
@@ -439,7 +439,7 @@ def is_user_bot_admin(ctx_author_id: str,/) -> bool:
 _token_getter = asyncio.Lock()
 async def get_time_as_string_token() -> str:
     async with _token_getter:
-        return datetime.utcnow().strftime("%d_%m_%Y__%H_%M_%S")
+        return datetime.datetime.now(datetime.UTC).strftime("%d_%m_%Y__%H_%M_%S")
 
 
 def delete_empty_folders(root: Path):
@@ -934,9 +934,17 @@ def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/,archive_name: st
         ps4_saves.append((zip_file.path,white_file))
     return ps4_saves,found_zips
 
-async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_or_folder: Path, max_size=FILE_SIZE_TOTAL_LIMIT):
+
+class ArchiveAndTempFolder(NamedTuple):
+    archive_path: Path
+    temp_folder: Path
+
+
+async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_or_folder: Path | ArchiveAndTempFolder, max_size=FILE_SIZE_TOTAL_LIMIT) -> str:
     raise NotImplementedError('not finshed')
-    if archive_or_folder.is_file():
+    temp_folder = archive_or_folder
+    if isisinstance(archive_or_folder,ArchiveAndTempFolder):
+        temp_folder = archive_or_folder.temp_folder
         await log_message(ctx,f'Checking {link} if valid archive')
         try:
             zip_info = await get_archive_info(archive_name)
@@ -949,14 +957,16 @@ async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: intera
             return f'The decompressed {link} is too big ({pretty_bytes(current_total_size)}), the max is {pretty_bytes(max_size)}' # if its a folder, im assuming the size was already checked
         
         await log_message(ctx,f'Extracting {link}')
-        await extract_full_archive(archive_or_folder,output_folder,'x')
+        await extract_full_archive(archive_or_folder.archive_path,temp_folder,'x')
     
     
     found_an_archive = False
     found_a_savedata0_folder = False
     
+    found_things = 0
+    
     await log_message(ctx,f'Looking for `sce_sys` folders in {link}')
-    for x in output_folder.rglob('*'):
+    for x in temp_folder.rglob('*'):
         if '__MACOSX' in x.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
         if x.name.startswith('._'): continue
         if not x.is_dir():
@@ -967,7 +977,7 @@ async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: intera
             found_a_savedata0_folder = True
         
         if x.name == 'sce_sys' and (x.parts.count('sce_sys') == 1):
-            pretty_dir = x.relative_to(output_folder)
+            pretty_dir = x.relative_to(temp_folder)
             pretty_dir = str(pretty_dir.parent if pretty_dir.parent.parts else 'LOOSE')
             
             await log_message(ctx,f'Checking if param.sfo in {pretty_dir} is valid')
@@ -975,8 +985,18 @@ async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: intera
             if not param_sfo.is_file():
                 consider_using_option = 'raw_encrypt_folder' if x.parent.name == 'savedata0' else 'raw_encrypt_folder_type_2'
                 return f'No param.sfo found in {pretty_dir} + {link}, consider using /{consider_using_option} instead'
-
-
+            try:
+                with open(param_sfo,'rb') as f:
+                    my_param = PS4SaveParamSfo.from_buffer(f)
+            except Exception:
+                return make_error_message_if_verbose_or_not(ctx.author_id,f'bad param.sfo in {pretty_dir} + {link}','')
+            await shutil.move(x.parent,output_folder)
+            found_things += 1
+            if len(found_things) > MAX_RESIGNS_PER_ONCE:
+                return f'too many decrypted saves in {link}, max is {MAX_RESIGNS_PER_ONCE}'
+    return ''
+    
+    
 async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_name: Path) -> str:
     await log_message(ctx,f'Checking {link} if valid archive')
     try:
