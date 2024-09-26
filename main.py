@@ -628,7 +628,14 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
             placeholder_meesage_to_allow_ping_to_actually_ping_the_user = await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
             await ctx.send(full_msg,ephemeral=False, files=files) 
             await ctx.delete(placeholder_meesage_to_allow_ping_to_actually_ping_the_user)
-
+    
+    try:
+        ctx.ezwizard3_special_ctx_attr_helped_people_by_allowing_non_cusa_google_drive_folders
+    except AttributeError:
+        pass
+    else:
+        add_new_helped_people_by_allowing_non_cusa_google_drive_folders(ctx.ezwizard3_special_ctx_attr_helped_people_by_allowing_non_cusa_google_drive_folders)
+    
     await update_status()
 
 
@@ -870,6 +877,14 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
     
     return leader + f'{message_1} reasom:\n{error_msg}\n {message_2}'
 
+def add_new_helped_people_by_allowing_non_cusa_google_drive_folders(unq_id: str,/):
+    with SqliteDict("user_stuff.sqlite", tablename="helped_people_by_allowing_non_cusa_google_drive_folders_ids") as db:
+        db[unq_id] = unq_id
+        db.commit()
+
+def get_amnt_of_helped_people_by_allowing_non_cusa_google_drive_folders() -> int:
+    with SqliteDict("user_stuff.sqlite", tablename="helped_people_by_allowing_non_cusa_google_drive_folders_ids") as db:
+        return len(db)
 
 user_cheat_chains = {}
 def add_cheat_chain(author_id: str, cheat_function: CheatFunc):
@@ -1442,7 +1457,12 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
             if bin_file.size != 96:
                 return f'Invalid bin file {bin_file.file_name_as_path} found in {link}'
             
-            title_id = white_file.file_name_as_path.parent.name if is_ps4_title_id(white_file.file_name_as_path.parent.name) else 'CUSA00000'
+            is_google_drive_parent_folder_a_cusa = is_ps4_title_id(white_file.file_name_as_path.parent.name)
+            
+            title_id = white_file.file_name_as_path.parent.name if is_google_drive_parent_folder_a_cusa else 'CUSA00000'
+            
+            if not is_google_drive_parent_folder_a_cusa:
+                ctx.ezwizard3_special_ctx_attr_helped_people_by_allowing_non_cusa_google_drive_folders = f'{white_file.file_id}/{bin_file.file_id}'
             
             x = make_folder_name_safe(bin_file.file_name_as_path.parent)
             
@@ -3172,7 +3192,10 @@ async def do_get_saves_icon_image(ctx: interactions.SlashContext,save_files: str
 
 @interactions.slash_command(name="my_command", description="My first command :)")
 async def my_command_function(ctx: interactions.SlashContext):
-    await ctx.send("Hello World")
+    await ctx.defer()
+    res = get_amnt_of_helped_people_by_allowing_non_cusa_google_drive_folders()
+    new = f' {res}' if res else ''
+    await ctx.send("Hello World" + new)
 
 
 async def param_sfo_info(ftp: aioftp.Client, mount_dir: str, save_name: str,/,show_save_tree: bool) -> NoReturn:
