@@ -462,15 +462,33 @@ def delete_empty_folders(root: Path):
 
 
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
+    """
+    mode 1 is test mode
+    """
     nth_time = 1
     try:
         ctx.ezwizard3_special_ctx_attr_setup_done += 1
         nth_time = ctx.ezwizard3_special_ctx_attr_setup_done
     except AttributeError:
-        await ctx.defer()
+        if mode != 1:
+            await ctx.defer()
     # t = await ctx.respond(content=get_a_stupid_silly_random_string_not_unique())
     # await ctx.delete(t)
-    ctx.ezwizard3_special_ctx_attr_mode = mode
+    try:
+        ctx.ezwizard3_special_ctx_attr_mode
+    except AttributeError:
+        ctx.ezwizard3_special_ctx_attr_mode = mode
+    if ctx.ezwizard3_special_ctx_attr_mode == 1:
+        ctx.author_id
+        ctx.channel = True
+        ctx.ezwizard3_special_ctx_attr_testing_log_message
+        ctx.ezwizard3_special_ctx_attr_testing_log_message_tick_tock
+        ctx.ezwizard3_special_ctx_attr_testing_log_user_error
+        ctx.ezwizard3_special_ctx_attr_testing_log_user_success
+        
+        
+        
+        
     await log_message(ctx,f'Pleast wait, if over a minute is spent here do the command again! {nth_time}th time here',_do_print = False)
     ctx.ezwizard3_special_ctx_attr_setup_done = 1
     return ctx
@@ -489,6 +507,9 @@ async def pretty_pingers_do(ctx: interactions.SlashContext,pingers: None | Seque
     return ''
     
 async def log_message(ctx: interactions.SlashContext, msg: str,*,pingers: None | Sequence[int] = None,_do_print: bool = True):
+    if ctx.ezwizard3_special_ctx_attr_mode == 1:
+        ctx.ezwizard3_special_ctx_attr_testing_log_message(msg)
+        return
     if _do_print:
         print(msg)
 
@@ -515,6 +536,10 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     """
     Use this when you know its gonna wait for a while, MAKE SURE YOU USE `asyncio.create_task` and cancel the task as soon as long task is done
     """
+    if ctx.ezwizard3_special_ctx_attr_mode == 1:
+        ctx.ezwizard3_special_ctx_attr_testing_log_message_tick_tock(msg)
+        return
+        
     msg = msg[:2000-len(', over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)')]
     await log_message(ctx, msg)
     
@@ -530,6 +555,11 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     
     
 async def log_user_error(ctx: interactions.SlashContext, error_msg: str,*,pingers: None | Sequence[int] = None):
+    if ctx.ezwizard3_special_ctx_attr_mode == 1:
+        pingers = [] or pingers
+        ctx.ezwizard3_special_ctx_attr_testing_log_user_error(msg,pingers)
+        return
+        
     files = []
     # if error_msg == 'Theres too many people using the bot at the moment, please wait for a spot to free up':
         # # await ctx.send(get_a_stupid_silly_random_string_not_unique(),ephemeral=False)
@@ -567,6 +597,11 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str,*,pinger
 
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None,*,pingers: None | Sequence[int] = None):
     files = [file] if file else []
+    if ctx.ezwizard3_special_ctx_attr_mode == 1:
+        pingers = [] or pingers
+        ctx.ezwizard3_special_ctx_attr_testing_log_user_success(msg,pingers)
+        return
+    
     print(f'{ctx.user} id: {ctx.author_id} sucesfully did a command with msg: {success_msg}')
     channel = ctx.channel or ctx.author
     
@@ -941,13 +976,13 @@ class ArchiveAndTempFolder(NamedTuple):
 
 
 async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID, archive_or_folder: Path | ArchiveAndTempFolder, max_size=FILE_SIZE_TOTAL_LIMIT) -> str:
-    raise NotImplementedError('not finshed')
+    raise NotImplementedError('not finshed, theres dead code here, and i need to find out how to extract nested archives, as well as finding sce_sys folders, as well as loose sce_sys, and only doing one if its loose')
     temp_folder = archive_or_folder
-    if isisinstance(archive_or_folder,ArchiveAndTempFolder):
+    if isinstance(archive_or_folder,ArchiveAndTempFolder):
         temp_folder = archive_or_folder.temp_folder
         await log_message(ctx,f'Checking {link} if valid archive')
         try:
-            zip_info = await get_archive_info(archive_name)
+            zip_info = await get_archive_info(archive_or_folder.archive_path)
         except Exception as e:
             return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
         
@@ -964,17 +999,23 @@ async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: intera
     found_a_savedata0_folder = False
     
     found_things = 0
+    consider_using_option = 'raw_encrypt_folder_type_2'
     
     await log_message(ctx,f'Looking for `sce_sys` folders in {link}')
+    
+    for x in temp_fold.iterdir():
+        if 
+    
     for x in temp_folder.rglob('*'):
         if '__MACOSX' in x.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
         if x.name.startswith('._'): continue
         if not x.is_dir():
             if not filename_valid_extension(x.name):
+                ctx.ezwizard3_special_ctx_attr_noticemsg_ = '**We found some archives in the decrpyted saves, we do not support unpacking archives within archives for this command, if the archives are part of the decrypted save, please ignore this message**'
                 found_an_archive = True
             continue
         if x.name == 'savedata0' and (x.parts.count('savedata0') == 1):
-            found_a_savedata0_folder = True
+            consider_using_option = 'raw_encrypt_folder'
         
         if x.name == 'sce_sys' and (x.parts.count('sce_sys') == 1):
             pretty_dir = x.relative_to(temp_folder)
@@ -983,17 +1024,22 @@ async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: intera
             await log_message(ctx,f'Checking if param.sfo in {pretty_dir} is valid')
             param_sfo = x / 'param.sfo'
             if not param_sfo.is_file():
-                consider_using_option = 'raw_encrypt_folder' if x.parent.name == 'savedata0' else 'raw_encrypt_folder_type_2'
-                return f'No param.sfo found in {pretty_dir} + {link}, consider using /{consider_using_option} instead'
+                return f'No param.sfo found in {pretty_dir} + {link}'
             try:
                 with open(param_sfo,'rb') as f:
                     my_param = PS4SaveParamSfo.from_buffer(f)
             except Exception:
                 return make_error_message_if_verbose_or_not(ctx.author_id,f'bad param.sfo in {pretty_dir} + {link}','')
+            my_param.with_new_account_id(account_id)
+            param_sfo.write_bytes(bytes(my_param))
+            await log_message(ctx,f'Doing some cleanup for {pretty_dir} + {link}')
+            make_folder_name_safe(pretty_dir)
             await shutil.move(x.parent,output_folder)
             found_things += 1
-            if len(found_things) > MAX_RESIGNS_PER_ONCE:
-                return f'too many decrypted saves in {link}, max is {MAX_RESIGNS_PER_ONCE}'
+            if found_things > MAX_RESIGNS_PER_ONCE:
+                return f'Too many decrypted saves in {link}, max is {MAX_RESIGNS_PER_ONCE}'
+    if not found_things:
+        return f'Did not find any sce_sys folders in there, consider using /{consider_using_option} instead'
     return ''
     
     
@@ -4002,7 +4048,9 @@ if __name__ == '__main__':
     print('done making the /quick commands')
 
 
-async def main() -> int:
+async def main(turn_on_bot: bool = True, patched_memory_object = None, print_function = print) -> int:
+    print = print_function
+    
     check_base_saves = not is_in_fast_boot_mode()
     global GIT_EXISTS
     global ZAPRIT_FISH_IS_UP
@@ -4105,7 +4153,9 @@ async def main() -> int:
     print('Patching memory')
     global mem
     global bot
-    async with PatchMemoryPS4900(ps4,ps4_fw_version) as mem:
+    async with PatchMemoryPS4900(ps4,ps4_fw_version) if (patched_memory_object is None) else nullcontext() as mem:
+        if patched_memory_object:
+            mem = patched_memory_object
         if check_base_saves:
             print('Memory patched, ensuring all base saves exist!')
             for eeeee in SAVE_DIRS:
@@ -4113,9 +4163,11 @@ async def main() -> int:
                     if not mp:
                         raise ValueError(f'broken base save {eeeee}, reason: {mp.error_code} ({ERROR_CODE_LONG_NAMES.get(mp.error_code,"Missing Long Name")})')
         print('done checking!')
-        bot = interactions.Client(token=CONFIG['discord_token'])
-        bot.load_extension("title_id_lookup_commands")
-        await bot.astart()
+        if turn_on_bot:
+            print('turning on bot...')
+            bot = interactions.Client(token=CONFIG['discord_token'])
+            bot.load_extension("title_id_lookup_commands")
+            await bot.astart()
     return 0 
 
 if __name__ == '__main__':

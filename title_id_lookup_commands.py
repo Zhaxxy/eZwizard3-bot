@@ -3,6 +3,8 @@ from typing import Sequence, Generator
 import re
 import logging
 import sqlite3
+from typing import Any
+import dis
 
 from interactions import Extension, slash_command, SlashContext, slash_option, SlashCommandChoice, OptionType, AutocompleteContext, Embed, Client
 from rapidfuzz import fuzz, utils
@@ -161,6 +163,23 @@ async def dm_all_at_once(bot: Client) -> None:
         pass#logging.debug(f'Dmed {author_id} succsfully!')
 
 
+class CouldNotEvalConstatCause2Large(Exception):
+    """
+    A
+    """
+
+def get_cool_thing(thing: str) -> Any:
+    me = eval(f'lambda: {thing}')
+    try:
+        me = me[0]
+    except Exception:
+        pass
+    results = [x.argrepr for x in dis.get_instructions(me) if x.opname in ('LOAD_CONST','LOAD_GLOBAL')]
+    if len(results) != 1:
+        raise CouldNotEvalConstatCause2Large
+    return results[0]
+
+
 class TitleIdLookupCommands(Extension):
     @slash_command(name = 'game_lookup', description = 'Find all title ids based on game name')
     @slash_option(name='game_name',
@@ -294,3 +313,24 @@ class TitleIdLookupCommands(Extension):
             await ctx.send(f"Successfully removed the bot from **{guild.name}** (ID: {guild_id}).", ephemeral=False)
         else:
             await ctx.send(f"Could not find a server with ID: {guild_id}.", ephemeral=False)
+    
+    @slash_command(
+        name='eval_basic_python_constants',
+        description="See how python stores a constant, like `0xfF+0o42` would return `289`"
+    )
+    @slash_option("input_constant", description=r"a Python constant, like `'\u2603'` would return `'☃'`", opt_type=OptionType.STRING, required=True, max_length=45)
+    async def eval_basic_python_constants(self, ctx: SlashContext, input_constant: str):
+        if len(input_constant) > 45:
+            return
+        
+        input_constant = input_constant.replace('\n','').replace('\r\n','')
+        try:
+            res = get_cool_thing(input_constant)
+        except SyntaxError:
+            await ctx.send(f'There was a SyntaxError with {input_constant}, youre doing something wrong')
+            return
+        except CouldNotEvalConstatCause2Large:
+            await ctx.send(f'The expression you gave is too large, it was not compiled to a single constant')
+            return
+            
+        await ctx.send(res)
