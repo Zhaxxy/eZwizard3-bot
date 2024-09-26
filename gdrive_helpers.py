@@ -166,6 +166,22 @@ def _get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> Generat
     this function messes up if you use exact same path, but who tf be doing that
     """
     no_ids = {_PathWithNoIDInHash(x): x for x in the_folder}
+    only_loose_files_here = sum((not x.is_file) for x in the_folder) <= 1
+    
+    if only_loose_files_here:
+        res: list[PS4GDriveFileSave] = []
+        for filepath in no_ids:
+            if filepath.file_thing.file_name_as_path.name.startswith('._'): continue
+            if not filepath.file_thing.is_file: continue
+            
+            if filepath.file_thing.file_name_as_path.suffix != '.bin':
+                bin_file = no_ids.get(_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix('.bin'),'')))
+                if not bin_file:
+                    return
+                res.append(PS4GDriveFileSave(bin_file,no_ids[filepath]))
+        yield from res
+        return
+        
     for filepath in no_ids:
         if '__MACOSX' in filepath.file_thing.file_name_as_path.parts and (not filepath.file_thing.is_file): continue
         if filepath.file_thing.file_name_as_path.name.startswith('._'): continue

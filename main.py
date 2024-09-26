@@ -36,7 +36,7 @@ from PIL import Image
 from lbptoolspy import far4_tools,install_mods_to_bigfart # put modules you need at the bottom of list for custom cheats, in correct block
 from lbptoolspy.binary_files import LBP3_PS4_L0_FILE_TEMPLATE
 
-from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES,extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe,pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words, non_format_susceptible_byte_repr, hex_dump
+from string_helpers import INT64_MAX_MIN_VALUES, UINT64_MAX_MIN_VALUES, INT32_MAX_MIN_VALUES, UINT32_MAX_MIN_VALUES, INT16_MAX_MIN_VALUES, UINT16_MAX_MIN_VALUES, INT8_MAX_MIN_VALUES, UINT8_MAX_MIN_VALUES, extract_drive_folder_id, extract_drive_file_id, is_ps4_title_id, make_folder_name_safe, reset_make_folder_name_counter, pretty_time, load_config, CUSA_TITLE_ID, chunker, is_str_int, get_a_stupid_silly_random_string_not_unique, is_psn_name, PARENT_TEMP_DIR, pretty_bytes, pretty_seconds_words, non_format_susceptible_byte_repr, hex_dump
 from archive_helpers import get_archive_info, extract_single_file, filename_valid_extension,SevenZipFile,SevenZipInfo, extract_full_archive, filename_is_not_an_archive
 from gdrive_helpers import get_gdrive_folder_size, list_files_in_gdrive_folder, gdrive_folder_link_to_name, get_valid_saves_out_names_only, download_file, get_file_info_from_id, GDriveFile, download_folder, google_drive_upload_file, make_gdrive_folder, get_folder_info_from_id, delete_google_drive_file_or_file_permentaly
 from savemount_py import PatchMemoryPS4900,MountSave,ERROR_CODE_LONG_NAMES,unmount_save,send_ps4debug,SUPPORTED_MEM_PATCH_FW_VERSIONS
@@ -696,12 +696,20 @@ class _ResourceManager:
     async def get_free_resources_count(self):
         async with self.lock:
             return len(self.resources) - len(self.used_resources)
+    
+    async def is_all_resources_free(self) -> bool:
+        async with self.lock:
+            return bool(self.used_resources)
+    
 SAVE_DIRS = ('save0', 'save1', 'save2', 'save3', 'save4', 'save5', 'save6', 'save7', 'save8', 'save9', 'save10', 'save11')
 
 _save_mount_points = _ResourceManager(SAVE_DIRS)
 
 async def get_save_str() -> str:
     return await _save_mount_points.acquire_resource()
+
+async def is_bot_completely_free() -> bool:
+    return await _save_mount_points.is_all_resources_free()
 
 async def free_save_str(save_str: str,/) -> None:
     return await _save_mount_points.release_resource(save_str)
@@ -1434,9 +1442,13 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
             if bin_file.size != 96:
                 return f'Invalid bin file {bin_file.file_name_as_path} found in {link}'
             
-            new_white_path = Path(output_folder, make_folder_name_safe(white_file.file_name_as_path.parent), make_ps4_path(account_id,white_file.file_name_as_path.parent.name),white_file.file_name_as_path.name)
-            new_bin_path = Path(output_folder, make_folder_name_safe(bin_file.file_name_as_path.parent), make_ps4_path(account_id,bin_file.file_name_as_path.parent.name),bin_file.file_name_as_path.name)
-
+            title_id = white_file.file_name_as_path.parent.name if is_ps4_title_id(white_file.file_name_as_path.parent.name) else 'CUSA00000'
+            
+            x = make_folder_name_safe(bin_file.file_name_as_path.parent)
+            
+            new_white_path = Path(output_folder, x, make_ps4_path(account_id,title_id),white_file.file_name_as_path.name)
+            new_bin_path = Path(output_folder, x, make_ps4_path(account_id,title_id),bin_file.file_name_as_path.name)
+            
             await log_message(ctx,f'Downloading {white_file.file_name_as_path} from {link}')
             try:
                 await download_file(white_file.file_id,new_white_path)
@@ -1602,6 +1614,20 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                 except Exception:
                     return make_error_message_if_verbose_or_not(ctx_author_id,f'Bad save {pretty_save_dir}','bad or missing param.sfo')
                 
+            
+            
+            async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
+                try:
+                    await ftp.change_directory(Path(new_mount_dir,'sce_sys').as_posix())
+                    async with TemporaryDirectory() as tp:
+                        tp_param_sfo = Path(tp,'TEMPPPPPPPPPPparam_sfo')
+                        await ftp.download('param.sfo',tp_param_sfo,write_into=True)
+                        with open(tp_param_sfo,'rb') as f:
+                            real_title_id = PS4SaveParamSfo.from_buffer(f).title_id
+                        results.insert(0,CheatFuncResult(None,real_title_id))
+                except Exception as e:
+                    return f'Bad save {pretty_save_dir} ({e}) missing param.sfo or broken param.sfo'
+            
             return_payload = results,account_id_old,real_name
             
             async with setting_global_image_lock:
@@ -3547,6 +3573,9 @@ async def get_bot_status(*,trunacte_status_text: bool = True) -> tuple[str,inter
     global _did_first_boot
     async with BOT_STATUS_GETTING:
         amnt_of_free = await get_amnt_free_save_strs()
+        
+        if await is_bot_completely_free():
+            reset_make_folder_name_counter()
         
         leader = 'IN TEST MODE, NO ONE CAN USE BOT! ' if is_in_test_mode() else ''
         

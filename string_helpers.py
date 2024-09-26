@@ -150,14 +150,39 @@ def extract_drive_file_id(link: str,/) -> str:
         return link.split('https://drive.google.com/file/u/0/d/')[-1].split('/view')[0]
     return ''
 
+_BASE37_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz_"
+
+def _base37_encode(num: int,/) -> str:
+    if num == 0:
+        return _BASE37_DIGITS[0]
+    arr = []
+    arr_append = arr.append  # Extract bound-method for faster access.
+    _divmod = divmod  # Access to locals is faster.
+    base = len(_BASE37_DIGITS)
+    while num:
+        num, rem = _divmod(num, base)
+        arr_append(_BASE37_DIGITS[rem])
+    arr.reverse()
+    return ''.join(arr)
+
+
 MAKE_FOLDER_NAME_SAFE_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_'
+_make_folder_name_counter = 0
+
 def make_folder_name_safe(some_string_path_ig: str | Path, /) -> str:
-    some_string_path_ig = str(some_string_path_ig).replace(' ','_').replace('/','_').replace('\\','_').replace('.','-')
+    global _make_folder_name_counter
+    some_string_path_ig = str(some_string_path_ig).replace(' ','_').replace('/','-').replace('\\','-').replace('.','-')
     some_string_path_ig = some_string_path_ig.removeprefix('PS4_FOLDER_IN_ME_')
     leader = 'PS4_FOLDER_IN_ME_' if is_ps4_title_id(some_string_path_ig.replace('_','')) else ''
     result = leader + ("".join(c for c in some_string_path_ig if c in MAKE_FOLDER_NAME_SAFE_CHARS).rstrip())
-    return result[:254] if result else 'no_name'
+    result = result[:254] if result else 'no_name'
+    
+    _make_folder_name_counter += 1
+    return f'{result}-{_base37_encode(_make_folder_name_counter)}'
 
+def reset_make_folder_name_counter() -> None:
+    global _make_folder_name_counter
+    _make_folder_name_counter = 0
 
 def pretty_time(time_in_seconds: float) -> str:
     hours, extra_seconds = divmod(int(time_in_seconds),3600)
