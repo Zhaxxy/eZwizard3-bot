@@ -1003,8 +1003,8 @@ async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: intera
     
     await log_message(ctx,f'Looking for `sce_sys` folders in {link}')
     
-    for x in temp_fold.iterdir():
-        if 
+#    for x in temp_fold.iterdir():
+#        if 
     
     for x in temp_folder.rglob('*'):
         if '__MACOSX' in x.parts[:-1]: continue # if you do happen to have saves in this folder, then tough luck
