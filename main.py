@@ -50,8 +50,8 @@ try:
     from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
     from custom_cheats.rdr2_enc_dec.rdr2_enc_dec import auto_encrypt_decrypt
 except ModuleNotFoundError as e:
-    msg = f'{e}, maybe you need to add the --recurse-submodules to the git clone command `git clone https://github.com/Zhaxxy/eZwizard3-bot.git --recurse-submodules`'
-    raise ModuleNotFoundError(msg) from None
+    msg = f'{e}, maybe you need to add the --recurse-submodules to the git clone command `git clone https://github.com/Zhaxxy/eZwizard3-bot.git --recurse-submodules` (or you can do `git submodule update --init --recursive` if you dont want to clone again)'
+    raise ModuleNotFoundError(msg) from e
 
 try:
     __file__ = sys._MEIPASS
