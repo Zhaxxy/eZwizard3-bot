@@ -1428,7 +1428,7 @@ async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_fo
         
         await log_message(ctx,f'Getting files metadata from folder {link}')
         try:
-            raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link))
+            raw_files = await list_files_in_gdrive_folder(new_link,await gdrive_folder_link_to_name(new_link),False)
         except Exception as e:
             return f'Could not get files metadata from folder {link}, got error {type(e).__name__}: {e}, maybe its not public?'
         await log_message(ctx,f'Looking for saves in the folder {link}')
