@@ -67,7 +67,7 @@ WARNING_COULD_NOT_UNMOUNT_MSG = 'WARNING WARNING SAVE DIDNT UNMOUNT, MANUAL ASSI
 LBP3_EU_BIGFART = 'https://drive.google.com/drive/folders/1fmUMCZlvj5011njMi6Xl-uP8WvIfRyuN?usp=sharing'
 LBP3_EU_LEVEL_BACKUP = 'https://drive.google.com/drive/folders/1wCBA0sZumgBRr3cDJm5BADRA9mfq4NpR?usp=sharing'
 
-FILE_SIZE_TOTAL_LIMIT = 1_173_741_920
+FILE_SIZE_TOTAL_LIMIT = 1_473_741_920
 DL_FILE_TOTAL_LIMIT = 50_000_000 # 50mb
 DISCORD_CHOICE_LIMIT = 25
 ATTACHMENT_MAX_FILE_SIZE = 25_000_000-1 # 25mb, the actual limit is 25mib but this includes metadata which is hard to calculate, so im hoping this will give it enough slack for metadata
@@ -532,6 +532,7 @@ async def log_message(ctx: interactions.SlashContext, msg: str,*,pingers: None |
         await ctx.edit(content=msg)
 
 
+LOG_MESSAGE_TICK_TOCK_TOO_LONG = ', over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)'
 async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
     """
     Use this when you know its gonna wait for a while, MAKE SURE YOU USE `asyncio.create_task` and cancel the task as soon as long task is done
@@ -540,20 +541,21 @@ async def log_message_tick_tock(ctx: interactions.SlashContext, msg: str):
         ctx.ezwizard3_special_ctx_attr_testing_log_message_tick_tock(msg)
         return
         
-    msg = msg[:2000-len(', over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)')]
+    msg = msg[:2000-len(LOG_MESSAGE_TICK_TOCK_TOO_LONG)]
     await log_message(ctx, msg)
     
     tick = 0
     while True:
         if ctx.expired:
-            await log_message(ctx, f'{msg}, over 15 minutes spent here, likely bot is stuck and needs reboot (including the PS4)', _do_print=False)
+            await log_message(ctx,msg + LOG_MESSAGE_TICK_TOCK_TOO_LONG, _do_print=False)
             while True:
                 await asyncio.sleep(10)
         await log_message(ctx, f'{msg} {tick} seconds spent here', _do_print=False)
         await asyncio.sleep(10)
         tick += 10
     
-    
+
+LOG_USER_ERROR_PRETTY_FMT_STRING = '<@{}>❌The command finished with error: {} ❌'
 async def log_user_error(ctx: interactions.SlashContext, error_msg: str,*,pingers: None | Sequence[int] = None):
     if ctx.ezwizard3_special_ctx_attr_mode == 1:
         pingers = [] or pingers
@@ -574,16 +576,15 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str,*,pinger
         new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
         error_msg = getattr(ctx,attr_name) + new_line_chars + error_msg
     
+    full_msg = LOG_USER_ERROR_PRETTY_FMT_STRING.format(ctx.author_id,error_msg)
     
-    is_big_message = len(error_msg) > 2000-1-3
+    is_big_message = len(full_msg) > 2000-1-3
     async with TemporaryDirectory() if is_big_message else nullcontext() as message_tp:
         if is_big_message:
             message_txt_path = Path(message_tp,'message.txt')
             message_txt_path.write_text(error_msg,encoding="utf-8")
             files.append(str(message_txt_path))
-            error_msg = 'Error in message.txt file'
-            
-        full_msg = f'<@{ctx.author_id}>❌The command finished with error: {error_msg} ❌'
+            full_msg = LOG_USER_ERROR_PRETTY_FMT_STRING.format(ctx.author_id,'Error in message.txt file')
         
 
         if ctx.expired:
@@ -595,6 +596,8 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str,*,pinger
 
     await update_status()
 
+
+LOG_USER_SUCCESS_PRETTY_FMT_STRING = '<@{}>✅The command finished sucesfully: {} ✅'
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None,*,pingers: None | Sequence[int] = None):
     files = [file] if file else []
     if ctx.ezwizard3_special_ctx_attr_mode == 1:
@@ -612,15 +615,16 @@ async def log_user_success(ctx: interactions.SlashContext, success_msg: str, fil
         new_line_chars = '\n\n' if attr_name == noitce_msgs[-1] else '\n\n\n'
         success_msg = getattr(ctx,attr_name) + new_line_chars + success_msg
 
+    full_msg = LOG_USER_SUCCESS_PRETTY_FMT_STRING.format(ctx.author_id,success_msg)
     
-    is_big_message = len(success_msg) > 2000-1-3
+    is_big_message = len(full_msg) > 2000-1-3
     async with TemporaryDirectory() if is_big_message else nullcontext() as message_tp:
         if is_big_message:
             message_txt_path = Path(message_tp,'message.txt')
             message_txt_path.write_text(success_msg,encoding="utf-8")
             files.append(str(message_txt_path))
-            success_msg = 'Success message in message.txt file'
-        full_msg = f'<@{ctx.author_id}>✅The command finished sucesfully: {success_msg} ✅'
+            full_msg = LOG_USER_SUCCESS_PRETTY_FMT_STRING.format(ctx.author_id,'Success message in message.txt file')
+        
         
         if ctx.expired:
             await channel.send(full_msg,ephemeral=False, files=files)
