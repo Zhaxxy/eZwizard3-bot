@@ -1294,7 +1294,7 @@ async def download_direct_link(ctx: interactions.SlashContext,link: str, donwloa
     
     link = link.replace('media.discordapp.net','cdn.discordapp.com')
     
-    if link.startswith('https://filetransfer.io/data-package')
+    if link.startswith('https://filetransfer.io/data-package'):
         link = link.removesubfix('/') # yes i can combine the 2 links but it looks "cleaner" this way (as if this codebase is clean)
         link = link.removesubfix('/download') + '/download' # TODO theres an extremely low chance that a url can be https://filetransfer.io/data-package/download where `download` is an id, therefore it wont fix that url, but user can manually fix the url himself and i dont wanna write more code then this
         
