@@ -265,6 +265,10 @@ class PS4SaveParamSfo:
     _param_sfo_data: bytes
     miss_matching_title_ids: Sequence[tuple[str,int]] | None
     
+    def check_if_account_id_is_banned(self) -> None | str:
+        if user := is_account_id_in_ban_list(self.account_id):
+            return f'Hey!, this account id {self.account_id.account_id} is banned, what are you trying to do <@{user}>??'
+    
     def __bytes__(self) -> bytes:
         return self._param_sfo_data
     
@@ -460,11 +464,25 @@ def delete_empty_folders(root: Path):
             os.rmdir(current_dir)
             deleted.add(current_dir)
 
+class SetUpCtxFailedError(Exception):
+    """
+    Raise this, if `set_up_ctx` failed for some reason
+    """
 
 async def set_up_ctx(ctx: interactions.SlashContext,*,mode = 0) -> interactions.SlashContext:
     """
     mode 1 is test mode
     """
+    if res := is_user_id_in_ban_list(ctx.author_id):
+        new_msg = f'You have been banned from using this bot, reason:\n\n{res}'
+        if is_user_bot_admin(ctx.author_id):
+            ctx.ezwizard3_special_ctx_attr_noticemsg_banned_but_is_admin = new_msg
+        else:
+            await ctx.send(new_msg)
+            raise SetUpCtxFailedError(new_msg)
+            #await asyncio.sleep(10)
+            #assert_never(None)
+        
     nth_time = 1
     try:
         ctx.ezwizard3_special_ctx_attr_setup_done += 1
@@ -788,6 +806,53 @@ def set_total_runtime(new_runtime_value: int ):
         db["total_runtime"] = new_runtime_value
         db.commit()
 
+def add_user_id_to_ban_list(ctx_author_id: str | int, reason: str):
+    assert reason
+    ctx_author_id = str(ctx_author_id)
+    with SqliteDict("user_stuff.sqlite", tablename="banned_discord_user_ids") as db:
+        db[ctx_author_id] = reason
+        db.commit()
+        
+def remove_user_id_to_ban_list(ctx_author_id: str | int):
+    ctx_author_id = str(ctx_author_id)
+    with SqliteDict("user_stuff.sqlite", tablename="banned_discord_user_ids") as db:
+        try:
+            del db[ctx_author_id]
+        except KeyError:
+            pass
+        else:
+            db.commit()
+        
+def is_user_id_in_ban_list(ctx_author_id: str | int) -> list | None:
+    ctx_author_id = str(ctx_author_id)
+    with SqliteDict("user_stuff.sqlite", tablename="banned_discord_user_ids") as db:
+        try:
+            return db[ctx_author_id]
+        except KeyError:
+            return None
+
+def add_account_id_to_ban_list(account_id: PS4AccountID, ctx_author_id: str | int):
+    ctx_author_id = str(ctx_author_id)
+    with SqliteDict("user_stuff.sqlite", tablename="banned_account_ids") as db:
+        db[account_id.account_id] = ctx_author_id
+        db.commit()
+
+def is_account_id_in_ban_list(account_id: PS4AccountID) -> str | None:
+    with SqliteDict("user_stuff.sqlite", tablename="banned_account_ids") as db:
+        try:
+            return db[account_id.account_id]
+        except KeyError:
+            return None
+
+def remove_account_id_from_ban_list(account_id: PS4AccountID):
+    with SqliteDict("user_stuff.sqlite", tablename="banned_account_ids") as db:
+        try:
+            del db[account_id.account_id]
+        except KeyError:
+            pass
+        else:
+            db.commit()
+
 def get_user_account_id(author_id: str):
     with SqliteDict("user_stuff.sqlite", tablename="user_account_ids") as db:
         return db[author_id]
@@ -1058,6 +1123,12 @@ async def get_sce_sys_folders_determining_decrypted_savedata_folders(ctx: intera
             except Exception:
                 return make_error_message_if_verbose_or_not(ctx.author_id,f'bad param.sfo in {pretty_dir} + {link}','')
             my_param.with_new_account_id(account_id)
+            
+            account_id_banned_res = my_param.check_if_account_id_is_banned()
+            if account_id_banned_res:
+                return account_id_banned_res
+
+
             param_sfo.write_bytes(bytes(my_param))
             await log_message(ctx,f'Doing some cleanup for {pretty_dir} + {link}')
             make_folder_name_safe(pretty_dir)
@@ -1535,7 +1606,7 @@ async def download_encrypted_from_ps4(ctx: interactions.SlashContext, bin_file_o
         await asyncio.get_running_loop().run_in_executor(None,custon_decss)
 
 
-async def resign_mounted_save(ftp: aioftp.Client,new_mount_dir:str, account_id: PS4AccountID) -> PS4AccountID:
+async def resign_mounted_save(ftp: aioftp.Client,new_mount_dir:str, account_id: PS4AccountID) -> PS4AccountID | str:
     old_account_id = PS4AccountID('0000000000000000')
     await ftp.change_directory(Path(new_mount_dir,'sce_sys').as_posix())
     async with TemporaryDirectory() as tp:
@@ -1545,6 +1616,9 @@ async def resign_mounted_save(ftp: aioftp.Client,new_mount_dir:str, account_id: 
             my_param = PS4SaveParamSfo.from_buffer(f)
         old_account_id = my_param.account_id
         my_param.with_new_account_id(account_id)
+        account_id_banned_res = my_param.check_if_account_id_is_banned()
+        if account_id_banned_res:
+            return resign_mounted_save
         tp_param_sfo.write_bytes(bytes(my_param))
             
         await ftp.upload(tp_param_sfo,'param.sfo',write_into=True)
@@ -1637,7 +1711,8 @@ async def _apply_cheats_on_ps4(account_id: PS4AccountID, bin_file: Path, white_f
                     account_id_old = await resign_mounted_save(ftp,new_mount_dir,account_id)
                 except Exception:
                     return make_error_message_if_verbose_or_not(ctx_author_id,f'Bad save {pretty_save_dir}','bad or missing param.sfo')
-                
+                if isinstance(account_id_old,str):
+                    return account_id_old
             
             
             async with aioftp.Client.context(CONFIG['ps4_ip'],2121) as ftp:
@@ -1927,7 +2002,16 @@ def dec_enc_save_files(func):
 def account_id_opt(func):
     return interactions.slash_option(
     name="account_id",
-    description="The account id to resign the saves to, put in 0 for account id in database and 1 for no resign",
+    description="Enter account ID (or username) to resign saves. Use 0 for database account ID or 1 for no resign",
+    required=True,
+    max_length=16,
+    min_length=1,
+    opt_type=interactions.OptionType.STRING
+    )(func)
+def account_id_to_ban_opt(func):
+    return interactions.slash_option(
+    name="account_id",
+    description="The account id to ban, unban or check. Can ethier be a username or an account id",
     required=True,
     max_length=16,
     min_length=1,
@@ -2645,6 +2729,7 @@ async def do_lbp3_install_mods(ctx: interactions.SlashContext,save_files: str,ac
 async def do_mods2levelbackup(ctx: interactions.SlashContext,account_id: str,gameid: str,ignore_plans: int = 0,**mod_files):
     ignore_plans = bool(ignore_plans)
     if not mod_files:
+        ctx = await set_up_ctx(ctx)
         return await log_user_error(ctx,'Please give at least 1 dl_link_mod_file')
     await base_do_cheats(ctx,LBP3_EU_LEVEL_BACKUP,account_id,[CheatFunc(install_mods_for_lbp3_ps4,{**mod_files,'ignore_plans':ignore_plans}),CheatFunc(re_region,{'gameid':gameid})])
     return # TODO finish off the below implmentation, need to have it set up a savedata0 with icon and param.sfo, similar to lbp_level_archive2ps4
@@ -3971,14 +4056,153 @@ async def do_remove_global_watermark(ctx: interactions.SlashContext):
         (Path(__file__).parent / f'DO_NOT_DELETE_global_image_watermark.png').unlink(missing_ok=True)
     return await log_user_success(ctx,f'Global watermark image removed successfully')
 
+
+@interactions.slash_command(name='ban_user_from_bot',description="Bans a discord user from using most commands")
+@interactions.slash_option(
+    name="offending_user",
+    description="The discord user to ban from using the bot",
+    required=True,
+    opt_type=interactions.OptionType.USER,
+    )
+@interactions.slash_option(
+    name="reason",
+    description="Why was the discord user banned from using the bot?",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    )
+async def do_ban_user_from_bot(ctx: interactions.SlashContext, offending_user: interactions.Member | interactions.User, reason: str):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
+    add_user_id_to_ban_list(offending_user.id,reason)
+
+    await log_message(ctx,'Checking offending_user account id')
+    pretty_thing_account_idk = ''
+    account_id_for_db: str | PS4AccountID = account_id_from_str('0',offending_user.id,ctx)
+    if isinstance(account_id_for_db,PS4AccountID):
+        add_account_id_to_ban_list(account_id_for_db, offending_user.id)
+        pretty_thing_account_idk = f' and account id {account_id_for_db.account_id}'
+        
+    await log_user_success(ctx,f'<@{offending_user.id}>{pretty_thing_account_idk} was banned from using the bot, reason:\n\n{reason}')
+
+
+@interactions.slash_command(name='is_user_banned_from_bot',description="Check if a user is banned from using the bot")
+@interactions.slash_option(
+    name="user_to_check",
+    description="The discord user to check if banned from using the bot",
+    required=True,
+    opt_type=interactions.OptionType.USER,
+    )
+async def do_is_user_banned(ctx: interactions.SlashContext, user_to_check: interactions.Member | interactions.User):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
+    ban_reason = is_user_id_in_ban_list(user_to_check.id)
+    if not ban_reason:
+        await log_user_error(ctx,f'<@{user_to_check.id}> is not banned')
+    else:
+        await log_user_success(ctx,f'<@{user_to_check.id}> was banned from using the bot, reason:\n\n{ban_reason}')
+
+
+@interactions.slash_command(name='unban_user_from_bot',description="Unbans a user")
+@interactions.slash_option(
+    name="user_to_unban",
+    description="The discord user to unban",
+    required=True,
+    opt_type=interactions.OptionType.USER,
+    )
+async def do_unban_user_from_bot(ctx: interactions.SlashContext, user_to_unban: interactions.Member | interactions.User):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
+    ban_reason = is_user_id_in_ban_list(user_to_unban.id)
+    if not ban_reason:
+        await log_user_error(ctx,f'<@{user_to_unban.id}> is not banned')
+        return
+    remove_user_id_to_ban_list(user_to_unban.id)
+    await log_user_success(ctx,f'<@{user_to_unban.id}> was unbanned from using the bot')
+
+
+@interactions.slash_command(name='ban_account_id_from_bot',description="Bans a certain psn account id from using the bot")
+@interactions.slash_option(
+    name="offending_user",
+    description="The discord user that owns the account id",
+    required=True,
+    opt_type=interactions.OptionType.USER,
+    )
+@account_id_to_ban_opt
+async def do_ban_account_id_from_bot(ctx: interactions.SlashContext, offending_user: interactions.Member | interactions.User, account_id: str):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
+    await log_message(ctx,'Checking if the offending_user is banned')
+    ban_reason = is_user_id_in_ban_list(offending_user.id)
+    if not ban_reason:
+        await log_user_error(ctx,f'<@{offending_user.id}> is not banned, you need to link the account id to a banned discord user!')
+        return
+    
+    await log_message(ctx,'Checking account_id')
+    account_id_for_db: str | PS4AccountID = account_id_from_str(account_id,offending_user.id,ctx)
+    if isinstance(account_id_for_db,str):
+        await log_user_error(ctx,account_id_for_db)
+        return
+    
+    add_account_id_to_ban_list(account_id_for_db, offending_user.id)
+    await log_user_success(ctx,f'Account id {account_id_for_db.account_id} ({account_id}), owned by <@{offending_user.id}> was banned from using the bot')
+    
+    
+@interactions.slash_command(name='is_account_id_banned_from_bot',description="Check if a psn account id is banned from using the bot")
+@account_id_to_ban_opt
+async def do_account_id_banned(ctx: interactions.SlashContext, account_id: str):
+    ctx = await set_up_ctx(ctx)
+
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
+    
+    await log_message(ctx,'Checking account_id')
+    account_id_for_db: str | PS4AccountID = account_id_from_str(account_id,ctx.author_id,ctx)
+    if isinstance(account_id_for_db,str):
+        await log_user_error(ctx,account_id_for_db)
+        return
+    
+    pretty_account_id_show = f'Account id {account_id_for_db.account_id} ({account_id}),'
+    
+    ban_reason = is_account_id_in_ban_list(account_id_for_db)
+    if not ban_reason:
+        await log_user_error(ctx,f'{pretty_account_id_show} is not banned')
+    else:
+        await log_user_success(ctx,f'{pretty_account_id_show} owned by <@{ban_reason}> is banned, use `is_user_banned_from_bot` to see reason')
+
+
+@interactions.slash_command(name='unban_account_id_from_bot',description="Unbans a psn account id")
+@account_id_to_ban_opt
+async def do_unban_account_id_from_bot(ctx: interactions.SlashContext, account_id: str):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        return await log_user_error(ctx,'Only bot instance admins may use this command')
+
+    await log_message(ctx,'Checking account_id')
+    account_id_for_db: str | PS4AccountID = account_id_from_str(account_id,ctx.author_id,ctx)
+    if isinstance(account_id_for_db,str):
+        await log_user_error(ctx,account_id_for_db)
+        return
+    
+    pretty_account_id_show = f'Account id {account_id_for_db.account_id} ({account_id}),'
+    
+    ban_reason = is_account_id_in_ban_list(account_id_for_db)
+    if not ban_reason:
+        await log_user_error(ctx,f'{pretty_account_id_show} is not banned')
+        return
+    remove_user_id_to_ban_list(account_id_for_db.account_id)
+    await log_user_success(ctx,f'{pretty_account_id_show} owned by <@{ban_reason}> was unbanned from using the bot')
+
+
 async def base_saved_ting_autocomplete(ctx: interactions.AutocompleteContext,thing: tuple[tuple[str,str]],/):
     string_option_input = ctx.input_text
     if not string_option_input:
         return await ctx.send(choices=[{'name':'Please start typing a built in save from /see_built_in_sabes','value':'Please start typing a built in save from /see_built_in_sabes'}])
     string_option_input = string_option_input.casefold()
-    
-    
-    
+
     return await ctx.send(choices=[dict(name=x[1], value=x[0]) for x in thing if string_option_input in x[1].casefold()][:25])
 
 
