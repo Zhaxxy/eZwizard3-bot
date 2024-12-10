@@ -2187,7 +2187,7 @@ async def base_do_dec(ctx: interactions.SlashContext,save_files: str, decrypt_fu
                 await log_user_success(ctx,f'Got your messages\n\n{save_msgs}')
                 return
             
-            your_saves_msg = 'savedata0 decrypted save (Please use /advanced_mode_export command instead)'
+            your_saves_msg = 'savedata0 decrypted save (Please use /advanced_mode_export command instead if you only want one file)'
             if decrypt_fun:
                your_saves_msg = (decrypt_fun.func.__doc__ or f'paypal me some money eboot.bin@protonmail.com and i might fix this message ({decrypt_fun.func.__name__})').strip()
             await send_result_as_zip(ctx,save_files,dec_tp,dec_tp,Path(tp,my_token + '.zip'),your_saves_msg,unzip_if_only_one_file=unzip_if_only_one_file)
@@ -2482,7 +2482,7 @@ async def base_do_cheats(ctx: interactions.SlashContext, save_files: str,account
             await asyncio.get_running_loop().run_in_executor(None,custon_decss1)  # TODO could be dangerous we are not using the mounted_saves_at_once sempahore
 
 ############################01 Custom decryptions
-@interactions.slash_command(name="raw_decrypt_folder",description=f"use /advanced_mode_export instead (max {MAX_RESIGNS_PER_ONCE} save per command)")
+@interactions.slash_command(name="raw_decrypt_folder",description=f"use /advanced_mode_export instead if you want one file (max {MAX_RESIGNS_PER_ONCE} save per command)")
 @dec_enc_save_files
 async def do_raw_decrypt_folder(ctx: interactions.SlashContext,save_files: str):
     await base_do_dec(ctx,save_files)
