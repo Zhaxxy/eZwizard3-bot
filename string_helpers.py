@@ -141,14 +141,15 @@ def hex_dump(data: bytes,/,start_offset: int = 0,invalid_char: str = '■',null_
 
 def extract_drive_file_id(link: str,/) -> str:
     if link.startswith('https://drive.google.com/file/d/'):
-        return link.split('https://drive.google.com/file/d/')[-1].split('?')[0].split('/')[0]
-    if link.startswith('https://drive.google.com/uc?id='):
-        return link.split('https://drive.google.com/uc?id=')[-1].split('&')[0]
-    if link.startswith('https://drive.google.com/file/u/0/d/'):
+        res = link.split('https://drive.google.com/file/d/')[-1].split('?')[0].split('/')[0]
+    elif link.startswith('https://drive.google.com/uc?id='):
+        res = link.split('https://drive.google.com/uc?id=')[-1].split('&')[0]
+    elif link.startswith('https://drive.google.com/file/u/0/d/'):
         if not '/view' in link:
-            return ''
-        return link.split('https://drive.google.com/file/u/0/d/')[-1].split('/view')[0]
-    return ''
+            res = ''
+        res = link.split('https://drive.google.com/file/u/0/d/')[-1].split('/view')[0]
+    res = ''
+    return res.replace('"','').replace("'",'')
 
 _BASE37_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz_"
 
