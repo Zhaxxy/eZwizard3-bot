@@ -76,8 +76,8 @@ def is_psn_name(input_str: str,/) -> bool:
 
 
 def extract_drive_folder_id(link: str,/) -> str:
-    return link.split('folders/')[-1].split('?')[0] if link.startswith('https://drive.google.com/drive') else ''
-
+    res = link.split('folders/')[-1].split('?')[0] if link.startswith('https://drive.google.com/drive') else ''
+    return res.replace('"','').replace("'",'')
 
 def non_format_susceptible_byte_repr(some_bytes: bytes | bytearray) -> str:
     """
