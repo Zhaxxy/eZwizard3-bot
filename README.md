@@ -1,7 +1,7 @@
 # eZwizard3-bot
 A discord bot that connects to your jb ps4 (9.00 only atm) to allow other people to do save things with it
 
-this project is activily being worked on by Zhaxxy and is very passionate about it, please feel free to ask for any suggestions, reporting any bugs, or even making your own changes and make a pull request, Zhaxxy will be sure to respond!
+this project is actively being worked on by Zhaxxy and is very passionate about it, please feel free to ask for any suggestions, reporting any bugs, or even making your own changes and make a pull request, Zhaxxy will be sure to respond!
 
 # Known issues
 
