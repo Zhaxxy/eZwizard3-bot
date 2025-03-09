@@ -86,7 +86,6 @@ def non_format_susceptible_byte_repr(some_bytes: bytes | bytearray) -> str:
     if not some_bytes:
         return "b''"
 
-
     new_str = (r"b'\x" + some_bytes.hex(' ').replace(' ',r'\x') + "'")
     for char in BASE_62_CHARS:
         new_str = new_str.replace(fr'\x{ord(char):x}',char)
