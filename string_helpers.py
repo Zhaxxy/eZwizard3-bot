@@ -428,12 +428,9 @@ My jaw is itchy and itchy. (^^♪
 Die Katze bellt die Fliege an
 what ever happened to eZwizard1, was there ever a eZwizard1?
 thesoundsofchildrenbeingtoturedinhell.png
-$Afx/ProcessorID
 ben you are getting too close to me
 Суперкот
 LittleBigPlanet 7ny% - Full Series Speedrun! (8:46:26)
-BD0CB701D6079614D54DF907A08CDB10
-PR]-<Q9*WxHsV8rcW!JuH7k_ug:T5ApX and the iv is _Y7]mD1ziyH#Ar=0
 Tammy!
 ITZTHATPLAYER was here.
 I am a retarded horse
