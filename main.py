@@ -55,7 +55,7 @@ except ModuleNotFoundError as e:
 
 try:
     __file__ = sys._MEIPASS
-except:
+except Exception:
     pass
 else:
     __file__ = str(Path(__file__) / 'huh.huh')
