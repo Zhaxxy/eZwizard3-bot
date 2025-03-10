@@ -3140,8 +3140,6 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
     ctx = await set_up_ctx(ctx)
     if account_id == '1':
         return await log_user_error(ctx,'Cannot get original account id of save, perhaps you didnt mean to put 1 in account_id')
-    if not ZAPRIT_FISH_IS_UP:
-        return await log_user_error(ctx,'Sorry, but zaprit.fish is down')
     slotid_from_drydb = kwargs.pop('slotid_from_drydb')
     gameid = kwargs.pop('gameid')
     async with TemporaryDirectory() as tp:
@@ -4341,9 +4339,7 @@ async def main(turn_on_bot: bool = True, patched_memory_object = None, print_fun
     
     check_base_saves = not is_in_fast_boot_mode()
     global GIT_EXISTS
-    global ZAPRIT_FISH_IS_UP
     GIT_EXISTS = False
-    ZAPRIT_FISH_IS_UP = False
     
     global psnawp
     print('Checking if npsso cookie is valid')
@@ -4351,7 +4347,6 @@ async def main(turn_on_bot: bool = True, patched_memory_object = None, print_fun
     user = psnawp.user(online_id='Zhaxxy')
     print('npsso cookie works!')
     
-    ZAPRIT_FISH_IS_UP = True
     
     print('doing some git stuff')
     try:
