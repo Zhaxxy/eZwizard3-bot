@@ -3205,7 +3205,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         async for x in async_savedata0_folder.rglob('*'):
             new_blocks_size += (await x.stat()).st_size
 
-        new_blocks_size = my_param.bytes_to_blocks_count(new_blocks_size + 3_145_728) # min save is 3mibb
+        new_blocks_size = my_param.bytes_to_blocks_count(max(new_blocks_size,3_145_728)) # min save is 3mib
         my_param.with_new_blocks_count(new_blocks_size)
         
         tp_param_sfo.write_bytes(bytes(my_param))
