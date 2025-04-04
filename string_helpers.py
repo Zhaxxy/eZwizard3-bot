@@ -354,7 +354,12 @@ built_in_saves:
     key = 'user_id'
     if not (x := my_config.get(key)) or x == '1ej71bbd':
         _raise_bad_config(key)
-
+    if isinstance(x,int):
+        my_config[key] = str(x)
+    elif isinstance(x,str):
+        pass
+    else:
+        _raise_bad_config(key)
 
     key = 'bot_admins'
     if not (x := my_config.get(key)):
