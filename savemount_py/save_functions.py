@@ -23,3 +23,29 @@ async def send_ps4debug(ip: str,/,port: int = 9090):
     writer.close()
     await writer.wait_closed()
     await asyncio.sleep(1)
+
+
+async def main() -> int:
+    while True:
+        ip = input('Enter the ip of your ps4 to inject ps4debug: ')
+        if not ip:
+            print('Please enter an ip')
+            continue
+        break
+    
+    while True:
+        port = input('Enter in bin loader port (default 9090): ') or '9090'
+        try:
+            port_num = int(port)
+        except ValueError:
+            print(f'Invalid port number {port}')
+            continue
+        break
+    
+    await send_ps4debug(ip,port)
+    input('Injected, press enter to exit... ')#
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(asyncio.run(main()))
