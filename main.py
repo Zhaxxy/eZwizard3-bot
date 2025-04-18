@@ -3131,6 +3131,19 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
     kwargs['decrypted_save_folder'] = kwargs.pop('mcworld_file')
     await base_do_cheats(ctx,SpecialSaveFiles.MINECRAFT_CUSTOM_SIZE_MCWORLD,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
+@interactions.slash_command(name="lbp_ps3_level_backup_zip_to_ps4", description=f"Convert a single ps3 lbp level backup to a ps4 level backup (lbp1, lbp2 and lbp3!)")
+@account_id_opt
+@interactions.slash_option('dl_link_level_backup','zip file containing a single ps3 level backup',interactions.OptionType.STRING,True)
+@lbp3_reregion_opt
+async def lbp_ps3_level_backup_zip_to_ps4(ctx: interactions.SlashContext, account_id: str, dl_link_level_backup: str, gameid: str):
+    if is_str_int(dl_link_level_backup) and int(dl_link_level_backup) > 1:
+        try:
+            dl_link_level_backup = get_saved_url(ctx.author_id,int(dl_link_level_backup))
+        except KeyError:
+            await log_user_error(ctx,f'You dont have any url saved for {dl_link_level_backup}, try running the file2url command again!')
+            return
+    await lbp_ps3_level_backup2ps4('level backup',ctx, account_id, pretty_url=dl_link_level_backup, real_url=dl_link_level_backup, gameid=gameid)
+
 
 @interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
 @account_id_opt
@@ -3138,6 +3151,7 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
 @lbp3_reregion_opt
 async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: str, slotid_from_drydb: int, gameid: str):
     await lbp_ps3_level_backup2ps4('slot',ctx, account_id, pretty_url=f'`{slotid_from_drydb}`', real_url=f'https://zaprit.fish/dl_archive/{slotid_from_drydb}', gameid=gameid)
+
 
 async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions.SlashContext, account_id: str, pretty_url: str, real_url: str, gameid: str):
     ctx = await set_up_ctx(ctx)
