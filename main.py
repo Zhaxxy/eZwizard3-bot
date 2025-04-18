@@ -3136,16 +3136,17 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
 @account_id_opt
 @interactions.slash_option('slotid_from_drydb','The slot id from dry.db of the level you want, you can search for it on https://maticzpl.xyz/lbpfind',interactions.OptionType.INTEGER,True,min_value=56,max_value=100515565)
 @lbp3_reregion_opt
-async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: str, **kwargs):
+async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: str, slotid_from_drydb: int, gameid: str):
+    await lbp_ps3_level_backup2ps4('slot',ctx, account_id, pretty_url=f'`{slotid_from_drydb}`', real_url=f'https://zaprit.fish/dl_archive/{slotid_from_drydb}', gameid=gameid)
+
+async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions.SlashContext, account_id: str, pretty_url: str, real_url: str, gameid: str):
     ctx = await set_up_ctx(ctx)
     if account_id == '1':
         return await log_user_error(ctx,'Cannot get original account id of save, perhaps you didnt mean to put 1 in account_id')
-    slotid_from_drydb = kwargs.pop('slotid_from_drydb')
-    gameid = kwargs.pop('gameid')
     async with TemporaryDirectory() as tp:
         tp = Path(tp)
-        await log_message(ctx,f'Downloading slot `{slotid_from_drydb}`')
-        result = await download_direct_link(ctx,f'https://zaprit.fish/dl_archive/{slotid_from_drydb}',tp)
+        await log_message(ctx,f'Downloading {pretty_entry_type_str} {pretty_url}')
+        result = await download_direct_link(ctx,real_url,tp)
         if isinstance(result,str):
             if not isinstance(result,ZapritFishKnownLinkError):
                 await log_user_error(ctx,result + ' This could be because the level failed to load on official servers or a dynamic thermometer level (this is an issue with https://zaprit.fish itself)')
@@ -3162,16 +3163,16 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         savedata0_folder = tp / 'savedata0_folder' / 'savedata0'
         savedata0_folder.mkdir(parents=True)
         
-        await log_message(ctx,f'Converting slot `{slotid_from_drydb}` to L0 file')
+        await log_message(ctx,f'Converting {pretty_entry_type_str} {pretty_url} to L0 file')
         with open(savedata0_folder / 'L0','wb') as f:
             level_name, level_desc,is_adventure,icon0_path = await asyncio.get_event_loop().run_in_executor(None, ps3_level_backup_to_l0_ps4,level_backup_folder,f)
             l0_size = f.tell()
         
         if l0_size > LBP3_PS4_L0_FILE_MAX_SIZE:
-            await log_user_error(ctx,f'The slot `{slotid_from_drydb}` is too big ({pretty_bytes(l0_size)}), the max lbp3 ps4 level backup can only be {pretty_bytes(LBP3_PS4_L0_FILE_MAX_SIZE)}')
+            await log_user_error(ctx,f'The {pretty_entry_type_str} {pretty_url} is too big ({pretty_bytes(l0_size)}), the max lbp3 ps4 level backup can only be {pretty_bytes(LBP3_PS4_L0_FILE_MAX_SIZE)}')
             return 
         
-        await log_message(ctx,f'Doing some file management for slot `{slotid_from_drydb}` ')
+        await log_message(ctx,f'Doing some file management for {pretty_entry_type_str} {pretty_url}')
         await shutil.copytree(Path(__file__).parent / 'savemount_py/backup_dec_save/sce_sys', savedata0_folder / 'sce_sys')
         
         lbp3_keystone = b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb7/\xad\xc3\xf9\xc7\xfc\xfaAR\xca\x82{\xcfo\xac\xcf\xd2m\x1f\x8f\x80!%[MK\xbc\x02\xb7\x04_\x91L\x99\xfc\xb3\xde^\x87\xc0\x9c\xdb\x90\xaf\xdb\xba\xde\xf3\x80L\xee\xa9\x11w9E\x9a\xa7y[O\xc9\xaa'
@@ -3197,7 +3198,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
         my_param.with_new_description(level_desc.encode('utf-8'))
 
 
-        await log_message(ctx,f'Getting decrypted save size for slot `{slotid_from_drydb}`')
+        await log_message(ctx,f'Getting decrypted save size for {pretty_entry_type_str} {pretty_url}')
         
         # new_blocks_size = sum((x.stat()).st_size for x in savedata0_folder.rglob('*'))
         async_savedata0_folder = AsyncPath(savedata0_folder)
