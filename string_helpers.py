@@ -240,6 +240,7 @@ def load_config() -> frozendict:
     SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT = '\n# Simple boolean, if set to true then the ping command will show some extra info such as what version bot is on or if it needs updating\n# or if its false, it wont show that extra stuff\nshould_ping_command_show_git_stuff:\n    true\n'
     BUILT_IN_SAVE_LINKS_YAML_DEAFULT_TEXT = '\n# links to saves that already exists (DO NOT USE DISCORD FILE LINKS AS THEY EXPIRE AND WONT WORK), and you can have them as a choice in save_files option on /quick commands\n# follow the format (without the hashtag of course)\n#  - the_link_here a description of the link that can have spaces\nbuilt_in_save_links:\n  - https://drive.google.com/drive/folders/1wCBA0sZumgBRr3cDJm5BADRA9mfq4NpR?usp=sharing LBP EU Level Backup\n'
     BUILT_IN_DL_LINKS_YAML_DEAFULT_TEXT = '\n# links to dl_link that already exists (DO NOT USE DISCORD FILE LINKS AS THEY EXPIRE AND WONT WORK), and you can have them as a choice in dl_link options option on /quick commands\n# such as decrypted saves or images\n# follow the format (without the hashtag of course)\n#  - the_link_here a description of the link that can have spaces\nbuilt_in_dl_links:\n  - https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Cat_August_2010-4.jpg/2880px-Cat_August_2010-4.jpg Cute cat image\n'
+    AUTOMATICALLY_DELETE_GDRIVE_SAVES_YAML_DEAFULT_TEXT = '\n# Simple boolean, if set to true then all of the google drive save files the bot makes\n# (ezwizardtwo_saves folder) will be deleted when the google drive account is full\n# or if its false, it will do the old behaviour (ping bot_admins to clear up space)\nautomatically_delete_gdrive_saves:\n    false\n'
     try:
         with open('config.yaml','r') as f:
             my_config: dict = yaml.load(f,yaml.Loader)
@@ -284,6 +285,7 @@ built_in_saves:
             f.write(SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT)
             f.write(BUILT_IN_SAVE_LINKS_YAML_DEAFULT_TEXT[1:])
             f.write(BUILT_IN_DL_LINKS_YAML_DEAFULT_TEXT[1:])
+            f.write(AUTOMATICALLY_DELETE_GDRIVE_SAVES_YAML_DEAFULT_TEXT[1:])
             
         raise Exception(f'bad config file or missing, got error {type(e).__name__}: {e} Please edit the config.yaml file') from None
     
@@ -291,6 +293,15 @@ built_in_saves:
     if (x := my_config.get(key)) is None:
         with open('config.yaml','a') as f:
             f.write(SHOULD_PING_COMMAND_SHOW_GIT_STUFF_YAML_DEAFULT_TEXT)
+        raise Exception(f'config.yaml updated with a new value `{key}` please check it out')
+    if not isinstance(x,bool):
+        raise Exception(f'{key} value should ethier be true or false, not {x}')
+
+
+    key = 'automatically_delete_gdrive_saves'
+    if (x := my_config.get(key)) is None:
+        with open('config.yaml','a') as f:
+            f.write(AUTOMATICALLY_DELETE_GDRIVE_SAVES_YAML_DEAFULT_TEXT)
         raise Exception(f'config.yaml updated with a new value `{key}` please check it out')
     if not isinstance(x,bool):
         raise Exception(f'{key} value should ethier be true or false, not {x}')

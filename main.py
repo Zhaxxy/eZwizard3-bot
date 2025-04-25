@@ -1928,6 +1928,7 @@ def _zipping_time(results: Path, parent_dir: Path, new_zip_name: Path):
 
 async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str,results: Path, parent_dir: Path, new_zip_name: Path, custom_msg: str,*,unzip_if_only_one_file: int = 0):
     global amnt_used_this_session
+    global UPLOAD_SAVES_FOLDER_ID
     await log_message(ctx,f'Zipping up modified {link_for_pretty} saves (2 more steps left)')
 
     found_1_file = False
@@ -1951,9 +1952,13 @@ async def send_result_as_zip(ctx: interactions.SlashContext,link_for_pretty: str
             google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
         except Exception as e:
             if 'storageQuotaExceeded' in str(e):
-                await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask ^^^ to clear some space',pingers=CONFIG['bot_admins'])
-                await asyncio.sleep(2*60)
-                await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!) ({pretty_bytes(real_file_size)} file)')
+                if CONFIG['automatically_delete_gdrive_saves']:
+                    await delete_google_drive_file_or_file_permentaly(UPLOAD_SAVES_FOLDER_ID)
+                    UPLOAD_SAVES_FOLDER_ID = await make_gdrive_folder('ezwizardtwo_saves')
+                else:
+                    await log_message(ctx,f'oh no the bots owner gdrive is full, im giving you 2 minutes to ask ^^^ to clear some space',pingers=CONFIG['bot_admins'])
+                    await asyncio.sleep(2*60)
+                    await log_message(ctx,f'Uploading modified {link_for_pretty} saves to google drive (last step!) ({pretty_bytes(real_file_size)} file)')
                 try:
                     google_drive_uploaded_user_zip_download_link = await google_drive_upload_file(new_zip_name,UPLOAD_SAVES_FOLDER_ID)
                 except Exception as e2:
