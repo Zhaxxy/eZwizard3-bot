@@ -44,7 +44,7 @@ from savemount_py.firmware_getter_from_libc_ps4 import get_fw_version
 from git_helpers import check_if_git_exists,run_git_command,get_git_url,is_modfied,is_updated,get_remote_count,get_commit_count
 from custom_crc import custom_crc
 from dry_db_stuff import ps3_level_backup_to_l0_ps4
-from bot_admin_helpers import is_in_test_mode, is_in_fast_boot_mode
+from bot_admin_helpers import is_in_test_mode, is_in_fast_boot_mode, toggle_test_mode_bool
 from title_id_lookup_commands import dm_all_at_once
 try:
     from custom_cheats.xenoverse2_ps4_decrypt.xenoverse2_ps4_decrypt import decrypt_xenoverse2_ps4, encrypt_xenoverse2_ps4
@@ -3975,6 +3975,21 @@ async def ezwizard3_info() -> str:
         lah_message += f'Current version: {await get_commit_count()}'
     
     return lah_message
+
+@interactions.slash_command(name='toggle_test_mode',description="Toggle test mod on and off (only bot admins can use bot)")
+async def do_toggle_test_mode(ctx: interactions.SlashContext):
+    ctx = await set_up_ctx(ctx)
+    if not is_user_bot_admin(ctx.author_id):
+        await log_user_error(ctx,'Only bot instance admins may use this command')
+        return
+
+
+    if toggle_test_mode_bool():
+        await log_user_success(ctx,'Test mode turned on, only bot admins can use bot now')
+    else:
+        await log_user_success(ctx,'Test mode turned off, people can use the bot now')
+    
+    return
 
 
 @interactions.slash_command(name='delete_all_google_drive_saves',description="Only run this command if the gdrive is full, will delete all gdrive files bot has given to users")
