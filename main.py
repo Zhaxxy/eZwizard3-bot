@@ -1032,9 +1032,8 @@ async def ps4_life_check(ctx: interactions.SlashContext | None = None):
             await channel.send(HUH) if ctx else None
         except Exception:
             pass
-        await ctx.bot.stop()
-        assert_never('bot should be ended')
-    
+        raise KeyboardInterrupt
+
 
 def get_only_ps4_saves_from_zip(ps4_saves_thing: SevenZipInfo,/,archive_name: str | Path) -> tuple[list[tuple[Path,Path]], list[SevenZipFile]]:
     ps4_saves: list[tuple[Path,Path]] = []
