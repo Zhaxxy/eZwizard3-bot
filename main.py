@@ -213,8 +213,9 @@ class PS4AccountID:
         int(account_id,16)
         account_id = account_id.casefold()
         
-        if account_id[0] in 'abcdef':
-            raise ValueError('Invalid account id, does not start with a number')
+        # TODO make this be a bool option in the init function, make it default always check this but have it False in places where it needs to be (eg when mounting the save first time to check param.sfo)
+        # if account_id[0] in 'abcdef':
+            # raise ValueError('Invalid account id, does not start with a number')
         self._account_id = account_id.casefold()
     
     def __repr__(self) -> str:
