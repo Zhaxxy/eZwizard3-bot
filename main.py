@@ -3225,7 +3225,7 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
         async for x in async_savedata0_folder.rglob('*'):
             new_blocks_size += (await x.stat()).st_size
 
-        new_blocks_size = my_param.bytes_to_blocks_count(max(new_blocks_size,3_145_728)) # min save is 3mib
+        new_blocks_size = my_param.bytes_to_blocks_count(new_blocks_size + 3_145_728) # min save is 3mib, but adding the 3mib for room of sce_sys folder contents
         my_param.with_new_blocks_count(new_blocks_size)
         
         tp_param_sfo.write_bytes(bytes(my_param))
