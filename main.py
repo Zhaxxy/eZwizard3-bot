@@ -1238,6 +1238,24 @@ async def extract_ps4_encrypted_saves_archive(ctx: interactions.SlashContext,lin
                 return f'Invalid archive after downloading it {link}, error when unpacking {type(e).__name__}: {e}'
         return ''
 
+def is_a_savedata0_folder(savedata0_path: Path, is_file: bool) -> bool:
+    if is_file:
+        return False
+    
+    if '__MACOSX' in savedata0_path.parts or savedata0_path.name.startswith('._'):
+        return False
+    
+    folder_parts = savedata0_path.parts
+    
+    if folder_parts.count('savedata0') != 1:
+        return False
+    
+    # yes i know i can make the below `return folder_parts[-1] == 'savedata0'` but this will be cleaner to add more conditions if i want to later
+    if folder_parts[-1] == 'savedata0':
+        return True
+    
+    return False
+
 
 async def get_direct_dl_link_from_mediafire_link(url: str) -> str:
     url_origin = url
@@ -1388,7 +1406,7 @@ async def download_decrypted_savedata0_folder(ctx: interactions.SlashContext,lin
             seen_savedata0_folders: set[GDriveFile] = {
                 p
                 for p in raw_files.values()
-                if (not p.is_file) and (p.file_name_as_path.parts.count('savedata0') == 1) and ('__MACOSX' not in p.file_name_as_path.parts) and (not p.file_name_as_path.name.startswith('._'))
+                if is_a_savedata0_folder(p.file_name_as_path,p.is_file)
             }
 
             if not seen_savedata0_folders:
@@ -1457,11 +1475,10 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         seen_savedata0_folders: set[SevenZipFile] = {
             p
             for p in a.files.values()
-            if (not p.is_file) and (p.path.parts.count('savedata0') == 1) and ('__MACOSX' not in p.path.parts) and (not p.path.name.startswith('._'))
+            if is_a_savedata0_folder(p.path, p.is_file)
         }
         if not seen_savedata0_folders:
             return f'Could not find any decrypted saves in {link}, make sure to put the decrypted save contents in a savedata0 folder and archive that, or use the /raw_encrypt_folder_type_2 command'
-
         if len(seen_savedata0_folders) > 1:
             return f'Too many decrypted saves in {link}, we only support encrypting one save per command'
 
