@@ -1938,7 +1938,7 @@ async def decrypt_saves_on_ps4(ctx: interactions.SlashContext, bin_file: Path, w
     return res
 
 def _zipping_time(results: Path, parent_dir: Path, new_zip_name: Path):
-    with zipfile.ZipFile(new_zip_name,'w') as zp:
+    with zipfile.ZipFile(new_zip_name,'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zp:
         for file in results.rglob('*'):
             zp.write(file,file.relative_to(parent_dir))
 
