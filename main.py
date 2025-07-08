@@ -1505,18 +1505,29 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
         if unpack_first_root_folder:
             await log_message(ctx,f'Doing some file management with {link}')
             checker = AsyncPath(new_savedata0_folder_made)
-            thing_count = 0
-            async for thing in checker.iterdir():
-                thing_count += 1
-            if thing_count != 1:
-                return ''
-            
-            if await thing.is_file(): # This is incase a user sends a zip with a single file
-                return ''
-            
+            if link == 'https://github.com/shahrilnet/remote_lua_loader/archive/refs/heads/main.zip':
+                thing = checker / 'remote_lua_loader-main/savedata'
+                if not await thing.is_dir():
+                    return f'remote_lua_loader-main/savedata folder doesnt exist in {link}, this is not your fault, please report this'
+            else:
+                thing_count = 0
+                async for thing in checker.iterdir():
+                    thing_count += 1
+                if thing_count != 1:
+                    return ''
+                
+                if await thing.is_file(): # This is incase a user sends a zip with a single file
+                    return ''
+                
             async for file_name in thing.iterdir():
                 await shutil.move(file_name,new_savedata0_folder_made)
-        
+            
+            if link == 'https://github.com/shahrilnet/remote_lua_loader/archive/refs/heads/main.zip':
+                await shutil.rmtree(thing.parent)
+            else:
+                await shutil.rmtree(thing)
+
+
 async def download_ps4_saves(ctx: interactions.SlashContext,link: str, output_folder: Path, account_id: PS4AccountID) -> str:
     """\
     function to download ps4 encrypted saves from a user given link, if anything goes wrong then a string error is returned, otherwise empty string (falsely).
