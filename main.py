@@ -3134,6 +3134,27 @@ async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files
     kwargs['unpack_first_root_folder'] = kwargs.get('unpack_first_root_folder',True)
     await base_do_cheats(ctx,save_files,account_id,CheatFunc(upload_savedata0_folder,kwargs))
 
+
+@interactions.slash_command(name="remote_lua_loader", description="Applies https://github.com/shahrilnet/remote_lua_loader to your JPN \"Lua\" game")
+@interactions.slash_option('save_files','The JPN "Lua" saves',interactions.OptionType.STRING,True)
+@account_id_opt
+async def do_remote_lua_loader(ctx: interactions.SlashContext,save_files: str,account_id: str,**kwargs):
+    kwargs['decrypted_save_folder'] = 'https://github.com/shahrilnet/remote_lua_loader/archive/refs/heads/main.zip'
+    kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DONT_DELETE_ANYTHING
+    kwargs['unpack_first_root_folder'] = True
+    ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
+    
+    # TODO gaze upon this beautiful formatting
+    await base_do_cheats(ctx,save_files,account_id,[
+                    CheatFunc(change_save_icon,{
+                                'dl_link_image_overlay':Path(__file__).parent / 'remote_lua_loader_overlay.png',
+                                'option':ChangeSaveIconOption.KEEP_ASPECT_NEAREST_NEIGHBOUR
+                                }),
+                    CheatFunc(upload_savedata0_folder,kwargs)
+                    ]
+    )
+
+
 @interactions.slash_command(name="mcworld2ps4", description=f".mcworld file to a PS4 encrypted minecraft save")
 @account_id_opt
 @interactions.slash_option('mcworld_file','A link to your mcworld file, NOT a folder!',interactions.OptionType.STRING,True)
