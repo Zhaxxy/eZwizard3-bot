@@ -1517,6 +1517,10 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
                 thing = checker / 'remote_lua_loader-main/savedata'
                 if not await thing.is_dir():
                     return f'remote_lua_loader-main/savedata folder doesnt exist in {link}, this is not your fault, please report this'
+            elif link == 'https://github.com/0x1iii1ii/ps4_autoLL/archive/refs/heads/main.zip':
+                thing = checker / 'ps4_autoLL-main/savedata'
+                if not await thing.is_dir():
+                    return f'ps4_autoLL-main/savedata folder doesnt exist in {link}, this is not your fault, please report this'
             else:
                 thing_count = 0
                 async for thing in checker.iterdir():
@@ -1530,7 +1534,10 @@ async def extract_savedata0_decrypted_save(ctx: interactions.SlashContext,link: 
             async for file_name in thing.iterdir():
                 await shutil.move(file_name,new_savedata0_folder_made)
             
-            if link == 'https://github.com/shahrilnet/remote_lua_loader/archive/refs/heads/main.zip':
+            if link in (
+                'https://github.com/shahrilnet/remote_lua_loader/archive/refs/heads/main.zip',
+                'https://github.com/0x1iii1ii/ps4_autoLL/archive/refs/heads/main.zip'
+                ):
                 await shutil.rmtree(thing.parent)
             else:
                 await shutil.rmtree(thing)
@@ -3138,8 +3145,18 @@ async def do_raw_encrypt_folder_type_2(ctx: interactions.SlashContext,save_files
 @interactions.slash_command(name="remote_lua_loader", description="Applies https://github.com/shahrilnet/remote_lua_loader to your JPN \"Lua\" game")
 @interactions.slash_option('save_files','The JPN "Lua" saves',interactions.OptionType.STRING,True)
 @account_id_opt
+@interactions.slash_option(
+    name="type",
+    description="Which one to use?",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.SlashCommandChoice(name="(Manual, most up to date) remote_lua_loader", value='https://github.com/shahrilnet/remote_lua_loader/archive/refs/heads/main.zip'),
+        interactions.SlashCommandChoice(name="(Auto, loads hen on gameboot) ps4_autoLL", value='https://github.com/0x1iii1ii/ps4_autoLL/archive/refs/heads/main.zip'),
+    ]
+    )
 async def do_remote_lua_loader(ctx: interactions.SlashContext,save_files: str,account_id: str,**kwargs):
-    kwargs['decrypted_save_folder'] = 'https://github.com/shahrilnet/remote_lua_loader/archive/refs/heads/main.zip'
+    kwargs['decrypted_save_folder'] = kwargs.pop('type')
     kwargs['clean_encrypted_file'] = CleanEncryptedSaveOption.DONT_DELETE_ANYTHING
     kwargs['unpack_first_root_folder'] = True
     ctx.ezwizard3_special_ctx_attr_special_save_files_thing = SpecialSaveFiles.ONLY_ALLOW_ONE_SAVE_FILES_CAUSE_IMPORT
