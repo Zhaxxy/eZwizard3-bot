@@ -754,8 +754,16 @@ mounted_saves_at_once = asyncio.Semaphore(12) # 3 i sadly got an unmount error, 
 def remove_pc_user_from_path(the_path: object,/) -> object:
     if not isinstance(the_path,(Path,AsyncPath)):
         return the_path
-    return the_path.relative_to(PARENT_TEMP_DIR)
-
+    
+    parent_ezwizard_dir = Path(__file__).parent.parent
+    
+    if the_path.is_relative_to(PARENT_TEMP_DIR): 
+        return the_path.relative_to(PARENT_TEMP_DIR)
+    elif the_path.is_relative_to(parent_ezwizard_dir):
+        return the_path.relative_to(parent_ezwizard_dir)
+    else:
+        return the_path
+   
 class CheatFunc(NamedTuple):
     func: Coroutine[None, None, str | None]
     kwargs: dict[str,Any]
