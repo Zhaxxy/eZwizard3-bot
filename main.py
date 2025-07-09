@@ -25,7 +25,10 @@ import ujson as json
 import aioshutil as shutil
 from aiopath import AsyncPath
 from psnawp_api import PSNAWP
-from psnawp_api.core.psnawp_exceptions import PSNAWPNotFound
+try:
+    from psnawp_api.core.psnawp_exceptions import PSNAWPNotFound
+except ImportError:
+    from psnawp_api.core.psnawp_exceptions import PSNAWPNotFoundError as PSNAWPNotFound
 from aiofiles.tempfile import TemporaryDirectory, TemporaryFile
 import interactions
 from sqlitedict import SqliteDict
