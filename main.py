@@ -4457,6 +4457,7 @@ async def main(turn_on_bot: bool = True, patched_memory_object = None, print_fun
     print('Checking if npsso cookie is valid')
     psnawp = PSNAWP(CONFIG["ssocookie"])
     user = psnawp.user(online_id='Zhaxxy')
+    PS4AccountID.from_account_id_number(user.account_id)
     print('npsso cookie works!')
     
     
