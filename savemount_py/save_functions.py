@@ -13,10 +13,25 @@ else:
 ERROR_CODE_LONG_NAMES: dict[int,str] = {int(key):value for key,value in  json.loads(Path(Path(__file__).parent / 'error_codes.json').read_text()).items()}
 PS4_DEBUG = (Path(__file__).parent / 'ps4debug.bin').read_bytes()
 
-async def send_ps4debug(ip: str,/,port: int = 9090):
+
+async def is_tcp_port_open(ip: str, port: int) -> bool:
+    try:
+        _, writer = await asyncio.open_connection(ip, port)
+        writer.close()
+        await writer.wait_closed()
+        return True
+    except ConnectionRefusedError:
+        return False
+
+
+async def send_ps4debug(ip: str,/,port: int = 9090) -> None:
     """
     Simple function to send over da ps4 debug bin
     """
+    is_ps4_debug_injected = await is_tcp_port_open(ip,744)
+    if is_ps4_debug_injected:
+        print('ps4debug already injected, no need to inject again')
+        return
     _, writer = await asyncio.open_connection(ip, port)
     writer.write(PS4_DEBUG)
     await writer.drain()
