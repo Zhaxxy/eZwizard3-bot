@@ -3280,8 +3280,9 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
         elif isinstance(icon0_path,str):
             result = await download_direct_link(ctx,f'https://zaprit.fish/icon/{icon0_path}',tp)
             if isinstance(result,str):
-                await log_user_error(ctx,result)
-                return 
+                result = Path(__file__).parent / 'remote_lua_loader_overlay.png'
+                #await log_user_error(ctx,result)
+                #return
             await shutil.move(result,savedata0_folder / 'sce_sys/icon0.png')
             
         base_name = f'{gameid}x00ADV' if is_adventure else f'{gameid}x00LEVEL'
