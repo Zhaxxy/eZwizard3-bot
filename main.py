@@ -89,6 +89,8 @@ BASE_SAVEDATA_FOLDER = f'/user/home/{CONFIG["user_id"]}/savedata'
 SAVE_FOLDER_ENCRYPTED = f'{BASE_SAVEDATA_FOLDER}/{BASE_TITLE_ID}'
 MOUNTED_POINT = Path('/mnt/sandbox/NPXS20001_000')
 
+REMOTE_LUA_LOADER_OVERLAY_PNG = Path(__file__).parent / 'remote_lua_loader_overlay.png'
+
 PS4_SAVE_KEYSTONES = {
     'CUSA05350': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb5\xaa\xa6\xdd\x19*\xfd\xdd\x8dy\x93\x8eJ\xce\x13\x7f\xd4H\x1d\xf1\x11\xbd\x18\x8a\xf3\x02\xc5l6j\x91\x12K\xcbZe\x06tj\x9d\x08\xd53;\xc1\x9cD\x96h\xff\xef\xe2\x18$W\x96\x8fQ\xa1\xc8<\x0b\x18\x96',
     'CUSA05088': b'keystone\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00&\xedp\x94\xb2\x94\xa3\x9bc\xbd\x94\x11;\x06l\x93x\x9d\xc2K\xe2\xed\xfc\xd78\xff\xdd\x8dU\x86\xab\xd8N\x1dx8q\xcf\xd3\x0b\xfc\x8cr<il\xbbd\xbd\x17\xbe(?\x85Xn\xa5\xf4T\xe8s\xdcu\xaa',
@@ -3168,7 +3170,7 @@ async def do_remote_lua_loader(ctx: interactions.SlashContext,save_files: str,ac
     # TODO gaze upon this beautiful formatting
     await base_do_cheats(ctx,save_files,account_id,[
                     CheatFunc(change_save_icon,{
-                                'dl_link_image_overlay':Path(__file__).parent / 'remote_lua_loader_overlay.png',
+                                'dl_link_image_overlay':REMOTE_LUA_LOADER_OVERLAY_PNG,
                                 'option':ChangeSaveIconOption.KEEP_ASPECT_NEAREST_NEIGHBOUR
                                 }),
                     CheatFunc(upload_savedata0_folder,kwargs)
@@ -3280,10 +3282,11 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
         elif isinstance(icon0_path,str):
             result = await download_direct_link(ctx,f'https://zaprit.fish/icon/{icon0_path}',tp)
             if isinstance(result,str):
-                result = Path(__file__).parent / 'remote_lua_loader_overlay.png'
+                await shutil.copy(REMOTE_LUA_LOADER_OVERLAY_PNG,savedata0_folder / 'sce_sys/icon0.png')
                 #await log_user_error(ctx,result)
                 #return
-            await shutil.move(result,savedata0_folder / 'sce_sys/icon0.png')
+            else:
+                await shutil.move(result,savedata0_folder / 'sce_sys/icon0.png')
             
         base_name = f'{gameid}x00ADV' if is_adventure else f'{gameid}x00LEVEL'
         
