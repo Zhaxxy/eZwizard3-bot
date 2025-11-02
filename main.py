@@ -3230,6 +3230,30 @@ async def lbp_ps3_level_backup_zip_to_ps4(ctx: interactions.SlashContext, accoun
     await lbp_ps3_level_backup2ps4('level backup',ctx, account_id, pretty_url=dl_link_level_backup, real_url=dl_link_level_backup, gameid=gameid)
 
 
+@interactions.slash_command(name="lbp_l0_file", description=f"Convert a ps4 L0 backup to an encrypted ps4 level backup")
+@account_id_opt
+@interactions.slash_option('dl_link_l0_file','L0 file url',interactions.OptionType.STRING,True)
+@interactions.slash_option(
+    name="level_type",
+    description="Is it a level, or an adventure?",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER,
+    choices=[
+        interactions.SlashCommandChoice(name="Level", value=0),
+        interactions.SlashCommandChoice(name="Adventure", value=1),
+    ]
+    )
+@lbp3_reregion_opt
+async def lbp_l0_file(ctx: interactions.SlashContext, account_id: str, dl_link_l0_file: str, level_type: bool | int, gameid: str):
+    if is_str_int(dl_link_l0_file) and int(dl_link_l0_file) > 1:
+        try:
+            dl_link_l0_file = get_saved_url(ctx.author_id,int(dl_link_l0_file))
+        except KeyError:
+            await log_user_error(ctx,f'You dont have any url saved for {dl_link_l0_file}, try running the file2url command again!')
+            return
+    await lbp_ps3_level_backup2ps4('level backup',ctx, account_id, pretty_url=dl_link_l0_file, real_url=dl_link_l0_file, gameid=gameid,is_l0_file=True, is_l0_file_adventure=bool(level_type))
+
+
 @interactions.slash_command(name="lbp_level_archive2ps4", description=f"Gets the level from the lbp archive backup (dry.db) and turns it into a ps4 levelbackup")
 @account_id_opt
 @interactions.slash_option('slotid_from_drydb','The slot id from dry.db of the level you want, you can search for it on https://maticzpl.xyz/lbpfind',interactions.OptionType.INTEGER,True,min_value=56,max_value=100515565)
@@ -3238,7 +3262,7 @@ async def do_lbp_level_archive2ps4(ctx: interactions.SlashContext, account_id: s
     await lbp_ps3_level_backup2ps4('slot',ctx, account_id, pretty_url=f'`{slotid_from_drydb}`', real_url=f'https://zaprit.fish/dl_archive/{slotid_from_drydb}', gameid=gameid)
 
 
-async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions.SlashContext, account_id: str, pretty_url: str, real_url: str, gameid: str):
+async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions.SlashContext, account_id: str, pretty_url: str, real_url: str, gameid: str, is_l0_file: bool = False, is_l0_file_adventure: bool = False):
     ctx = await set_up_ctx(ctx)
     if account_id == '1':
         return await log_user_error(ctx,'Cannot get original account id of save, perhaps you didnt mean to put 1 in account_id')
@@ -3251,21 +3275,32 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
                 await log_user_error(ctx,result + ' This could be because the level failed to load on official servers or a dynamic thermometer level (this is an issue with https://zaprit.fish itself)')
                 return 
             await log_user_error(ctx,result)
-            return 
-        await extract_full_archive(result,tp,'x')
-        for level_backup_folder in tp.iterdir():
-            if level_backup_folder.is_dir():
-                break
-        else: # no break
-            return await log_user_error(ctx,'the zip the zaprit fish gave had no level backup (this should never happen, defo report this)')
+            return
+        if not is_l0_file:
+            await extract_full_archive(result,tp,'x')
+            for level_backup_folder in tp.iterdir():
+                if level_backup_folder.is_dir():
+                    break
+            else: # no break
+                return await log_user_error(ctx,'the zip the zaprit fish gave had no level backup (this should never happen, defo report this)')
         
         savedata0_folder = tp / 'savedata0_folder' / 'savedata0'
         savedata0_folder.mkdir(parents=True)
         
-        await log_message(ctx,f'Converting {pretty_entry_type_str} {pretty_url} to L0 file')
-        with open(savedata0_folder / 'L0','wb') as f:
-            level_name, level_desc,is_adventure,icon0_path = await asyncio.get_event_loop().run_in_executor(None, ps3_level_backup_to_l0_ps4,level_backup_folder,f)
-            l0_size = f.tell()
+        if is_l0_file:
+            await shutil.copy(result,savedata0_folder)
+            level_name = 'l0 file'
+            level_desc = 'this was made from a l0 file'
+            is_adventure = is_l0_file_adventure
+            icon0_path = REMOTE_LUA_LOADER_OVERLAY_PNG
+            with open(savedata0_folder / 'L0','rb') as f:
+                f.seek(0, 2)
+                l0_size = f.tell()
+        else:
+            await log_message(ctx,f'Converting {pretty_entry_type_str} {pretty_url} to L0 file')
+            with open(savedata0_folder / 'L0','wb') as f:
+                level_name, level_desc,is_adventure,icon0_path = await asyncio.get_event_loop().run_in_executor(None, ps3_level_backup_to_l0_ps4,level_backup_folder,f)
+                l0_size = f.tell()
         
         if l0_size > LBP3_PS4_L0_FILE_MAX_SIZE:
             await log_user_error(ctx,f'The {pretty_entry_type_str} {pretty_url} is too big ({pretty_bytes(l0_size)}), the max lbp3 ps4 level backup can only be {pretty_bytes(LBP3_PS4_L0_FILE_MAX_SIZE)}')
@@ -3278,7 +3313,7 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
         
         await AsyncPath(savedata0_folder / 'sce_sys/keystone').write_bytes(lbp3_keystone)
         if isinstance(icon0_path,Path):
-            await shutil.move(icon0_path,savedata0_folder / 'sce_sys/icon0.png')
+            await shutil.copy(icon0_path,savedata0_folder / 'sce_sys/icon0.png')
         elif isinstance(icon0_path,str):
             result = await download_direct_link(ctx,f'https://zaprit.fish/icon/{icon0_path}',tp)
             if isinstance(result,str):
@@ -3286,7 +3321,7 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
                 #await log_user_error(ctx,result)
                 #return
             else:
-                await shutil.move(result,savedata0_folder / 'sce_sys/icon0.png')
+                await shutil.copy(result,savedata0_folder / 'sce_sys/icon0.png')
             
         base_name = f'{gameid}x00ADV' if is_adventure else f'{gameid}x00LEVEL'
         
