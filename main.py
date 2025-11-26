@@ -3221,6 +3221,7 @@ async def do_mcworld2ps4(ctx: interactions.SlashContext, account_id: str, **kwar
 @interactions.slash_option('dl_link_level_backup','zip file containing a single ps3 level backup',interactions.OptionType.STRING,True)
 @lbp3_reregion_opt
 async def lbp_ps3_level_backup_zip_to_ps4(ctx: interactions.SlashContext, account_id: str, dl_link_level_backup: str, gameid: str):
+    ctx = await set_up_ctx(ctx)
     if is_str_int(dl_link_level_backup) and int(dl_link_level_backup) > 1:
         try:
             dl_link_level_backup = get_saved_url(ctx.author_id,int(dl_link_level_backup))
@@ -3245,6 +3246,7 @@ async def lbp_ps3_level_backup_zip_to_ps4(ctx: interactions.SlashContext, accoun
     )
 @lbp3_reregion_opt
 async def lbp_l0_file(ctx: interactions.SlashContext, account_id: str, dl_link_l0_file: str, level_type: bool | int, gameid: str):
+    ctx = await set_up_ctx(ctx)
     if is_str_int(dl_link_l0_file) and int(dl_link_l0_file) > 1:
         try:
             dl_link_l0_file = get_saved_url(ctx.author_id,int(dl_link_l0_file))
