@@ -174,7 +174,7 @@ def _get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> Generat
             if not filepath.file_thing.is_file: continue
             
             if filepath.file_thing.file_name_as_path.suffix != '.bin':
-                bin_file = no_ids.get(_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix('.bin'),'')))
+                bin_file = no_ids.get(_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix(filepath.file_thing.file_name_as_path.suffix + '.bin'),'')))
                 if not bin_file: # If we are gonna allow this, we are not gonna say its supported, and defiently not accepting anything if theres bad data, so say theres no saves
                     return
                 res.append(PS4GDriveFileSave(bin_file,no_ids[filepath]))
@@ -195,7 +195,7 @@ def _get_valid_saves_out_names_only(the_folder: Sequence[GDriveFile]) -> Generat
                         yield PS4GDriveFileSave(no_ids[filepath],white_file)
             else:
                 try:
-                    bin_file = no_ids[_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix('.bin'),''))]
+                    bin_file = no_ids[_PathWithNoIDInHash((filepath.file_thing.file_name_as_path.with_suffix(filepath.file_thing.file_name_as_path.suffix + '.bin'),''))]
                 except KeyError:
                     pass
                 else:
