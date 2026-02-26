@@ -3290,7 +3290,7 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
         savedata0_folder.mkdir(parents=True)
         
         if is_l0_file:
-            await shutil.copy(result,savedata0_folder)
+            await shutil.copy(result,savedata0_folder / 'L0')
             level_name = 'l0 file'
             level_desc = 'this was made from a l0 file'
             is_adventure = is_l0_file_adventure
