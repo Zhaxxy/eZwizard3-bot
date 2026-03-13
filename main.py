@@ -3279,7 +3279,15 @@ async def lbp_ps3_level_backup2ps4(pretty_entry_type_str: str, ctx: interactions
             await log_user_error(ctx,result)
             return
         if not is_l0_file:
-            await extract_full_archive(result,tp,'x')
+            try:
+                await extract_full_archive(result,tp,'x')
+            except Exception as e:
+                if real_url.startswith('https://zaprit.fish/dl_archive/'):
+                    await log_user_error(ctx,f'Level could not be downloaded, go to {real_url} to see why')
+                else:
+                    await log_user_error(ctx,f'Invalid archive after downloading it {real_url}, error when unpacking {type(e).__name__}: {e}')
+                return
+
             for level_backup_folder in tp.iterdir():
                 if level_backup_folder.is_dir():
                     break
