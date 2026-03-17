@@ -149,9 +149,12 @@ def ps3_level_backup_to_l0_ps4(level_backup_folder_path: Path | str, l0_output: 
                 # except (KeyError,IndexError):
                     # is_adventure = False
                 try:
-                    icon_tex_hash = new_slt_dict["resource"]["slots"][0]["icon"]["value"]
-                    if not (isinstance(icon_tex_hash,str) and len(icon_tex_hash) == 40):
+                    if new_slt_dict["resource"]["slots"][0]["icon"] is None:
                         icon_tex_hash = None
+                    else:
+                        icon_tex_hash = new_slt_dict["resource"]["slots"][0]["icon"]["value"]
+                        if not (isinstance(icon_tex_hash,str) and len(icon_tex_hash) == 40):
+                            icon_tex_hash = None
                 except (KeyError,IndexError):
                     icon_tex_hash = None
                 succy = False
