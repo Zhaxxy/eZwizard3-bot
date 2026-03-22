@@ -3,6 +3,9 @@ A discord bot that connects to your jb ps4 (9.00 only atm) to allow other people
 
 this project is actively being worked on by Zhaxxy and is very passionate about it, please feel free to ask for any suggestions, reporting any bugs, or even making your own changes and make a pull request, Zhaxxy will be sure to respond!
 
+# TODO
+save param.sfos contain 2 8 byte unix timestamps at offset 0x650 and 0x658, it seems like the 0x658 one gets displayed in the menus, needs further investigating
+
 # Known issues
 
 ## RuntimeError: coroutine ignored GeneratorExit
