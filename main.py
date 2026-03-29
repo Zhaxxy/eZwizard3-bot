@@ -961,7 +961,7 @@ def make_error_message_if_verbose_or_not(ctx_author_id: str, message_1: str, mes
     if 'got 451' in str(sys.exc_info()[1]):
         leader += '**This error usually means, the decrypted save is too large to upload to the encrypted save**\n'
     
-    return f'{leader}{message_1} reason:\n{error_msg}\n {message_2}'
+    return f'{leader}{message_1} reason:\n{error_msg}\n {message_2}'.replace(str(PARENT_TEMP_DIR),'.../').replace(repr(str(PARENT_TEMP_DIR)),"'.../'")
 
 def add_new_helped_people_by_allowing_non_cusa_google_drive_folders(unq_id: str,/):
     with SqliteDict("user_stuff.sqlite", tablename="helped_people_by_allowing_non_cusa_google_drive_folders_ids") as db:
