@@ -106,7 +106,8 @@ def ps3_level_backup_to_l0_ps4(level_backup_folder_path: Path | str, l0_output: 
         for file in level_backup_folder_path.iterdir():
             if file.name.upper() in ('PARAM.PFD','PARAM.SFO','ICON0.PNG'):
                 if file.name.upper() == 'ICON0.PNG':
-                    icon0_thing = file
+                    if file.stat().st_size < 20_000_000:
+                        icon0_thing = file
                 continue
             save_files.append(file)
         
