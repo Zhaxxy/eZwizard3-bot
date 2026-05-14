@@ -429,7 +429,6 @@ You can add any more strings here you want, just put in your strings in theese t
 ben
 BENNY ben BENNY
 benny, oh benny!
-I HATE NI
 hush little piggy
 feel free do donate me anything to paypal eboot.bin@protonmail.com
 SHAT AP
@@ -456,7 +455,6 @@ I am a retarded horse
 Like a somebodyyyyyyy
 one two buckel my shoe
 three four buckle some more
-five six YOU STU{IID NI
 Рита и Барсик
 slipin_jimmy.mp4
 ご飯を待ちすぎてアクビが出る猫(^^♪ 
