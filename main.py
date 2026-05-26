@@ -2075,10 +2075,10 @@ def lbp3_reregion_opt(func):
     required=True,
     opt_type=interactions.OptionType.STRING,
     choices=[
-        interactions.SlashCommandChoice(name="CUSA00063 (EU)", value='CUSA00063'),
+        interactions.SlashCommandChoice(name="CUSA00063 (EU & UK Digital)", value='CUSA00063'),
         interactions.SlashCommandChoice(name="CUSA00473 (US)", value='CUSA00473'),
         interactions.SlashCommandChoice(name="CUSA00693 (AS asia)", value='CUSA00693'),
-        interactions.SlashCommandChoice(name="CUSA00762 (GB UK)", value='CUSA00762'),
+        interactions.SlashCommandChoice(name="CUSA00762 (GB UK Disc)", value='CUSA00762'),
         interactions.SlashCommandChoice(name="CUSA00810 (US LATAM)", value='CUSA00810'),
         interactions.SlashCommandChoice(name="CUSA00601 (JAPAN)", value='CUSA00601'),
     ]
