@@ -7,7 +7,7 @@ discord-py-interactions
 sqlitedict
 aiohttp
 aioftp
-pip install ps4debug==0.1.6
+ps4debug==0.1.6
 lbptoolspy
 aiogoogle
 google-api-python-client
