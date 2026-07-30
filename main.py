@@ -23,7 +23,7 @@ _boot_start = time.perf_counter()
 from async_lru import alru_cache
 import ujson as json
 import aioshutil as shutil
-from aiopath import AsyncPath
+from anyio import Path as AsyncPath
 from psnawp_api import PSNAWP
 try:
     from psnawp_api.core.psnawp_exceptions import PSNAWPNotFound

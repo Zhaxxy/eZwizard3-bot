@@ -7,14 +7,14 @@ discord-py-interactions
 sqlitedict
 aiohttp
 aioftp
-ps4debug
+pip install ps4debug==0.1.6
 lbptoolspy
 aiogoogle
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 pycryptodome
-aiopath
+anyio
 aioshutil
 async-lru
 ujson
