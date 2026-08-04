@@ -1,0 +1,6 @@
+*.py whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.json whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.yaml whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.yml whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.txt whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+.gitignore whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
