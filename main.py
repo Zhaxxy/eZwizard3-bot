@@ -620,11 +620,12 @@ async def log_user_error(ctx: interactions.SlashContext, error_msg: str,*,pinger
 
     await update_status()
 
-if datetime.datetime.now(datetime.UTC).month == 12 and datetime.datetime.now(datetime.UTC).day <= 25:
-    LOG_USER_SUCCESS_PRETTY_FMT_STRING = '<@{}>🎄The command finished sucesfully: {} 🎄'
-else:
-    LOG_USER_SUCCESS_PRETTY_FMT_STRING = '<@{}>✅The command finished sucesfully: {} ✅'
+
 async def log_user_success(ctx: interactions.SlashContext, success_msg: str, file: str | None = None,*,pingers: None | Sequence[int] = None):
+    if datetime.datetime.now(datetime.UTC).month == 12 and datetime.datetime.now(datetime.UTC).day <= 25:
+        LOG_USER_SUCCESS_PRETTY_FMT_STRING = '<@{}>🎄The command finished sucesfully: {} 🎄'
+    else:
+        LOG_USER_SUCCESS_PRETTY_FMT_STRING = '<@{}>✅The command finished sucesfully: {} ✅'
     files = [file] if file else []
     if ctx.ezwizard3_special_ctx_attr_mode == 1:
         pingers = [] or pingers
